@@ -24,3 +24,7 @@ venv/
 
 # Built page: regenerate with `python tools/build_ui.py`
 ui/fragment-to-catalyst.html
+
+# Built structure page: regenerate from ui/structure.html
+ui/structure-built.html
+data/raw/structures/

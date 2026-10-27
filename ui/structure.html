@@ -1,0 +1,266 @@
+<title>TfH Catalytic Site</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
+<style>
+/* Layout: viewer fills the frame; a narrow panel carries provenance and controls. */
+:root{
+  --paper:#f7f6f3; --panel:#fffffe; --stage:#eceae2;
+  --ink:#1b1c1a; --ink-2:#55564f; --ink-3:#87887f;
+  --rule:#ddddd4; --rule-2:#eceae2;
+  --accent:#1f5f52; --ser:#c2541f; --asp:#1f5f52; --his:#5b4a9e; --ss:#8a5a12;
+  --font-ui:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#13140f; --panel:#1b1d17; --stage:#0d0e0a;
+  --ink:#eceade; --ink-2:#aeafa2; --ink-3:#7d7e73;
+  --rule:#32342a; --rule-2:#23251d;
+  --accent:#63c3ad; --ser:#e8894f; --asp:#63c3ad; --his:#a899e8; --ss:#d7a04a;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#13140f; --panel:#1b1d17; --stage:#0d0e0a;
+  --ink:#eceade; --ink-2:#aeafa2; --ink-3:#7d7e73;
+  --rule:#32342a; --rule-2:#23251d;
+  --accent:#63c3ad; --ser:#e8894f; --asp:#63c3ad; --his:#a899e8; --ss:#d7a04a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+/* The publish skeleton supplies this; keep it so the file also behaves standalone. */
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--panel)}
+.wrap{max-width:70rem;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2{margin:0;font-weight:600;text-wrap:balance}
+.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+header{background:var(--panel);border-bottom:1px solid var(--rule)}
+.masthead{padding-block:.75rem;display:flex;gap:.9rem;align-items:baseline;flex-wrap:wrap}
+.masthead h1{font-size:1.05rem}
+.masthead .sub{font-size:.82rem;color:var(--ink-3)}
+
+.grid{display:grid;gap:1rem;grid-template-columns:1fr 20rem;margin-block:1rem;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+#stage{position:relative;height:clamp(22rem,62vh,36rem);background:var(--stage);
+  border:1px solid var(--rule);border-radius:3px;overflow:hidden;min-width:0}
+#viewer{position:absolute;inset:0}
+.loading{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--font-data);
+  font-size:.8rem;color:var(--ink-3)}
+.side{display:flex;flex-direction:column;gap:.85rem;min-width:0}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:.8rem .9rem}
+.card h2{font-family:var(--font-data);font-size:.68rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.5rem}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:.25rem .7rem;font-size:.84rem}
+.kv dt{font-family:var(--font-data);font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:.12rem}
+.kv dd{margin:0;min-width:0;word-break:break-word}
+.triad{display:flex;flex-direction:column;gap:.35rem}
+.res{display:flex;align-items:center;gap:.5rem;font-size:.86rem}
+.swatch{width:.75rem;height:.75rem;border-radius:2px;flex:none}
+.res .n{font-family:var(--font-data);font-weight:500}
+.res .r{color:var(--ink-2);font-size:.8rem}
+.btns{display:flex;flex-wrap:wrap;gap:.4rem}
+button{font:inherit;font-size:.8rem;padding:.35rem .6rem;border:1px solid var(--rule);border-radius:3px;
+  background:var(--paper);color:var(--ink-2);cursor:pointer}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.note{font-size:.8rem;color:var(--ink-2);margin:.5rem 0 0}
+.caveat{border:1px dashed var(--rule);border-radius:3px;padding:.75rem .9rem;background:transparent}
+.caveat h2{color:var(--ink-3)}
+.caveat li{font-size:.82rem;color:var(--ink-2);margin-bottom:.35rem}
+.caveat ul{margin:0;padding-left:1.1rem}
+a{color:var(--accent)}
+footer{border-top:1px solid var(--rule);padding-block:1rem 2rem;font-size:.78rem;color:var(--ink-3)}
+</style>
+
+<header><div class="wrap"><div class="masthead">
+  <h1>TfH &mdash; catalytic site</h1>
+  <span class="sub">The catalyst this engine selects for a PET fragment, at atomic resolution</span>
+</div></div></header>
+
+<main class="wrap">
+  <div class="grid">
+    <div id="stage">
+      <div id="viewer"></div>
+      <div class="loading" id="loading">loading structure&hellip;</div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>Structure</h2>
+        <dl class="kv">
+          <dt>PDB</dt><dd><a href="https://www.rcsb.org/structure/4CG1" target="_blank" rel="noopener">4CG1</a> &middot; X-ray, chain A</dd>
+          <dt>Protein</dt><dd>Cutinase, <em>Thermobifida fusca</em> KW3</dd>
+          <dt>EC</dt><dd class="mono">3.1.1.74</dd>
+          <dt>Residues</dt><dd class="mono" id="nres">&mdash;</dd>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h2>Catalytic triad</h2>
+        <div class="triad">
+          <div class="res"><span class="swatch" style="background:var(--ser)"></span>
+            <span class="n">Ser130</span><span class="r">nucleophile</span></div>
+          <div class="res"><span class="swatch" style="background:var(--his)"></span>
+            <span class="n">His208</span><span class="r">general base</span></div>
+          <div class="res"><span class="swatch" style="background:var(--asp)"></span>
+            <span class="n">Asp176</span><span class="r">charge relay</span></div>
+        </div>
+        <p class="note">Ser-His-Asp, the serine-hydrolase arrangement. The serine attacks the
+        ester bond in the polymer backbone; this is the chemistry the whole route rests on.</p>
+      </div>
+
+      <div class="card">
+        <h2>View</h2>
+        <div class="btns">
+          <button id="b-spin" aria-pressed="false">Spin</button>
+          <button id="b-surface" aria-pressed="false">Surface</button>
+          <button id="b-ss" aria-pressed="true">Secondary structure</button>
+          <button id="b-zoom">Zoom to site</button>
+          <button id="b-reset">Reset</button>
+        </div>
+        <p class="note">Drag to rotate, scroll to zoom. The triad is drawn as sticks;
+        the disulfide Cys241&ndash;Cys259 is in gold.</p>
+      </div>
+
+      <div class="card caveat">
+        <h2>What you are looking at</h2>
+        <ul>
+          <li><strong>This is an experimental crystal structure</strong>, not a prediction.
+            For this enzyme that is the stronger evidence, so it is what is shown.</li>
+          <li>AlphaFold does model it (Q6A0I4, mean pLDDT 91.5), but its file server refused
+            the download from this network. Nothing was substituted for it.</li>
+          <li>4CG1 is an engineered variant: 259 of 261 residues match the selected enzyme
+            Q6A0I4, differing at <span class="mono">S18R</span> and <span class="mono">T136S</span>.
+            Neither is in the triad.</li>
+          <li>Numbering here is the mature protein. UniProt numbers the precursor, so its
+            Ser170/Asp216/His248 are Ser130/Asp176/His208 below &mdash; an offset of 40,
+            checked residue by residue against the structure.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="wrap">
+  Structure from RCSB PDB entry 4CG1. Roth C, Wei R, Oeser T, et al.
+  <em>Structural and functional studies on a thermostable polyethylene terephthalate degrading
+  hydrolase from Thermobifida fusca.</em> Appl Microbiol Biotechnol. 2014.
+  <a href="https://doi.org/10.1007/s00253-014-5672-0" target="_blank" rel="noopener">doi:10.1007/s00253-014-5672-0</a>
+  &middot; PMID <a href="https://pubmed.ncbi.nlm.nih.gov/24728714/" target="_blank" rel="noopener">24728714</a>
+</footer>
+
+<script>
+const PDB = window.__PDB__;
+const $ = s => document.querySelector(s);
+const TRIAD = { 130: "ser", 176: "asp", 208: "his" };
+const DISULFIDE = [241, 259];
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+let viewer, spinning = false, surfaceOn = false, bySS = true, surface = null;
+
+function paintCartoon() {
+  viewer.setStyle({}, {});
+  if (bySS) {
+    viewer.setStyle({ ss: "h" }, { cartoon: { color: css("--accent") } });
+    viewer.setStyle({ ss: "s" }, { cartoon: { color: css("--ss") } });
+    viewer.setStyle({ ss: "c" }, { cartoon: { color: css("--ink-3") } });
+  } else {
+    viewer.setStyle({}, { cartoon: { color: css("--ink-3") } });
+  }
+  for (const [resi, role] of Object.entries(TRIAD)) {
+    viewer.setStyle({ resi: +resi },
+      { stick: { radius: 0.22, color: css("--" + role) },
+        cartoon: { color: css("--" + role) } });
+  }
+  viewer.setStyle({ resi: DISULFIDE },
+    { stick: { radius: 0.18, color: css("--ss") }, cartoon: { color: css("--ink-3") } });
+}
+
+function labelTriad() {
+  viewer.removeAllLabels();
+  const names = { 130: "Ser130", 176: "Asp176", 208: "His208" };
+  for (const [resi, role] of Object.entries(TRIAD)) {
+    viewer.addLabel(names[resi], {
+      position: {}, alignment: "center", inFront: true,
+      fontSize: 11, fontColor: css("--" + role),
+      backgroundColor: css("--panel"), backgroundOpacity: 0.85,
+      borderThickness: 0.5, borderColor: css("--rule")
+    }, { resi: +resi, atom: "CA" });
+  }
+}
+
+function start() {
+  viewer = $3Dmol.createViewer("viewer", { backgroundColor: css("--stage") });
+  viewer.addModel(PDB, "pdb");
+  paintCartoon();
+  labelTriad();
+  viewer.zoomTo();
+  viewer.render();
+  $("#loading").hidden = true;
+
+  const atoms = viewer.getModel().selectedAtoms({ atom: "CA" });
+  $("#nres").textContent = atoms.length + " modelled";
+
+  $("#b-spin").addEventListener("click", e => {
+    spinning = !spinning;
+    e.currentTarget.setAttribute("aria-pressed", String(spinning));
+    viewer.spin(spinning ? "y" : false);
+  });
+
+  $("#b-surface").addEventListener("click", e => {
+    surfaceOn = !surfaceOn;
+    e.currentTarget.setAttribute("aria-pressed", String(surfaceOn));
+    if (surfaceOn) {
+      surface = viewer.addSurface($3Dmol.SurfaceType.VDW,
+        { opacity: 0.68, color: css("--rule") });
+    } else if (surface) {
+      viewer.removeAllSurfaces(); surface = null;
+    }
+    viewer.render();
+  });
+
+  $("#b-ss").addEventListener("click", e => {
+    bySS = !bySS;
+    e.currentTarget.setAttribute("aria-pressed", String(bySS));
+    paintCartoon(); viewer.render();
+  });
+
+  $("#b-zoom").addEventListener("click", () => {
+    viewer.zoomTo({ resi: Object.keys(TRIAD).map(Number) }, 700);
+  });
+
+  $("#b-reset").addEventListener("click", () => {
+    if (surfaceOn) { viewer.removeAllSurfaces(); surface = null; surfaceOn = false;
+      $("#b-surface").setAttribute("aria-pressed", "false"); }
+    if (spinning) { viewer.spin(false); spinning = false;
+      $("#b-spin").setAttribute("aria-pressed", "false"); }
+    paintCartoon(); viewer.zoomTo(700); viewer.render();
+  });
+
+  // The theme can change under the page; repaint so the model never keeps
+  // the other theme's colours on this one's background.
+  const repaint = () => {
+    viewer.setBackgroundColor(css("--stage"));
+    paintCartoon(); labelTriad(); viewer.render();
+  };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", repaint);
+  new MutationObserver(repaint).observe(document.documentElement,
+    { attributes: true, attributeFilter: ["data-theme"] });
+
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    $("#b-spin").disabled = true;
+  }
+}
+
+if (window.$3Dmol) start();
+else window.addEventListener("load", () => {
+  if (window.$3Dmol) start();
+  else $("#loading").textContent = "3D viewer could not load";
+});
+</script>
