@@ -73,6 +73,7 @@ def enrich_from_brenda(proteins: list[Protein], subset_path: Path) -> dict[str, 
 
     subset = brenda.load_subset(subset_path)
     release = subset.get("release")
+    bad_pmids = brenda.load_bad_pmids(subset_path.parent / "bad_references.json")
     by_accession: dict[str, list[Protein]] = {}
     for protein in proteins:
         if protein.uniprot_accession:
@@ -90,7 +91,11 @@ def enrich_from_brenda(proteins: list[Protein], subset_path: Path) -> dict[str, 
         for accession, targets in by_accession.items():
             observations = list(
                 brenda.observations_for_accession(
-                    entry, accession, release=release, skip_reference_ids=skip
+                    entry,
+                    accession,
+                    release=release,
+                    skip_reference_ids=skip,
+                    bad_pmids=bad_pmids,
                 )
             )
             if not observations:

@@ -1,0 +1,29 @@
+{
+  "checked_at": "2026-10-27T15:55:01+00:00",
+  "checked": 1024,
+  "pmids": [
+    "18355276",
+    "254050803",
+    "2937183"
+  ],
+  "detail": [
+    {
+      "ec": "3.1.1.101",
+      "pmid": "254050803",
+      "claimed_title": "Functional characterization and structural modeling of synthetic polyester-degrading hyd",
+      "actual": "not found in PubMed"
+    },
+    {
+      "ec": "3.1.1.101",
+      "pmid": "2937183",
+      "claimed_title": "Structural insight into molecular mechanism of poly(ethylene terephthalate) degradation",
+      "actual": "points at: '[Rehabilitation of children with oral surgical diseases and traumatic '"
+    },
+    {
+      "ec": "3.1.1.3",
+      "pmid": "18355276",
+      "claimed_title": "Catalytic mechanism of C-di-GMP specific phosphodiesterase: a study of the EAL domain-co",
+      "actual": "points at: 'Mutations towards enantioselectivity adversely affect secretion of Pse'"
+    }
+  ]
+}

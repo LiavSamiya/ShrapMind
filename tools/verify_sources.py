@@ -10,6 +10,7 @@ it can be removed before it reaches a slide.
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
 import json
 import random
 import re
@@ -148,6 +149,30 @@ def _verify_brenda_titles(
             print(f"    BRENDA says : {title[:88]}")
             print(f"    PubMed says : {detail[:88]}")
         time.sleep(pause)
+
+    # Feed the result back into ingest. The digit/year heuristic in
+    # brenda.suspect_references is a cheap pre-filter and misses the case that
+    # matters most: a well-formed, real PMID attached to the wrong paper. Only
+    # resolving the id catches that, so what resolving found is written down.
+    blocklist = subset_path.parent / "bad_references.json"
+    if not sample:
+        blocklist.write_text(
+            json.dumps(
+                {
+                    "checked_at": _dt.datetime.now(_dt.timezone.utc).isoformat(
+                        timespec="seconds"
+                    ),
+                    "checked": len(unique),
+                    "pmids": sorted({pmid for _, pmid, _, _ in mismatches}),
+                    "detail": [
+                        {"ec": ec, "pmid": pmid, "claimed_title": title, "actual": detail}
+                        for ec, pmid, title, detail in mismatches
+                    ],
+                },
+                indent=2,
+            )
+        )
+        print(f"\nwrote {blocklist}")
 
     print("\n" + "=" * 60)
     print(f"{len(unique) - len(mismatches)}/{len(unique)} references check out")

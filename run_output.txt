@@ -5,7 +5,7 @@
   "reviewed": 167,
   "with_structure": 60,
   "with_temperature_optimum": 31,
-  "with_ph_optimum": 32,
+  "with_ph_optimum": 30,
   "by_substrate": {
     "PET": 323,
     "PA": 76,
@@ -119,5 +119,5 @@ VERDICT: no_pathway
   No enzyme with demonstrated activity on PE is present in the seed set. This is a statement about available evidence, not a claim that the material is indegradable.
 
 ################ 4. TESTS ################
-...................                                                      [100%]
-19 passed in 0.07s
+....................                                                     [100%]
+20 passed in 0.09s

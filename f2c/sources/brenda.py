@@ -91,6 +91,21 @@ def _conditions(comment: str) -> dict[str, Any]:
     return out
 
 
+def load_bad_pmids(path: Path) -> set[str]:
+    """PMIDs that resolving proved wrong, written by tools/verify_sources.py.
+
+    The heuristic below is a pre-filter and catches only ids that look wrong.
+    The case that matters most -- a real, well-formed PMID attached to the
+    wrong paper -- survives it and is caught only by resolving the id and
+    comparing titles. Of the three bad references in release 2026.1, the
+    heuristic found two; this file is how the third stays out.
+    """
+    path = Path(path)
+    if not path.exists():
+        return set()
+    return {str(p) for p in json.loads(path.read_text()).get("pmids", [])}
+
+
 def suspect_references(entry: dict[str, Any]) -> list[dict[str, Any]]:
     """References whose PMID cannot be right on its face.
 
@@ -119,10 +134,12 @@ def observations_for_accession(
     retrieved_at: str | None = None,
     release: str | None = None,
     skip_reference_ids: set[str] | None = None,
+    bad_pmids: set[str] | None = None,
 ) -> Iterator[Observation]:
     """Yield every BRENDA measurement attached to one UniProt accession."""
     retrieved_at = retrieved_at or _dt.date.today().isoformat()
-    skip_reference_ids = skip_reference_ids or set()
+    skip_reference_ids = set(skip_reference_ids or set())
+    bad_pmids = bad_pmids or set()
 
     protein_ids = {
         pid
@@ -134,6 +151,15 @@ def observations_for_accession(
 
     references = entry.get("reference") or {}
 
+    # A reference whose PMID was proved wrong is dropped entirely: an
+    # unciteable measurement is not a measurement this product can use.
+    if bad_pmids:
+        skip_reference_ids |= {
+            rid
+            for rid, ref in references.items()
+            if ref.get("pmid") and str(ref["pmid"]) in bad_pmids
+        }
+
     for field, metric in METRICS.items():
         for record in entry.get(field) or []:
             if not protein_ids.intersection(record.get("proteins") or []):
@@ -142,9 +168,14 @@ def observations_for_accession(
             if value is None:
                 continue
 
-            ref_ids = [
-                r for r in (record.get("references") or []) if r not in skip_reference_ids
-            ]
+            raw_refs = record.get("references") or []
+            ref_ids = [r for r in raw_refs if r not in skip_reference_ids]
+            # Every reference behind this value was discredited. Emitting it
+            # anyway would only strip the citation, turning a measurement we
+            # know we cannot stand behind into one that merely looks uncited.
+            if raw_refs and not ref_ids:
+                continue
+
             pmid = None
             for rid in ref_ids:
                 candidate = references.get(rid, {}).get("pmid")

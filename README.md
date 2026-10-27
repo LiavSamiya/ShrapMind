@@ -68,10 +68,22 @@ to **PMID 2937183**, which is really a 1986 Russian paper on paediatric oral
 surgery. Imported unchecked, that becomes a citation in a slide deck that
 collapses the moment anyone clicks it.
 
-`f2c/sources/brenda.py::suspect_references` drops references whose PMID cannot
-be right for the stated year, and `tools/verify_sources.py --brenda-titles`
-resolves each remaining id and compares titles. Existence alone is not enough:
-a real PMID attached to the wrong paper looks perfect until someone opens it.
+Checking all 1,024 references in the EC entries this project uses found **three**
+that point at a different paper. The cheap heuristic in
+`f2c/sources/brenda.py::suspect_references` — a PMID too small for its stated
+year — caught two of them. The third, PMID 18355276, is eight digits and
+plausibly dated, and only resolving it and comparing titles revealed it belongs
+to a different paper entirely.
+
+So verification writes its findings to `data/raw/brenda/bad_references.json`,
+and the importer reads that file back. A measurement whose every reference was
+discredited is dropped rather than imported without a citation: otherwise a
+number we know we cannot stand behind would enter the warehouse merely looking
+uncited. That costs two enzymes their pH optimum, which is the right trade.
+
+```bash
+python tools/verify_sources.py --brenda-titles data/raw/brenda/subset.json
+```
 
 ## The rules this engine will not break
 

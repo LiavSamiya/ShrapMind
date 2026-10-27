@@ -180,6 +180,31 @@ def test_brenda_suspect_references_are_detected():
     assert flagged == {"1", "2"}
 
 
+def test_verified_bad_pmids_are_dropped_from_import():
+    """The heuristic misses a real PMID on the wrong paper; the blocklist must not.
+
+    PMID 18355276 is 8 digits and plausibly dated, so suspect_references lets
+    it through. Resolving it showed it points at a different paper, and that
+    finding has to survive into the import.
+    """
+    entry = {
+        "protein": {"1": {"accessions": ["P00000"]}},
+        "reference": {"5": {"pmid": 18355276, "year": 2008, "title": "Plausible"}},
+        "temperature_optimum": [
+            {"value": "55", "proteins": ["1"], "references": ["5"], "comment": ""}
+        ],
+    }
+    assert brenda.suspect_references(entry) == [], "heuristic cannot catch this one"
+
+    kept = list(brenda.observations_for_accession(entry, "P00000"))
+    assert len(kept) == 1
+
+    dropped = list(
+        brenda.observations_for_accession(entry, "P00000", bad_pmids={"18355276"})
+    )
+    assert dropped == []
+
+
 def test_gaps_name_an_engineering_action():
     candidate = score(
         _protein(observations=[_obs("temperature_optimum_c", 70.0), _obs("ph_optimum", 9.0)])
