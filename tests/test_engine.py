@@ -152,6 +152,40 @@ def test_disagreeing_measurements_use_the_median_not_the_first():
     assert "median" in summary.describe("C")
 
 
+def test_a_median_nobody_measured_does_not_score_as_a_perfect_match():
+    """Regression: a bimodal spread produced an artefact median on target.
+
+    TfH is measured at 25, 25, 50 and 55 C. The median is 37.5, which sits on
+    body temperature although no lab measured anything near it. Scoring that
+    as a near-perfect match ranked it above an enzyme whose measurements
+    genuinely cluster near 37.
+    """
+    scattered = _protein(
+        observations=[
+            _obs("temperature_optimum_c", v) for v in (25.0, 25.0, 50.0, 55.0)
+        ]
+    )
+    clustered = _protein(
+        observations=[_obs("temperature_optimum_c", v) for v in (36.0, 37.0, 38.0)]
+    )
+
+    spread_summary = rank._summarise(scattered, "temperature_optimum_c")
+    tight_summary = rank._summarise(clustered, "temperature_optimum_c")
+    assert spread_summary.value == 37.5, "the artefact median is still produced"
+
+    scattered_fit = rank._scattered_fit(spread_summary, 37.0, rank.TEMP_TOLERANCE_C)
+    clustered_fit = rank._scattered_fit(tight_summary, 37.0, rank.TEMP_TOLERANCE_C)
+    assert clustered_fit > scattered_fit, "agreement must beat coincidence"
+    assert scattered_fit < 0.75, "a 30 C disagreement cannot read as a good match"
+
+
+def test_confidence_falls_as_measurements_disagree():
+    tight = _protein(observations=[_obs("ph_optimum", 7.4), _obs("ph_optimum", 7.5)])
+    wide = _protein(observations=[_obs("ph_optimum", 5.0), _obs("ph_optimum", 11.0)])
+    assert rank._summarise(tight, "ph_optimum").confidence(rank.PH_TOLERANCE) > 0.9
+    assert rank._summarise(wide, "ph_optimum").confidence(rank.PH_TOLERANCE) < 0.3
+
+
 def test_cited_paper_matches_the_number_shown():
     """The citation shown must belong to the value shown, not to another one."""
     protein = _protein(

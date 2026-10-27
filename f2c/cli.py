@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import warehouse
+from . import export_ui, warehouse
 from .engine import decide
 from .report import render
 from .schema import MaterialSpec
@@ -39,6 +39,14 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("stats", help="describe the warehouse")
     s.add_argument("--store", type=Path, default=warehouse.DEFAULT_STORE)
 
+    e = sub.add_parser("export-ui", help="write the data the browser interface reads")
+    e.add_argument("--store", type=Path, default=warehouse.DEFAULT_STORE)
+    e.add_argument(
+        "--out",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / "ui" / "decisions.json",
+    )
+
     sel = sub.add_parser("select", help="choose the catalyst for a fragment")
     _add_material_args(sel)
     sel.add_argument("--json", action="store_true", help="emit JSON instead of text")
@@ -54,6 +62,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "stats":
         print(json.dumps(warehouse.stats(warehouse.load(args.store)), indent=2))
+        return 0
+
+    if args.command == "export-ui":
+        payload = export_ui.build(warehouse.load(args.store))
+        path = export_ui.write(payload, args.out)
+        size_kb = path.stat().st_size / 1024
+        print(
+            f"wrote {path} ({size_kb:.0f} KB, "
+            f"{len(payload['decisions'])} materials)"
+        )
         return 0
 
     material = MaterialSpec(

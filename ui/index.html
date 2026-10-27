@@ -1,0 +1,454 @@
+<title>Fragment-to-Catalyst</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a fixed fragment bar, then a single reading column of findings.
+   Instrument panel, not dashboard: measurement scales carry the uncertainty. */
+:root{
+  --paper:#f7f6f3; --panel:#fffffe; --ink:#1b1c1a; --ink-2:#55564f; --ink-3:#87887f;
+  --rule:#ddddd4; --rule-2:#eceae2;
+  --accent:#1f5f52;            /* instrument teal */
+  --ok:#2f6b3a; --warn:#8a5a12; --stop:#8c3327; --unknown:#6b6c78;
+  --font-ui:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#13140f; --panel:#1b1d17; --ink:#eceade; --ink-2:#aeafa2; --ink-3:#7d7e73;
+  --rule:#32342a; --rule-2:#23251d;
+  --accent:#63c3ad; --ok:#6fbb7c; --warn:#d7a04a; --stop:#e07a6c; --unknown:#9c9daa;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#13140f; --panel:#1b1d17; --ink:#eceade; --ink-2:#aeafa2; --ink-3:#7d7e73;
+  --rule:#32342a; --rule-2:#23251d;
+  --accent:#63c3ad; --ok:#6fbb7c; --warn:#d7a04a; --stop:#e07a6c; --unknown:#9c9daa;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-ui);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);
+  z-index:40;background:var(--panel)}
+.wrap{max-width:62rem;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance;margin:0;font-weight:600}
+a{color:var(--accent)}
+.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--font-data);font-size:.68rem;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-3)}
+
+/* ---- masthead + fragment bar ---- */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--panel);
+  border-bottom:1px solid var(--rule)}
+.masthead{display:flex;align-items:baseline;gap:.9rem;flex-wrap:wrap;padding-block:.7rem .4rem}
+.masthead h1{font-size:1.02rem;letter-spacing:-.01em}
+.masthead .sub{font-size:.8rem;color:var(--ink-3)}
+.bar{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr));
+  padding-block:.3rem .8rem;align-items:end}
+.field{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.field label{font-family:var(--font-data);font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3)}
+.field select,.field input{font:inherit;font-family:var(--font-data);font-size:.9rem;
+  padding:.42rem .5rem;border:1px solid var(--rule);border-radius:3px;
+  background:var(--paper);color:var(--ink);min-width:0;width:100%}
+.field select:focus-visible,.field input:focus-visible,button:focus-visible{
+  outline:2px solid var(--accent);outline-offset:1px}
+
+/* ---- verdict ---- */
+.verdict{display:flex;gap:.85rem;align-items:flex-start;padding:.95rem 1rem;margin-block:1.1rem;
+  border:1px solid var(--rule);border-left:4px solid var(--v,var(--unknown));
+  border-radius:3px;background:var(--panel)}
+.verdict .vtitle{font-family:var(--font-data);font-size:.74rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--v,var(--unknown));font-weight:600}
+.verdict p{margin:.3rem 0 0;color:var(--ink-2);font-size:.92rem}
+
+section{margin-block:1.7rem}
+h2{font-size:.78rem;font-family:var(--font-data);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);padding-bottom:.45rem;border-bottom:1px solid var(--rule);margin-bottom:.9rem}
+
+/* ---- catalyst identity ---- */
+.cat{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:1rem}
+.cat .name{font-size:1.45rem;font-weight:600;letter-spacing:-.015em;line-height:1.2}
+.cat .org{font-style:italic;color:var(--ink-2);font-size:.94rem;margin-top:.1rem}
+.ids{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.7rem}
+.id{font-family:var(--font-data);font-size:.74rem;padding:.2rem .45rem;border:1px solid var(--rule);
+  border-radius:2px;color:var(--ink-2);text-decoration:none;background:var(--paper)}
+a.id:hover{border-color:var(--accent);color:var(--accent)}
+.rxn{margin-top:.75rem;font-family:var(--font-data);font-size:.78rem;color:var(--ink-2);
+  overflow-x:auto;white-space:nowrap;padding-bottom:.2rem}
+
+/* ---- score ---- */
+.scorerow{display:flex;gap:1.4rem;flex-wrap:wrap;margin-top:.95rem;padding-top:.85rem;
+  border-top:1px solid var(--rule-2)}
+.metric .k{font-family:var(--font-data);font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3)}
+.metric .v{font-family:var(--font-data);font-size:1.3rem;font-variant-numeric:tabular-nums}
+
+/* ---- measurement scale: the core of this interface ---- */
+.sig{padding:.85rem 0;border-bottom:1px solid var(--rule-2)}
+.sig:last-child{border-bottom:0}
+.sighead{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap}
+.sighead .lab{font-weight:500;font-size:.92rem}
+.sighead .val{font-family:var(--font-data);font-size:.86rem;color:var(--ink-2)}
+.scale{position:relative;height:48px;margin-top:.8rem}
+.axis{position:absolute;left:0;right:0;top:19px;height:1px;background:var(--rule)}
+.tick{position:absolute;top:13px;width:1px;height:7px;background:var(--rule)}
+.ticklab{position:absolute;top:24px;transform:translateX(-50%);font-family:var(--font-data);
+  font-size:.62rem;color:var(--ink-3)}
+.target{position:absolute;top:6px;width:2px;height:27px;background:var(--accent)}
+.targetlab{position:absolute;top:-2px;transform:translateX(-50%);font-family:var(--font-data);
+  font-size:.62rem;color:var(--accent);white-space:nowrap}
+.pt{position:absolute;top:14px;width:11px;height:11px;border-radius:50%;
+  background:var(--panel);border:2px solid var(--ink-2);transform:translateX(-50%)}
+.med{position:absolute;top:11px;width:0;height:0;transform:translateX(-50%);
+  border-left:5px solid transparent;border-right:5px solid transparent;
+  border-top:7px solid var(--warn)}
+.spreadbar{position:absolute;top:18px;height:3px;background:var(--rule);opacity:.9}
+.note{font-size:.82rem;color:var(--ink-2);margin-top:.5rem}
+.note strong{color:var(--warn)}
+.unknown-sig{color:var(--unknown);font-size:.88rem;display:flex;gap:.5rem;align-items:baseline}
+.unknown-sig .mark{font-family:var(--font-data)}
+
+/* ---- generic blocks ---- */
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:.85rem 1rem}
+.stack{display:flex;flex-direction:column;gap:.7rem}
+.gap{border-left:3px solid var(--warn);padding-left:.75rem}
+.gap .g1{font-weight:500;font-size:.93rem}
+.gap .g2{font-size:.85rem;color:var(--ink-2);margin-top:.15rem}
+.gap .act{font-size:.85rem;margin-top:.3rem}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:.3rem .9rem;font-size:.88rem}
+.kv dt{font-family:var(--font-data);font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:.15rem}
+.kv dd{margin:0}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--rule-2)}
+th{font-family:var(--font-data);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;white-space:nowrap}
+td.num{font-family:var(--font-data);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tablewrap{overflow-x:auto}
+ol.lit{margin:0;padding-left:1.2rem;font-size:.87rem}
+ol.lit li{margin-bottom:.4rem;color:var(--ink-2)}
+ol.lit a{word-break:break-word}
+.limits{border:1px dashed var(--rule);border-radius:3px;padding:.85rem 1rem;background:transparent}
+.limits h3{font-size:.78rem;font-family:var(--font-data);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.5rem}
+.limits li{font-size:.87rem;color:var(--ink-2);margin-bottom:.35rem}
+button.copy{font:inherit;font-size:.82rem;padding:.35rem .7rem;border:1px solid var(--rule);
+  border-radius:3px;background:var(--panel);color:var(--ink-2);cursor:pointer}
+button.copy:hover{border-color:var(--accent);color:var(--accent)}
+footer{border-top:1px solid var(--rule);margin-top:2.2rem;padding-block:1.1rem 2rem;
+  font-size:.78rem;color:var(--ink-3)}
+@media (prefers-reduced-motion:no-preference){.pt,.med{transition:left .25s ease}}
+</style>
+
+<header>
+  <div class="wrap">
+    <div class="masthead">
+      <h1>Fragment&#8209;to&#8209;Catalyst</h1>
+      <span class="sub">Which enzyme degrades this fragment, and how far it is from working in the body</span>
+    </div>
+    <div class="bar">
+      <div class="field">
+        <label for="material">Fragment material</label>
+        <select id="material"></select>
+      </div>
+      <div class="field">
+        <label for="mass">Mass (mg)</label>
+        <input id="mass" type="number" min="0.1" step="0.1" value="50">
+      </div>
+      <div class="field">
+        <label for="site">Anatomical site</label>
+        <select id="site">
+          <option value="deep_muscle">Deep skeletal muscle</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sort">Rank candidates by</label>
+        <select id="sort">
+          <option value="score">Score</option>
+          <option value="certainty">Measured signals</option>
+          <option value="papers">Replication</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<footer class="wrap">
+  <div id="meta"></div>
+</footer>
+
+<script>
+const DATA = window.__F2C__;
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* Trailing zeros are stripped only after a decimal point. Stripping them
+   everywhere turned 20 °C into "2" on the axis. */
+const fmt = (n, d = 2) => {
+  if (n === null || n === undefined || Number.isNaN(+n)) return "—";
+  const s = (+n).toFixed(d);
+  return s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s;
+};
+
+const VERDICT = {
+  enzyme_selected:        { label: "Catalyst selected",       color: "var(--ok)" },
+  no_pathway:             { label: "No route",                color: "var(--stop)" },
+  no_candidate_meets_bar: { label: "No candidate meets bar",  color: "var(--warn)" }
+};
+
+/* The product burden is exactly linear in mass, so the page scales the
+   per-milligram figure the engine exported rather than keeping its own copy
+   of the repeat-unit masses. */
+const burdenFor = (burden, massMg) => {
+  if (!burden || !burden.computable) return null;
+  return {
+    total: burden.mmol_per_mg * massMg,
+    capture: burden.capture_mmol_per_mg * massMg
+  };
+};
+
+/* ---- the measurement scale ---------------------------------------------
+   Points are every individual measurement; the triangle is the median. When
+   they scatter, you see it rather than read it in a parenthesis. */
+function scale(sig) {
+  const pts = sig.measurements.map(m => m.value);
+  if (!pts.length) return "";
+  const target = sig.target;
+  const lo = Math.min(...pts, target), hi = Math.max(...pts, target);
+  const padding = Math.max((hi - lo) * 0.18, Math.abs(target) * 0.05, 1);
+  const min = lo - padding, max = hi + padding;
+  const pos = v => ((v - min) / (max - min)) * 100;
+
+  const ticks = [min, (min + max) / 2, max].map(v =>
+    `<span class="tick" style="left:${pos(v)}%"></span>
+     <span class="ticklab mono" style="left:${pos(v)}%">${fmt(v, 0)}</span>`).join("");
+
+  /* Two labs reporting the same number would otherwise draw as one dot, so
+     "4 measurements" would show three. Repeats stack upward instead. */
+  const seen = new Map();
+  const dots = sig.measurements.map(m => {
+    const tier = seen.get(m.value) ?? 0;
+    seen.set(m.value, tier + 1);
+    return `<span class="pt" style="left:${pos(m.value)}%;top:${14 - tier * 9}px"
+      title="${fmt(m.value)}${esc(sig.unit)}${m.pmid ? " · PMID " + esc(m.pmid) : ""}"></span>`;
+  }).join("");
+
+  const spreadBar = pts.length > 1
+    ? `<span class="spreadbar" style="left:${pos(Math.min(...pts))}%;width:${pos(Math.max(...pts)) - pos(Math.min(...pts))}%"></span>`
+    : "";
+
+  return `<div class="scale">
+    <span class="axis"></span>${ticks}${spreadBar}
+    <span class="target" style="left:${pos(target)}%"></span>
+    <span class="targetlab mono" style="left:${pos(target)}%">body ${fmt(target)}${esc(sig.unit)}</span>
+    ${dots}
+    ${sig.median !== null ? `<span class="med" style="left:${pos(sig.median)}%" title="median ${fmt(sig.median)}"></span>` : ""}
+  </div>`;
+}
+
+function signalBlock(sig) {
+  if (!sig.measurements.length) {
+    return `<div class="sig"><div class="unknown-sig">
+      <span class="mark">?</span>
+      <span><strong>${esc(sig.label)}</strong> was never measured for this enzyme.
+      It is scored as neutral evidence, not as a good result.</span></div></div>`;
+  }
+  const n = sig.n, spread = sig.spread ?? 0;
+  const disagrees = n > 1 && spread > 0;
+  /* The median of 25, 25, 50, 55 is 37.5 — a number nobody measured. Saying so
+     is the whole point of showing the points. */
+  const nearest = Math.min(...sig.measurements.map(m => Math.abs(m.value - sig.median)));
+  const artefact = disagrees && nearest > spread * 0.15;
+
+  return `<div class="sig">
+    <div class="sighead">
+      <span class="lab">${esc(sig.label)}</span>
+      <span class="val">${n === 1
+        ? `${fmt(sig.median)}${esc(sig.unit)} · 1 measurement`
+        : `median ${fmt(sig.median)}${esc(sig.unit)} · ${n} measurements · range ${fmt(spread)}`}</span>
+    </div>
+    ${scale(sig)}
+    ${artefact ? `<p class="note"><strong>No lab measured this median.</strong>
+      The reported values are ${sig.measurements.map(m => fmt(m.value)).join(", ")}${esc(sig.unit)};
+      the median falls between them. Its weight in the score is discounted accordingly.</p>`
+      : disagrees ? `<p class="note">Reported values: ${sig.measurements.map(m => fmt(m.value)).join(", ")}${esc(sig.unit)}
+        across ${n} publications.</p>` : ""}
+  </div>`;
+}
+
+function catalystCard(c) {
+  const links = [];
+  if (c.uniprot) links.push(`<a class="id" href="https://www.uniprot.org/uniprotkb/${esc(c.uniprot)}" target="_blank" rel="noopener">UniProt ${esc(c.uniprot)}${c.reviewed ? " ✓" : ""}</a>`);
+  (c.ec || []).forEach(ec => links.push(`<a class="id" href="https://www.brenda-enzymes.org/enzyme.php?ecno=${esc(ec)}" target="_blank" rel="noopener">EC ${esc(ec)}</a>`));
+  (c.pdb || []).slice(0, 4).forEach(p => links.push(`<a class="id" href="https://www.rcsb.org/structure/${esc(p)}" target="_blank" rel="noopener">PDB ${esc(p)}</a>`));
+  if (c.alphafold) links.push(`<a class="id" href="${esc(c.alphafold)}" target="_blank" rel="noopener">AlphaFold</a>`);
+  (c.rhea || []).filter(r => r.startsWith("RHEA:")).slice(0, 1).forEach(r =>
+    links.push(`<span class="id">${esc(r)}</span>`));
+
+  return `<div class="cat">
+    <div class="name">${esc(c.name)}</div>
+    <div class="org">${esc(c.organism)}</div>
+    <div class="ids">${links.join("")}</div>
+    ${c.reactions?.length ? `<div class="rxn">${esc(c.reactions[0])}</div>` : ""}
+    <div class="scorerow">
+      <div class="metric"><div class="k">Score</div><div class="v">${fmt(c.score)}</div></div>
+      <div class="metric"><div class="k">Signals unmeasured</div><div class="v">${Math.round(c.uncertainty * 100)}%</div></div>
+      <div class="metric"><div class="k">Publications</div><div class="v">${c.publications}</div></div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const key = $("#material").value;
+  const mass = Math.max(0.1, +$("#mass").value || 50);
+  const d = DATA.decisions[key];
+  const v = VERDICT[d.verdict] || { label: d.verdict, color: "var(--unknown)" };
+  const out = [];
+
+  out.push(`<div class="verdict" style="--v:${v.color}">
+    <div><div class="vtitle">${esc(v.label)}</div>
+    <p>${esc(d.rationale)}</p></div></div>`);
+
+  if (d.selected) {
+    const c = d.selected;
+    out.push(`<section><h2>Selected catalyst</h2>${catalystCard(c)}</section>`);
+
+    out.push(`<section><h2>Fit to body conditions</h2><div class="card">
+      ${Object.values(c.signals).map(signalBlock).join("")}
+    </div></section>`);
+
+    if (c.gaps.length) {
+      out.push(`<section><h2>Gap to body conditions · brief for the engineering layer</h2>
+        <div class="stack">${c.gaps.map(g => `<div class="card gap">
+          <div class="g1">${esc(g.kind)}: ${esc(g.detail)}</div>
+          <div class="g2 mono">measured ${esc(g.measured || "not measured")} → target ${esc(g.target)}</div>
+          <div class="act">${esc(g.action)}${g.pmid ? ` <a href="https://pubmed.ncbi.nlm.nih.gov/${esc(g.pmid)}/" target="_blank" rel="noopener">PMID ${esc(g.pmid)}</a>` : ""}</div>
+        </div>`).join("")}</div></section>`);
+    }
+
+    const b = burdenFor(d.burden, mass);
+    if (b) {
+      out.push(`<section><h2>Product burden at complete degradation</h2><div class="card">
+        <dl class="kv">
+          <dt>Fragment</dt><dd class="mono">${fmt(mass, 1)} mg ${esc(key)}</dd>
+          <dt>Monomer released</dt><dd class="mono">${b.total.toFixed(3)} mmol</dd>
+          <dt>Carrier capacity</dt><dd class="mono">≥ ${b.capture.toFixed(3)} mmol</dd>
+          <dt>Products</dt><dd>${(d.burden.products || []).map(esc).join(", ")}</dd>
+          ${d.burden.metabolic?.length ? `<dt>Metabolic</dt><dd>${d.burden.metabolic.map(esc).join(", ")}</dd>` : ""}
+          <dt>Release rate</dt><dd>${esc(d.burden.rate_note)}</dd>
+        </dl>
+        <p class="note">Closed mass balance. No kinetic assumption enters this figure, which is
+        why it scales exactly with fragment mass.</p>
+      </div></section>`);
+    }
+
+    if (c.literature.length) {
+      out.push(`<section><h2>Evidence trail</h2><div class="card">
+        <ol class="lit">${c.literature.map(l => `<li>${esc(l.title)}${l.year ? ` (${esc(l.year)})` : ""}
+          ${l.doi ? `<br><a href="${esc(l.doi)}" target="_blank" rel="noopener">${esc(l.doi)}</a>` : ""}</li>`).join("")}</ol>
+      </div></section>`);
+    }
+  }
+
+  const others = d.alternatives || [];
+  if (others.length) {
+    const sortBy = $("#sort").value;
+    const sorted = [...others].sort((a, b2) =>
+      sortBy === "certainty" ? a.uncertainty - b2.uncertainty :
+      sortBy === "papers" ? b2.publications - a.publications :
+      b2.score - a.score);
+    out.push(`<section><h2>${d.selected ? "Alternatives considered" : "Candidates below the bar"}</h2>
+      <div class="card tablewrap"><table>
+        <thead><tr><th>Catalyst</th><th>Organism</th><th>Score</th><th>Unmeasured</th><th>Papers</th><th>Temp / pH medians</th></tr></thead>
+        <tbody>${sorted.map(c => {
+          const t = c.signals.temperature_optimum_c, p = c.signals.ph_optimum;
+          return `<tr>
+            <td>${c.uniprot ? `<a href="https://www.uniprot.org/uniprotkb/${esc(c.uniprot)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}</td>
+            <td><em>${esc(c.organism)}</em></td>
+            <td class="num">${fmt(c.score)}</td>
+            <td class="num">${Math.round(c.uncertainty * 100)}%</td>
+            <td class="num">${c.publications}</td>
+            <td class="num">${t.median !== null ? fmt(t.median) + "°C" : "—"} / ${p.median !== null ? fmt(p.median) : "—"}</td>
+          </tr>`; }).join("")}</tbody>
+      </table></div></section>`);
+  }
+
+  out.push(`<section><h2>What this tool does not claim</h2>
+    <div class="limits"><ul>
+      <li>The score ranks strength of experimental evidence and fit to body conditions.
+        It is <strong>not</strong> a predicted degradation rate: no public dataset links a sequence
+        to turnover on a solid fragment in tissue.</li>
+      <li>A signal nobody measured is scored as neutral, never as a good result. The
+        &ldquo;unmeasured&rdquo; column is how much of each score rests on that.</li>
+      <li>Activity shown only on soluble oligomers is excluded for solid fragments.</li>
+      <li>Research prototype. Not a medical device and not a clinical decision aid.</li>
+    </ul>
+    <p style="margin:.7rem 0 0"><button class="copy" id="copyjson">Copy this result as JSON</button></p>
+    </div></section>`);
+
+  $("#main").innerHTML = out.join("");
+  $("#copyjson").addEventListener("click", copyResult);
+}
+
+function copyResult() {
+  const key = $("#material").value;
+  const mass = Math.max(0.1, +$("#mass").value || 50);
+  const d = DATA.decisions[key];
+  const b = burdenFor(d.burden, mass);
+  const payload = JSON.stringify({
+    fragment: { material: key, mass_mg: mass, site: $("#site").value },
+    verdict: d.verdict, rationale: d.rationale,
+    selected: d.selected && {
+      name: d.selected.name, organism: d.selected.organism, uniprot: d.selected.uniprot,
+      ec: d.selected.ec, score: d.selected.score, uncertainty: d.selected.uncertainty,
+      signals: d.selected.signals, gaps: d.selected.gaps
+    },
+    burden: b && { total_mmol: b.total, capture_mmol: b.capture, products: d.burden.products },
+    generated_at: DATA.generated_at
+  }, null, 2);
+
+  const btn = $("#copyjson");
+  const done = ok => { btn.textContent = ok ? "Copied" : "Press Ctrl+C to copy";
+    setTimeout(() => { btn.textContent = "Copy this result as JSON"; }, 2200); };
+  try {
+    navigator.clipboard.writeText(payload).then(() => done(true), () => fallback());
+  } catch (e) { fallback(); }
+
+  function fallback() {
+    const ta = document.createElement("textarea");
+    ta.value = payload; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    done(false);
+    setTimeout(() => ta.remove(), 8000);
+  }
+}
+
+function boot() {
+  const sel = $("#material");
+  const groups = { "Verified enzymes": [], "No verified enzyme": [], "No enzymatic route": [] };
+  for (const [key, d] of Object.entries(DATA.decisions)) {
+    if (d.verdict === "enzyme_selected") groups["Verified enzymes"].push(key);
+    else if (/^[A-Z]+$/.test(key)) groups["No verified enzyme"].push(key);
+    else groups["No enzymatic route"].push(key);
+  }
+  sel.innerHTML = Object.entries(groups).filter(([, v]) => v.length).map(([g, keys]) =>
+    `<optgroup label="${esc(g)}">${keys.map(k =>
+      `<option value="${esc(k)}">${esc(k)}</option>`).join("")}</optgroup>`).join("");
+  sel.value = "PET";
+
+  const w = DATA.warehouse;
+  $("#meta").innerHTML = `${w.proteins} experimentally verified enzymes · ${w.reviewed} Swiss-Prot reviewed ·
+    temperature optimum curated for ${w.with_temperature}, pH for ${w.with_ph}.
+    Sources: PAZy, UniProtKB, BRENDA 2026.1. Built ${esc((DATA.generated_at || "").slice(0, 10))}.`;
+
+  ["material", "mass", "site", "sort"].forEach(id =>
+    $("#" + id).addEventListener("input", render));
+  render();
+}
+boot();
+</script>

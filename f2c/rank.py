@@ -59,6 +59,20 @@ class Summary:
     def evidence(self):
         return self.observation.evidence
 
+    def confidence(self, tolerance: float) -> float:
+        """How much the median is worth believing, given how the values scatter.
+
+        A median is only a summary. Four measurements of 25, 25, 50 and 55 have
+        a median of 37.5, which lands on body temperature although not one lab
+        measured anything near it. Treating that as a perfect match would let
+        an artefact of the arithmetic outrank an enzyme whose measurements
+        genuinely cluster where we need them, so confidence falls as the values
+        disagree.
+        """
+        if self.n <= 1:
+            return 1.0
+        return 1.0 / (1.0 + self.spread / tolerance)
+
     def describe(self, unit: str) -> str:
         if self.n == 1:
             return f"{self.value:g} {unit}".strip()
@@ -86,6 +100,17 @@ def _fit(delta: float, tolerance: float) -> float:
     return max(0.0, 1.0 - delta / tolerance)
 
 
+def _scattered_fit(summary: "Summary", target: float, tolerance: float) -> float:
+    """Fit to a body condition, discounted by how far the measurements scatter.
+
+    Scattered values are pulled back toward the neutral prior: the median still
+    points the right way, it just carries less weight than a tight cluster.
+    """
+    raw = _fit(abs(summary.value - target), tolerance)
+    confidence = summary.confidence(tolerance)
+    return raw * confidence + NEUTRAL_PRIOR * (1.0 - confidence)
+
+
 def score(protein: Protein) -> ScoredCandidate:
     reasons: list[str] = []
     unknowns: list[str] = []
@@ -107,11 +132,34 @@ def score(protein: Protein) -> ScoredCandidate:
     temp = _summarise(protein, "temperature_optimum_c")
     if temp is not None:
         delta = abs(temp.value - BODY_TEMPERATURE_C)
-        parts["temperature_fit"] = _fit(delta, TEMP_TOLERANCE_C)
+        parts["temperature_fit"] = _scattered_fit(
+            temp, BODY_TEMPERATURE_C, TEMP_TOLERANCE_C
+        )
         reasons.append(
             f"temperature optimum {temp.describe('C')} vs body "
             f"{BODY_TEMPERATURE_C:g} C ({temp.evidence.citation()})"
         )
+        if temp.n > 1 and temp.confidence(TEMP_TOLERANCE_C) < 0.6:
+            reasons.append(
+                f"temperature measurements disagree across {temp.spread:g} C, "
+                "so the median is discounted"
+            )
+            # Not knowing the optimum is itself work the lab has to do, and it
+            # would otherwise go unreported whenever the median lands on target.
+            gaps.append(
+                Gap(
+                    kind="temperature spread",
+                    detail=(
+                        f"{temp.n} publications disagree across {temp.spread:g} C "
+                        f"({', '.join(f'{o.value:g}' for o in sorted(protein.observations_for('temperature_optimum_c'), key=lambda o: o.value or 0) if o.value is not None)} C), "
+                        "so this enzyme's optimum is not actually established"
+                    ),
+                    measured=temp.describe("C"),
+                    target="one assay at 37 C under comparable conditions",
+                    engineering_target="re-measure activity at body temperature before relying on the median",
+                    evidence=temp.evidence,
+                )
+            )
         if delta > 5.0:
             gaps.append(
                 Gap(
@@ -141,11 +189,16 @@ def score(protein: Protein) -> ScoredCandidate:
     ph = _summarise(protein, "ph_optimum")
     if ph is not None:
         delta = abs(ph.value - BODY_PH)
-        parts["ph_fit"] = _fit(delta, PH_TOLERANCE)
+        parts["ph_fit"] = _scattered_fit(ph, BODY_PH, PH_TOLERANCE)
         reasons.append(
             f"pH optimum {ph.describe('')} vs body {BODY_PH:g} "
             f"({ph.evidence.citation()})"
         )
+        if ph.n > 1 and ph.confidence(PH_TOLERANCE) < 0.6:
+            reasons.append(
+                f"pH measurements disagree across {ph.spread:g} units, "
+                "so the median is discounted"
+            )
         if delta > 0.5:
             gaps.append(
                 Gap(

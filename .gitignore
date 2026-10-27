@@ -21,3 +21,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# Built page: regenerate with `python tools/build_ui.py`
+ui/fragment-to-catalyst.html
