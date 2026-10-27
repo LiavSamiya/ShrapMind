@@ -186,8 +186,16 @@ footer{border-top:1px solid var(--rule);margin-top:2.2rem;padding-block:1.1rem 2
         <input id="mass" type="number" min="0.1" step="0.1" value="50">
       </div>
       <div class="field">
-        <label for="site">Anatomical site</label>
-        <select id="site">
+        <label for="cryst">Crystallinity (%)</label>
+        <input id="cryst" type="number" min="0" max="100" step="1" value="35">
+      </div>
+      <div class="field">
+        <label for="psize">Particle size (mm)</label>
+        <input id="psize" type="number" min="0.05" step="0.05" value="2">
+      </div>
+      <div class="field">
+        <label for="site">Site · only validated context</label>
+        <select id="site" disabled title="Deep skeletal muscle is the only site this engine covers">
           <option value="deep_muscle">Deep skeletal muscle</option>
         </select>
       </div>
@@ -330,6 +338,60 @@ function catalystCard(c) {
   </div>`;
 }
 
+/* Crystallinity and particle size are free inputs, so they are applied here
+   rather than baked into the export. The thresholds and wording come from the
+   engine so there is one source of truth, not a second copy written in JS. */
+function fragmentBarriers(d, mass) {
+  const R = DATA.accessibility_rules, T = R.text;
+  const key = d.material;
+  const cryst = $("#cryst").value === "" ? null : +$("#cryst").value;
+  const size = Math.max(0, +$("#psize").value || 0);
+  const density = R.density_g_cm3[key];
+  const strongest = d.selected.kinetics?.strongest;
+
+  const rows = [];
+
+  if (density && mass > 0 && size > 0) {
+    const volumeCm3 = (mass / 1000) / density;
+    const edgeCm = size / 10;
+    const count = Math.max(1, volumeCm3 / (edgeCm ** 3));
+    const areaMm2 = count * 6 * edgeCm ** 2 * 100;
+    rows.push(`<div class="card stage s-derived">
+      <div class="rowhead"><span class="t">Exposed surface</span>${badge("derived")}</div>
+      <div class="why mono">${areaMm2.toFixed(1)} mm² · ${(areaMm2 / mass).toFixed(2)} mm²/mg
+        · about ${Math.round(count).toLocaleString()} particle${count >= 2 ? "s" : ""}</div>
+      <div class="subtle">${esc(T.area_basis)}</div></div>`);
+  }
+
+  if (cryst === null || Number.isNaN(cryst)) {
+    rows.push(`<div class="card stage s-specified">
+      <div class="rowhead"><span class="t">Crystallinity</span>${badge("specified")}</div>
+      <div class="why">${esc(T.unknown)}</div></div>`);
+  } else if (cryst >= R.crystallinity_barrier_pct) {
+    const high = cryst >= R.crystallinity_high_pct;
+    rows.push(`<div class="card stage s-${high ? "specified" : "literature"}">
+      <div class="rowhead"><span class="t">Crystallinity ${cryst}%</span>
+        <span class="ev ev-${high ? "specified" : "literature"}">${high ? "high barrier" : "moderate barrier"}</span></div>
+      <div class="why">${esc(T.barrier)}</div>
+      ${strongest && strongest !== "polymer" ? `<div class="subtle">${esc(T.surrogate)}</div>` : ""}
+      <div class="subtle">Action: assay on material of the same crystallinity as the
+        fragment, or pre-treat to reduce it.</div></div>`);
+  } else {
+    rows.push(`<div class="card stage s-derived">
+      <div class="rowhead"><span class="t">Crystallinity ${cryst}%</span>${badge("derived")}</div>
+      <div class="why">Below the ${R.crystallinity_barrier_pct}% point where the crystalline
+        fraction becomes the first barrier. Enough amorphous material is exposed to attack.</div></div>`);
+  }
+
+  rows.push(`<div class="card stage s-specified">
+    <div class="rowhead"><span class="t">Surface state</span>${badge("specified")}</div>
+    <div class="why">${esc(T.corona)}</div>
+    <div class="subtle">Action: include the corona in the assay rather than using clean coupons.</div></div>`);
+
+  return `<section><h2>Fragment barriers · not fixed by choosing another catalyst</h2>
+    <div class="stack">${rows.join("")}</div></section>`;
+}
+
 const EVLABEL = {
   measured: "measured", derived: "derived",
   literature: "published", specified: "design spec"
@@ -462,6 +524,7 @@ function render() {
     }
   }
 
+  if (d.selected) out.push(fragmentBarriers(d, mass));
   if (d.downstream) out.push(downstreamSections(d.downstream));
 
   const others = d.alternatives || [];
@@ -555,7 +618,7 @@ function boot() {
     temperature optimum curated for ${w.with_temperature}, pH for ${w.with_ph}.
     Sources: PAZy, UniProtKB, BRENDA 2026.1. Built ${esc((DATA.generated_at || "").slice(0, 10))}.`;
 
-  ["material", "mass", "site", "sort"].forEach(id =>
+  ["material", "mass", "cryst", "psize", "site", "sort"].forEach(id =>
     $("#" + id).addEventListener("input", render));
   render();
 }

@@ -86,6 +86,26 @@ def render(decision: Decision) -> str:
             lines.append(f"      action   : {g.engineering_target}")
         lines.append("")
 
+    frag = decision.fragment or {}
+    if frag:
+        lines += ["FRAGMENT BARRIERS  (not fixed by choosing another catalyst)", ""]
+        geo = frag.get("geometry") or {}
+        if geo.get("computable") and "specific_area_mm2_per_mg" in geo:
+            lines += [
+                f"  surface area       : {geo['surface_area_mm2']} mm2 "
+                f"({geo['specific_area_mm2_per_mg']} mm2/mg)",
+                f"  basis              : {geo['basis']}",
+                "  surface erosion scales with this, not with mass. No rate is derived "
+                "from it.",
+                "",
+            ]
+        elif geo.get("note"):
+            lines += [f"  surface area       : {geo['note']}", ""]
+        for item in frag.get("accessibility") or []:
+            lines.append(f"  * {item['kind']} [{item['severity']}]: {item['detail']}")
+            lines.append(f"      action   : {item['action']}")
+        lines.append("")
+
     cap = decision.capture or {}
     lines += ["PRODUCT BURDEN AND CAPTURE", ""]
     if cap.get("computable"):

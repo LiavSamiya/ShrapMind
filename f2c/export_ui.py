@@ -17,8 +17,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from . import pipeline
+from . import pipeline, substrate
 from .engine import decide
+from . import formulate
 from .formulate import REPEAT_UNIT_G_PER_MOL, capture_requirement
 from .rank import BODY_PH, BODY_TEMPERATURE_C, WEIGHTS, _summarise
 from .retrieve import ALIASES, NON_ENZYMATIC
@@ -59,6 +60,21 @@ def _measurements(protein: Protein, metric: str) -> list[dict[str, Any]]:
     return out
 
 
+def _kinetics(p: Protein) -> dict[str, Any]:
+    """What the catalytic constants were measured on, by class."""
+    obs = [o for o in p.observations
+           if o.metric in substrate.KINETIC_METRICS and o.value is not None]
+    if not obs:
+        return {"n": 0, "classes": {}, "strongest": None}
+    classes = [substrate.classify((o.conditions or {}).get("substrate")) for o in obs]
+    return {
+        "n": len(obs),
+        "classes": {k: classes.count(k) for k in substrate.ORDER if classes.count(k)},
+        "labels": substrate.LABEL,
+        "strongest": substrate.best(classes),
+    }
+
+
 def _candidate(candidate: ScoredCandidate) -> dict[str, Any]:
     p = candidate.protein
     signals = {}
@@ -93,6 +109,7 @@ def _candidate(candidate: ScoredCandidate) -> dict[str, Any]:
         "reasons": candidate.reasons,
         "unknowns": candidate.unknowns,
         "signals": signals,
+        "kinetics": _kinetics(p),
         "gaps": [
             {
                 "kind": g.kind,
@@ -188,6 +205,30 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
             "with_ph": sum(1 for p in proteins if _summarise(p, "ph_optimum")),
         },
         "polymers_with_repeat_unit": sorted(REPEAT_UNIT_G_PER_MOL),
+        # Crystallinity and particle size are free inputs, so the page applies
+        # these rules itself. Exporting the thresholds and the wording keeps
+        # one source of truth instead of a second copy written in JavaScript.
+        "accessibility_rules": {
+            "crystallinity_barrier_pct": formulate.CRYSTALLINITY_BARRIER_PCT,
+            "crystallinity_high_pct": 45.0,
+            "density_g_cm3": formulate.DENSITY_G_CM3,
+            "text": {
+                "unknown": "Crystallinity not characterised. It decides whether the "
+                           "enzyme can reach the chain at all.",
+                "barrier": "Enzymes act on amorphous regions. The crystalline fraction "
+                           "resists attack and sets the ceiling on how much of this "
+                           "fragment can be degraded at all.",
+                "surrogate": "The selected enzyme's constants come from soluble "
+                             "substrates, where crystallinity does not apply, so they "
+                             "say nothing about this barrier.",
+                "corona": "A fragment in tissue carries adsorbed plasma protein and, "
+                          "in trauma, soil and blood. The enzyme meets that layer, "
+                          "not the polymer.",
+                "area_basis": "Cubes of the stated edge length filling the fragment "
+                              "volume. Surface erosion scales with this, not with mass; "
+                              "no rate is derived from it.",
+            },
+        },
         "decisions": decisions,
     }
 

@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from .formulate import capture_requirement
+from . import substrate
+from .formulate import accessibility_gaps, capture_requirement, geometry
 from .rank import rank
 from .retrieve import retrieve
 from .schema import Decision, MaterialSpec, Protein
@@ -68,7 +69,17 @@ def decide(
             generated_at=now,
         )
 
-    return Decision(
+    # Barriers that belong to the fragment rather than the catalyst. Reported
+    # separately because choosing a different enzyme does not remove them.
+    kinetics = [
+        o for o in best.protein.observations
+        if o.metric in substrate.KINETIC_METRICS and o.value is not None
+    ]
+    catalytic_class = substrate.best(
+        [substrate.classify((o.conditions or {}).get("substrate")) for o in kinetics]
+    ) if kinetics else None
+
+    decision = Decision(
         material=material,
         verdict="enzyme_selected",
         selected=best,
@@ -81,3 +92,16 @@ def decide(
         capture=capture_requirement(result.material_key, material.mass_mg),
         generated_at=now,
     )
+    decision.fragment = {
+        "geometry": geometry(
+            result.material_key, material.mass_mg, material.particle_size_mm
+        ),
+        "accessibility": accessibility_gaps(
+            result.material_key,
+            material.crystallinity_pct,
+            material.protein_corona,
+            catalytic_class,
+        ),
+        "catalytic_class": catalytic_class,
+    }
+    return decision

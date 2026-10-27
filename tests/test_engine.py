@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as _dt
+import json
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from f2c.rank import score
 from f2c.retrieve import retrieve
 from f2c.schema import Evidence, MaterialSpec, Observation, Protein
 from f2c.sources import brenda
+from f2c import substrate
 
 STORE = Path(__file__).resolve().parent.parent / "data" / "warehouse.json"
 TODAY = _dt.date.today().isoformat()
@@ -118,7 +120,18 @@ def test_unmeasured_enzyme_cannot_outrank_a_measured_good_fit():
     measured = _protein(
         reviewed=True,
         pdb_ids=["1ABC"],
-        observations=[_obs("temperature_optimum_c", 37.0), _obs("ph_optimum", 7.4)],
+        observations=[
+            _obs("temperature_optimum_c", 37.0),
+            _obs("ph_optimum", 7.4),
+            # Every scored signal has to be present for uncertainty to reach
+            # zero, catalytic evidence included.
+            Observation(
+                metric="kcat", value=2.0, unit="1/s",
+                evidence=Evidence(source_db="BRENDA", retrieved_at=TODAY,
+                                  level="experimental", pmid="2"),
+                conditions={"substrate": "PET film"},
+            ),
+        ],
     )
     assert score(measured).score > score(unmeasured).score
     assert score(measured).uncertainty == 0.0
@@ -237,6 +250,64 @@ def test_verified_bad_pmids_are_dropped_from_import():
         brenda.observations_for_accession(entry, "P00000", bad_pmids={"18355276"})
     )
     assert dropped == []
+
+
+def test_substrate_classes_separate_proxies_from_the_real_thing():
+    assert substrate.classify("4-nitrophenyl acetate") == substrate.MODEL
+    assert substrate.classify("N-succinyl-Ala-Ala-Pro-Phe-4-nitroanilide") == substrate.MODEL
+    assert substrate.classify("bis(2-hydroxyethyl)terephthalate") == substrate.OLIGOMER
+    assert substrate.classify("amorphous PET film") == substrate.POLYMER
+    assert substrate.classify("more") == substrate.UNKNOWN
+    assert substrate.classify(None) == substrate.UNKNOWN
+
+
+def test_weak_kinetics_never_score_below_no_kinetics():
+    """A reporter-ester constant proves the protein is a live hydrolase.
+
+    It says nothing about eroding a solid, so it must not lift the score much
+    -- but scoring it below silence would punish having measured anything.
+    """
+    assert substrate.WEIGHT[substrate.MODEL] >= rank.NEUTRAL_PRIOR
+    assert substrate.WEIGHT[substrate.POLYMER] > substrate.WEIGHT[substrate.OLIGOMER]
+    assert substrate.WEIGHT[substrate.OLIGOMER] > substrate.WEIGHT[substrate.MODEL]
+
+
+def test_no_warehouse_enzyme_claims_polymer_level_kinetics(proteins):
+    """Every constant in the warehouse was measured on a surrogate.
+
+    If this ever fails, someone has added real polymer kinetics and the gap
+    text below it needs revisiting -- which would be good news.
+    """
+    classes = {
+        substrate.classify((o.conditions or {}).get("substrate"))
+        for p in proteins for o in p.observations
+        if o.metric in substrate.KINETIC_METRICS and o.value is not None
+    }
+    assert substrate.POLYMER not in classes
+
+
+def test_crystallinity_changes_the_answer(proteins):
+    """Regression: it was accepted, printed, and ignored."""
+    low = decide(MaterialSpec(polymer="PET", mass_mg=50, crystallinity_pct=5), proteins)
+    high = decide(MaterialSpec(polymer="PET", mass_mg=50, crystallinity_pct=60), proteins)
+    kinds = lambda d: {g["kind"]: g["severity"] for g in d.fragment["accessibility"]}
+    assert "crystallinity" not in kinds(low)
+    assert kinds(high)["crystallinity"] == "high"
+
+
+def test_particle_size_changes_surface_area(proteins):
+    coarse = decide(MaterialSpec(polymer="PET", mass_mg=50, particle_size_mm=4), proteins)
+    fine = decide(MaterialSpec(polymer="PET", mass_mg=50, particle_size_mm=0.5), proteins)
+    a = coarse.fragment["geometry"]["specific_area_mm2_per_mg"]
+    b = fine.fragment["geometry"]["specific_area_mm2_per_mg"]
+    assert b > a * 4, "smaller particles must expose far more surface"
+
+
+def test_surface_area_is_not_turned_into_a_rate(proteins):
+    d = decide(MaterialSpec(polymer="PET", mass_mg=50, particle_size_mm=1), proteins)
+    blob = json.dumps(d.fragment).lower()
+    for forbidden in ("per hour", "per day", "mg/h", "half-life", "days to"):
+        assert forbidden not in blob
 
 
 def test_gaps_name_an_engineering_action():

@@ -8,6 +8,7 @@ unknown and counted against the confidence.
 """
 from __future__ import annotations
 
+from . import substrate
 from .schema import (
     BODY_PH,
     BODY_TEMPERATURE_C,
@@ -18,11 +19,12 @@ from .schema import (
 
 # Explicit so the ranking can be audited and argued with.
 WEIGHTS: dict[str, float] = {
-    "replication": 0.30,   # independent papers reporting activity on this material
-    "temperature_fit": 0.25,
-    "ph_fit": 0.20,
-    "curation": 0.15,      # Swiss-Prot reviewed
-    "structure": 0.10,     # an experimental structure exists
+    "replication": 0.26,   # independent papers reporting activity on this material
+    "temperature_fit": 0.22,
+    "ph_fit": 0.17,
+    "catalytic_evidence": 0.17,  # what the constants were measured on
+    "curation": 0.10,      # Swiss-Prot reviewed
+    "structure": 0.08,     # an experimental structure exists
 }
 
 # Beyond these distances from body conditions the optimum tells us the enzyme
@@ -221,6 +223,44 @@ def score(protein: Protein) -> ScoredCandidate:
                 engineering_target="measure activity at pH 7.4 before any design work",
             )
         )
+
+    # --- what the catalytic constants were measured on ---------------------
+    kinetics = [
+        o for o in protein.observations
+        if o.metric in substrate.KINETIC_METRICS and o.value is not None
+    ]
+    if kinetics:
+        classes = [substrate.classify((o.conditions or {}).get("substrate")) for o in kinetics]
+        strongest = substrate.best(classes)
+        parts["catalytic_evidence"] = substrate.WEIGHT[strongest]
+        counts = {k: classes.count(k) for k in substrate.ORDER if classes.count(k)}
+        reasons.append(
+            f"{len(kinetics)} catalytic constant{'s' if len(kinetics) != 1 else ''} "
+            "measured on "
+            + ", ".join(f"{n}× {substrate.LABEL[k]}" for k, n in counts.items())
+        )
+        if strongest != substrate.POLYMER:
+            # True for every enzyme in the warehouse as built, and the single
+            # most useful thing this engine can tell a laboratory.
+            gaps.append(
+                Gap(
+                    kind="catalytic evidence",
+                    detail=(
+                        f"no constant for this enzyme was measured on the polymer; "
+                        f"the strongest available was measured on "
+                        f"{substrate.LABEL[strongest]}"
+                    ),
+                    measured=f"{len(kinetics)} constants, best class: {strongest}",
+                    target="kcat and Km against the solid polymer at 37 C in serum",
+                    engineering_target=(
+                        "measure turnover on the fragment itself; a chromogenic ester "
+                        "shows the enzyme is an active hydrolase, not that it erodes a solid"
+                    ),
+                    evidence=kinetics[0].evidence,
+                )
+            )
+    else:
+        unknowns.append("catalytic_constants")
 
     # --- curation and structure -------------------------------------------
     if protein.reviewed:

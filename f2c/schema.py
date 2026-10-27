@@ -150,6 +150,9 @@ class Decision:
     alternatives: list[ScoredCandidate]
     rationale: str
     capture: dict[str, Any] | None = None
+    # Barriers and derived quantities belonging to the fragment itself, which
+    # choosing a different catalyst would not change.
+    fragment: dict[str, Any] | None = None
     generated_at: str | None = None
 
     def to_dict(self) -> dict[str, Any]:

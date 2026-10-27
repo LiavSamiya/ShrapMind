@@ -84,6 +84,105 @@ def capture_requirement(material_key: str, mass_mg: float | None) -> dict[str, A
     }
 
 
+# Densities, g/cm3, for converting mass and particle size into surface area.
+DENSITY_G_CM3: dict[str, float] = {
+    "PET": 1.38, "PEF": 1.43, "PLA": 1.24, "PHA": 1.25,
+    "PBS": 1.26, "PC": 1.20, "PA": 1.14, "PBAT": 1.26, "PUR": 1.20, "NR": 0.93,
+}
+
+# Above this, the crystalline fraction is the dominant barrier to an enzyme
+# reaching the chain. Below it, enough amorphous material is exposed that
+# accessibility is not the first thing to fix.
+CRYSTALLINITY_BARRIER_PCT = 30.0
+
+
+def geometry(material_key: str, mass_mg: float | None, particle_size_mm: float | None) -> dict[str, Any]:
+    """Specific surface area of the fragment.
+
+    Surface erosion scales with area, not mass, so this is the quantity a rate
+    would be expressed per. It is reported as a derived property of the input
+    and never turned into a rate, because the turnover figure that would make
+    it a rate does not exist for a solid fragment.
+    """
+    density = DENSITY_G_CM3.get(material_key)
+    if density is None or mass_mg is None:
+        return {"computable": False,
+                "reason": "needs fragment mass and a density for this polymer"}
+
+    volume_cm3 = (mass_mg / 1000.0) / density
+    out: dict[str, Any] = {
+        "computable": True,
+        "density_g_cm3": density,
+        "volume_mm3": volume_cm3 * 1000.0,
+    }
+    if particle_size_mm and particle_size_mm > 0:
+        # One cube of the stated edge length, repeated to make up the volume:
+        # a defensible first approximation that makes the size input do real work.
+        edge_cm = particle_size_mm / 10.0
+        per_particle_cm3 = edge_cm ** 3
+        count = max(1.0, volume_cm3 / per_particle_cm3)
+        area_cm2 = count * 6.0 * edge_cm ** 2
+        out.update({
+            "particle_size_mm": particle_size_mm,
+            "approx_particle_count": round(count, 1),
+            "surface_area_mm2": round(area_cm2 * 100.0, 2),
+            "specific_area_mm2_per_mg": round(area_cm2 * 100.0 / mass_mg, 3),
+            "basis": "cubes of the stated edge length filling the fragment volume",
+        })
+    else:
+        out["note"] = "particle size not characterised; surface area cannot be bounded"
+    return out
+
+
+def accessibility_gaps(
+    material_key: str,
+    crystallinity_pct: float | None,
+    protein_corona: bool,
+    catalytic_class: str | None = None,
+) -> list[dict[str, Any]]:
+    """Barriers between the enzyme and the chain it has to cut.
+
+    These belong to the fragment rather than the enzyme, so they are reported
+    separately: swapping the catalyst does not remove them.
+    """
+    out: list[dict[str, Any]] = []
+
+    if crystallinity_pct is None:
+        out.append({
+            "kind": "crystallinity",
+            "detail": "crystallinity not characterised",
+            "severity": "unknown",
+            "action": "measure it; it decides whether the enzyme can reach the chain at all",
+        })
+    elif crystallinity_pct >= CRYSTALLINITY_BARRIER_PCT:
+        severity = "high" if crystallinity_pct >= 45 else "moderate"
+        detail = (
+            f"{crystallinity_pct:g}% crystalline. Enzymes act on amorphous regions; "
+            "the crystalline fraction resists attack and sets the ceiling on how much "
+            "of this fragment can be degraded at all"
+        )
+        if catalytic_class and catalytic_class != "polymer":
+            detail += (
+                ". The selected enzyme's constants come from soluble substrates, "
+                "where crystallinity does not apply, so they say nothing about this barrier"
+            )
+        out.append({
+            "kind": "crystallinity", "detail": detail, "severity": severity,
+            "action": "assay on material of the same crystallinity as the fragment, "
+                      "or pre-treat to reduce it",
+        })
+
+    if protein_corona:
+        out.append({
+            "kind": "surface state",
+            "detail": "a fragment in tissue carries adsorbed plasma protein and, in "
+                      "trauma, soil and blood. The enzyme meets that layer, not the polymer",
+            "severity": "moderate",
+            "action": "include the corona in the assay rather than using clean coupons",
+        })
+    return out
+
+
 def residue_note(material_key: str) -> str:
     """What is left once the polymer phase is gone."""
     return (
