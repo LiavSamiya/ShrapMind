@@ -1,0 +1,23 @@
+# Bulk source downloads. Re-fetch with: python tools/fetch_sources.py
+# The small, committed slices under data/ are enough to run the engine.
+data/raw/brenda/brenda_2026_1.json
+data/raw/brenda/*.tar.gz
+data/raw/cazy/
+data/raw/pdb/
+data/raw/interpro/
+data/raw/alphafold/
+data/raw/uniprot/
+data/raw/chebi/
+data/raw/mcsa/
+
+# Logs from verification and fetch runs
+*.log
+verify_full.log
+brenda_titles.log
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.DS_Store

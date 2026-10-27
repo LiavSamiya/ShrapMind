@@ -1,0 +1,50 @@
+{
+  "fetched_at": "2026-10-27T15:31:52+00:00",
+  "sources": {
+    "pazy": {
+      "records": 505,
+      "file": "data/raw/pazy_proteins.json"
+    },
+    "mcsa": {
+      "entries": 1003,
+      "pages": 11,
+      "dir": "data/raw/mcsa"
+    },
+    "interpro": {
+      "requested": 232,
+      "retrieved": 232,
+      "dir": "data/raw/interpro"
+    },
+    "alphafold": {
+      "requested": 232,
+      "retrieved": 219,
+      "dir": "data/raw/alphafold"
+    },
+    "pdb": {
+      "requested": 603,
+      "retrieved": 602,
+      "dir": "data/raw/pdb"
+    },
+    "chebi": {
+      "requested": 69,
+      "retrieved": 69,
+      "dir": "data/raw/chebi"
+    },
+    "cazy": {
+      "retrieved": true,
+      "file": "data/raw/cazy/cazy_data.zip",
+      "members": [
+        "cazy_data_20260910.txt"
+      ],
+      "uncompressed_bytes": 376965077,
+      "content": "family assignments (feature, not activity label)",
+      "terms": "no access gate; CAZy asks to be cited"
+    }
+  },
+  "unavailable": {
+    "brenda": "data is CC BY 4.0, but the download requires actively ticking the licence box on brenda-enzymes.org/download.php -- an acceptance that has to be made by a person, not a script",
+    "sabio_rk": "REST service returns the web application, not data, from this network",
+    "fireprotdb": "documented API paths return 404; endpoint needs confirming",
+    "rhea": "direct JSON blocked (403); Rhea ids are captured via UniProt instead"
+  }
+}

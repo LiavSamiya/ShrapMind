@@ -1,0 +1,123 @@
+################ 1. WAREHOUSE ################
+{
+  "proteins": 505,
+  "with_uniprot": 235,
+  "reviewed": 167,
+  "with_structure": 60,
+  "with_temperature_optimum": 31,
+  "with_ph_optimum": 32,
+  "by_substrate": {
+    "PET": 323,
+    "PA": 76,
+    "PUR": 55,
+    "PLA": 50,
+    "PBAT": 23,
+    "PHA": 22,
+    "PBS": 19,
+    "PC": 10,
+    "NR": 8,
+    "PEF": 7
+  }
+}
+
+################ 2. PET FRAGMENT IN MUSCLE ################
+========================================================================
+FRAGMENT-TO-CATALYST  ::  catalyst selection
+========================================================================
+
+FRAGMENT
+  material      : PET  (form: polymer)
+  mass          : 50.0 mg
+  crystallinity : 35.0
+  site          : deep_muscle
+
+VERDICT: enzyme_selected
+  Selected from 323 enzymes with demonstrated activity on PET, ranked on evidence strength and fit to body conditions.
+
+SELECTED CATALYST
+
+  TfH  [pazy:19]
+    organism      : Thermobifida sp.
+    UniProt       : Q6A0I4 (reviewed)
+    EC            : 3.1.1.74
+    Rhea          : RHEA-COMP:12420, RHEA-COMP:12421, RHEA:12957
+    reaction      : pentanoate ester + H2O = pentanoate + an aliphatic alcohol + H(+)
+    structures    : 4CG1, 4CG2, 4CG3, 5ZOA, 7QJQ
+    score         : 0.93   unknown signals: 0%
+      + activity reported in 15 independent publications
+      + temperature optimum median 37.5 C over 4 measurements (range 30) vs body 37 C (PMID:15638529)
+      + pH optimum median 8  over 3 measurements (range 2) vs body 7.4 (PMID:15638529)
+      + Swiss-Prot reviewed entry
+      + experimental structure available (4CG1)
+
+  evidence trail:
+    - Characterization of a New Extracellular Hydrolase from Thermobifida fusca Degrading Aliphatic−Aromatic Copolyesters (2004)
+      https://doi.org/10.1021/bm049582t
+    - Enzymatic Degradation of Poly(ethylene terephthalate): Rapid Hydrolyse using a Hydrolase from T. fusca (2005)
+      https://doi.org/10.1002/marc.200500410
+    - Production of a recombinant polyester-cleaving hydrolase from Thermobifida fusca in Escherichia coli (2006)
+      https://doi.org/10.1007/s00449-006-0069-9
+    - Genome Sequence and Analysis of the Soil Cellulolytic ActinomyceteThermobifida fuscaYX (2007)
+      https://doi.org/10.1128/jb.01899-06
+    - Identification and Characterization of Bacterial Cutinase (2008)
+      https://doi.org/10.1074/jbc.m800848200
+    - Enzymatic Surface Hydrolysis of PET: Effect of Structural Diversity on Kinetic Properties of Cutinases from Thermobifida (2011)
+      https://doi.org/10.1021/ma200949p
+
+GAP TO BODY CONDITIONS  (the brief for the engineering layer)
+
+  * ph: optimum pH 8 is 0.6 units from body pH  [PMID:15638529]
+      measured : pH median 8  over 3 measurements (range 2)
+      target   : pH 7.4
+      action   : re-tune the active-site electrostatics for neutral pH
+
+PRODUCT BURDEN AND CAPTURE
+
+  basis              : closed mass balance at complete degradation; no kinetic assumption
+  repeat unit        : 192.17 g/mol
+  total product      : 0.2602 mmol at complete degradation
+  products           : terephthalic acid, ethylene glycol
+  needs capture      : terephthalic acid, ethylene glycol
+  carrier capacity   : >= 0.5204 mmol
+  release rate       : not reported: turnover of a solid fragment under serum and a protein corona is not in the public record, so no release schedule is derivable from these sources
+
+  residue: Inorganic inclusions and surface contamination are not enzyme substrates and persist after the polymer phase is consumed. Their fate is governed by particle size rather than chemistry, which makes residue size a measured endpoint of any degradation experiment, not an afterthought.
+
+ALTERNATIVES CONSIDERED
+
+  - TfCut2 (Thermobifida fusca) score 0.93, 0% unknown
+  - IsPETase (Pseudideonella sakaiensis) score 0.79, 0% unknown
+  - Cut190 (Saccharomonospora viridis) score 0.78, 45% unknown
+  - CalB (Moesziomyces antarcticus) score 0.78, 45% unknown
+
+NOTE
+  Ranking reflects strength of experimental evidence and fit to body
+  conditions. It is not a predicted degradation rate: no public dataset
+  links a sequence to turnover on a solid fragment in tissue.
+
+========================================================================
+
+################ 3. OTHER MATERIALS ################
+--- PLA ---
+VERDICT: enzyme_selected
+  Selected from 50 enzymes with demonstrated activity on PLA, ranked on evidence strength and fit to body conditions.
+
+--- PUR ---
+VERDICT: enzyme_selected
+  Selected from 55 enzymes with demonstrated activity on PUR, ranked on evidence strength and fit to body conditions.
+
+--- glass ---
+VERDICT: no_pathway
+  glass: Si-O-Si network; no hydrolysable bond accessible to a secreted enzyme at 37 C. No enzymatic degradation route exists; this fragment belongs to the capsule-modulation arm, not the catalyst arm.
+
+--- steel ---
+VERDICT: no_pathway
+  steel: metallic lattice; degradation would be redox corrosion, not hydrolysis. No enzymatic degradation route exists; this fragment belongs to the capsule-modulation arm, not the catalyst arm.
+
+--- PE ---
+VERDICT: no_pathway
+  No enzyme with demonstrated activity on PE is present in the seed set. This is a statement about available evidence, not a claim that the material is indegradable.
+
+################ 4. TESTS ################
+...................                                                      [100%]
+19 passed in 0.07s
