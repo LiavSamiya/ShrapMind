@@ -351,3 +351,52 @@ def test_pet_selection_is_fully_cited(proteins):
     assert chosen.protein.literature, "selection must carry its evidence trail"
     assert chosen.protein.uniprot_accession
     assert decision.capture["computable"] is True
+
+
+# --- the structure page's numbering guard ----------------------------------
+# UniProt numbers the precursor, the PDB entry numbers the mature protein, and
+# the two differ by the 40-residue signal peptide. If that offset ever shifts,
+# the viewer would highlight three arbitrary residues and call them the active
+# site, which is the kind of confident-looking error this project exists to
+# avoid. The build refuses rather than guesses.
+
+def _pdb(residues: dict[int, str], chain: str = "A") -> str:
+    lines = []
+    for i, (resi, name) in enumerate(sorted(residues.items()), start=1):
+        lines.append(
+            f"ATOM  {i:5d}  CA  {name:>3} {chain}{resi:4d}"
+            "      0.000   0.000   0.000  1.00  0.00           C"
+        )
+    return "\n".join(lines) + "\nTER\nEND\n"
+
+
+def test_structure_build_accepts_the_verified_numbering(tmp_path):
+    from tools import build_structure
+
+    pdb = tmp_path / "ok.pdb"
+    pdb.write_text(_pdb({130: "SER", 176: "ASP", 208: "HIS"}))
+    assert build_structure.verify_triad(pdb) == {130: "SER", 176: "ASP", 208: "HIS"}
+
+
+def test_structure_build_refuses_to_mislabel_the_active_site(tmp_path):
+    from tools import build_structure
+
+    # The same structure read one numbering scheme off: the positions exist but
+    # hold different residues.
+    pdb = tmp_path / "shifted.pdb"
+    pdb.write_text(_pdb({130: "ALA", 176: "GLY", 208: "LEU"}))
+    with pytest.raises(SystemExit) as exc:
+        build_structure.verify_triad(pdb)
+    assert "mislabel" in str(exc.value)
+
+
+def test_structure_build_keeps_one_chain(tmp_path):
+    from tools import build_structure
+
+    src = tmp_path / "two_chains.pdb"
+    src.write_text(
+        _pdb({130: "SER"}, chain="A").replace("END\n", "")
+        + _pdb({130: "SER"}, chain="B")
+    )
+    atoms = build_structure.trim(src, tmp_path / "out.pdb")
+    assert atoms == 1, "chain B is a second copy, not more of the same molecule"
