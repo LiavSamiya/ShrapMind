@@ -1,4 +1,6 @@
-# Fragment-to-Catalyst — catalyst selection engine
+# ShrapMind
+
+**Fragment-to-Catalyst** — a catalyst selection engine for retained shrapnel.
 
 Takes a characterised fragment and returns the enzyme that degrades it, the
 evidence behind that choice, and the specific ways the natural enzyme does not
