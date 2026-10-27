@@ -135,6 +135,33 @@ ol.lit a{word-break:break-word}
 .limits h3{font-size:.78rem;font-family:var(--font-data);letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink-3);margin-bottom:.5rem}
 .limits li{font-size:.87rem;color:var(--ink-2);margin-bottom:.35rem}
+/* Evidence class is the load-bearing distinction on this page: the catalyst
+   rests on measurements, everything downstream does not. It gets a badge, a
+   colour and a rail so the difference survives a quick scan. */
+.ev{font-family:var(--font-data);font-size:.6rem;letter-spacing:.09em;text-transform:uppercase;
+  padding:.1rem .35rem;border-radius:2px;border:1px solid currentColor;white-space:nowrap;flex:none}
+.ev-measured{color:var(--ok)} .ev-derived{color:var(--accent)}
+.ev-literature{color:var(--his,#5b4a9e)} .ev-specified{color:var(--warn)}
+.stage{border-left:3px solid var(--rule);padding-left:.8rem}
+.stage.s-measured{border-color:var(--ok)} .stage.s-derived{border-color:var(--accent)}
+.stage.s-literature{border-color:var(--his,#5b4a9e)} .stage.s-specified{border-color:var(--warn)}
+.rowhead{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+.rowhead .t{font-weight:500;font-size:.93rem}
+.why{font-size:.85rem;color:var(--ink-2);margin-top:.15rem}
+.subtle{font-size:.82rem;color:var(--ink-3);margin-top:.25rem}
+.refline{font-size:.8rem;margin-top:.3rem}
+.refline .says{color:var(--ink-2);display:block;margin-top:.15rem}
+.legend{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.78rem;color:var(--ink-2);
+  padding:.6rem .8rem;border:1px solid var(--rule);border-radius:3px;background:var(--panel)}
+.legend span{display:flex;gap:.35rem;align-items:center}
+.correction{border-left:3px solid var(--stop);padding-left:.8rem}
+.correction .c1{font-weight:500;font-size:.9rem}
+.correction .c2{font-size:.84rem;color:var(--ink-2);margin-top:.2rem}
+.flowbar{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem}
+.flowbar a{font-family:var(--font-data);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;
+  padding:.3rem .5rem;border:1px solid var(--rule);border-radius:2px;text-decoration:none;
+  color:var(--ink-2);background:var(--panel)}
+.flowbar a:hover{border-color:var(--accent);color:var(--accent)}
 button.copy{font:inherit;font-size:.82rem;padding:.35rem .7rem;border:1px solid var(--rule);
   border-radius:3px;background:var(--panel);color:var(--ink-2);cursor:pointer}
 button.copy:hover{border-color:var(--accent);color:var(--accent)}
@@ -303,6 +330,86 @@ function catalystCard(c) {
   </div>`;
 }
 
+const EVLABEL = {
+  measured: "measured", derived: "derived",
+  literature: "published", specified: "design spec"
+};
+const badge = ev => `<span class="ev ev-${ev}">${EVLABEL[ev] || ev}</span>`;
+const refLine = r => !r ? "" : `<div class="refline">
+  <a href="https://doi.org/${esc(r.doi)}" target="_blank" rel="noopener">${esc(r.title)}</a>
+  (${esc(r.year)}) · <a href="https://pubmed.ncbi.nlm.nih.gov/${esc(r.pmid)}/" target="_blank" rel="noopener">PMID ${esc(r.pmid)}</a>
+  <span class="says">What it shows: ${esc(r.says)}</span></div>`;
+
+/* Everything past catalyst selection is a design specification. It is rendered
+   in the same page because the product is the whole route, but never with the
+   same authority: each row states which kind of thing it is. */
+function downstreamSections(ds) {
+  const out = [];
+
+  out.push(`<section><h2>Treatment route · what happens after the catalyst</h2>
+    <p class="legend">
+      <span>${badge("measured")} from the warehouse, with a PMID</span>
+      <span>${badge("derived")} computed from measured values</span>
+      <span>${badge("literature")} a published finding, cited</span>
+      <span>${badge("specified")} a design decision, nothing measured yet</span>
+    </p></section>`);
+
+  out.push(`<section><h2>Stage 2 · Cocktail the carrier must deliver</h2>
+    <div class="stack">${ds.cocktail.map(c => `<div class="card stage s-${c.evidence}">
+      <div class="rowhead"><span class="t">${esc(c.role)}</span>${badge(c.evidence)}</div>
+      <div class="why">${esc(c.what)} — ${esc(c.why)}</div>
+      ${c.note ? `<div class="subtle">${esc(c.note)}</div>` : ""}
+      ${refLine(c.ref)}
+    </div>`).join("")}</div></section>`);
+
+  out.push(`<section><h2>Stage 3 · Carrier requirements</h2>
+    <div class="stack">${ds.carrier.map(c => `<div class="card stage s-${c.evidence}">
+      <div class="rowhead"><span class="t">${esc(c.property)}</span>${badge(c.evidence)}</div>
+      <div class="why">${esc(c.spec)}</div>
+      <div class="subtle">Why: ${esc(c.why)}</div>
+      ${c.note ? `<div class="subtle">${esc(c.note)}</div>` : ""}
+      ${refLine(c.ref)}
+    </div>`).join("")}</div></section>`);
+
+  out.push(`<section><h2>Stage 4 · Host response, and where this intervenes</h2>
+    <div class="card tablewrap"><table>
+      <thead><tr><th>Time</th><th>What the tissue does</th><th>Intended intervention</th><th>Basis</th></tr></thead>
+      <tbody>${ds.host_response.map(h => `<tr>
+        <td class="num">${esc(h.phase)}</td><td>${esc(h.event)}</td>
+        <td>${esc(h.intervention)}</td><td>${badge(h.evidence)}</td></tr>`).join("")}</tbody>
+    </table></div>
+    ${ds.host_response.filter(h => h.ref).map(h => refLine(h.ref)).join("")}</section>`);
+
+  const r = ds.residue;
+  out.push(`<section><h2>Stage 5 · Residue, once the polymer is gone</h2>
+    <div class="stack">
+      <div class="card"><div class="why">${esc(r.summary)}</div></div>
+      <div class="card stage s-${r.risk.evidence}">
+        <div class="rowhead"><span class="t">The risk</span>${badge(r.risk.evidence)}</div>
+        <div class="why">${esc(r.risk.what)}</div>${refLine(r.risk.ref)}</div>
+      <div class="card stage s-${r.proposed.evidence}">
+        <div class="rowhead"><span class="t">Proposed handling</span>${badge(r.proposed.evidence)}</div>
+        <div class="why">${esc(r.proposed.what)}</div></div>
+      <div class="card stage s-specified">
+        <div class="rowhead"><span class="t">Open question</span>${badge("specified")}</div>
+        <div class="why">${esc(r.open)}</div>${refLine(r.ref)}</div>
+    </div></section>`);
+
+  if (ds.caveats?.length) {
+    out.push(`<section><h2>Where the brief and the cited papers part company</h2>
+      <div class="stack">${ds.caveats.map(c => `<div class="card correction">
+        <div class="c1">${esc(c.claim)}</div>
+        <div class="c2"><strong>${esc(c.status)}.</strong> ${esc(c.detail)}</div>
+        ${refLine(c.evidence)}
+      </div>`).join("")}</div>
+      <p class="note">These are written down because a reviewer with an immunology
+      background will reach the same papers. Better to correct the claim than defend it.</p>
+    </section>`);
+  }
+
+  return out.join("");
+}
+
 function render() {
   const key = $("#material").value;
   const mass = Math.max(0.1, +$("#mass").value || 50);
@@ -354,6 +461,8 @@ function render() {
       </div></section>`);
     }
   }
+
+  if (d.downstream) out.push(downstreamSections(d.downstream));
 
   const others = d.alternatives || [];
   if (others.length) {

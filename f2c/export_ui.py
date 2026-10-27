@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from . import pipeline
 from .engine import decide
 from .formulate import REPEAT_UNIT_G_PER_MOL, capture_requirement
 from .rank import BODY_PH, BODY_TEMPERATURE_C, WEIGHTS, _summarise
@@ -157,13 +158,20 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
     for key in materials(proteins):
         spec = MaterialSpec(polymer=key, mass_mg=REFERENCE_MASS_MG)
         decision = decide(spec, proteins, max_alternatives=max_alternatives)
+        burden = _burden(key) if decision.verdict == "enzyme_selected" else None
         decisions[key] = {
             "material": key,
             "verdict": decision.verdict,
             "rationale": decision.rationale,
             "selected": _candidate(decision.selected) if decision.selected else None,
             "alternatives": [_candidate(c) for c in decision.alternatives],
-            "burden": _burden(key) if decision.verdict == "enzyme_selected" else None,
+            "burden": burden,
+            # Downstream stages are a design specification, not a computation.
+            # They ship with an evidence class per item so the interface can
+            # keep them visually distinct from the measured selection above.
+            "downstream": pipeline.build(
+                key, (burden or {}).get("products", [])
+            ) if decision.verdict == "enzyme_selected" else None,
         }
 
     return {
