@@ -1,4 +1,29 @@
+# ---------------------------------------------------------------- secrets
 .env
+
+# ---------------------------------------------------------------- data
+# Bulk source downloads. Re-fetch with: python tools/fetch_sources.py
+# The small, committed slices under data/ are enough to run the engine.
+data/raw/brenda/brenda_2026_1.json
+data/raw/brenda/*.tar.gz
+data/raw/cazy/
+data/raw/pdb/
+data/raw/interpro/
+data/raw/alphafold/
+data/raw/uniprot/
+data/raw/mcsa/
+data/raw/structures/
+# NOTE: data/raw/chebi/ and data/raw/chemistry/ ARE committed - they are the
+# compound snapshot the simulator's physics depends on, and they are small.
+# Everything else above is re-fetchable; those two are load-bearing.
+
+# ---------------------------------------------------------------- logs
+*.log
+verify_full.log
+brenda_titles.log
+audit.log*
+
+# ---------------------------------------------------------------- python
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -6,7 +31,13 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+
+# ---------------------------------------------------------------- built pages
+# Regenerate with `python tools/build_ui.py` / `python tools/build_structure.py`
+ui/fragment-to-catalyst.html
+ui/structure-built.html
+
+# ---------------------------------------------------------------- editors
 .DS_Store
-audit.log*
 .idea/
 .vscode/
