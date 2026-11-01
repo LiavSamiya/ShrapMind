@@ -26,11 +26,20 @@ def _gate(result, name):
     return next(g for g in result["gates"] if g["name"] == name)
 
 
-def test_a_sound_run_passes_every_gate():
+def test_a_sound_run_passes_every_gate_except_unresolved_hazard():
+    """With the chemistry snapshot unresolved - which is its committed state,
+    because GHS codes are regulatory strings that must be fetched and must
+    never be hand-entered - the hazard gate is the one that legitimately
+    fails. Everything else passes.
+
+    That failure is the system reporting an unanswered question, not a finding
+    of danger, and it clears once tools/fetch_chemistry.py can reach PubChem.
+    """
     r = E.run_safety_gates(_assay(), _RX, _PP)
-    assert r["passed"], r["summary"]
-    assert not r["blocking"]
-    assert len(r["gates"]) == 12
+    assert len(r["gates"]) == 14
+    assert r["failed"] == ["hazard_resolved"], r["summary"]
+    detail = _gate(r, "hazard_resolved")["detail"]
+    assert "NOT a finding of safety" in detail
 
 
 def test_fragmentation_blocks_and_trips_forbidden_products():
@@ -86,11 +95,31 @@ def test_every_gate_reports_the_number_that_decided_it():
         assert g["detail"], g["name"]
 
 
-def test_no_go_material_is_refused_at_the_reaction_stage():
-    for mat in ("polyethylene", "glass", "lead"):
+def test_non_enzymatic_materials_are_refused_at_the_reaction_stage():
+    """f2c's own non-enzymatic list: materials with no hydrolysable or
+    chelatable bond an enzyme could reach."""
+    for mat in ("glass", "lead", "ceramic", "titanium"):
         out = E.define_reaction(mat)
         assert out["ok"] is False
         assert "no-go" in out["recommendation"]
+
+
+def test_absent_evidence_is_not_reported_as_impossibility():
+    """The distinction f2c draws deliberately and this project keeps:
+    polyethylene has no documented route, which is not the same claim as
+    "polyethylene cannot be degraded"."""
+    out = E.define_reaction("PE")
+    assert out["ok"] is False
+    assert "absent evidence" in out["recommendation"]
+    assert "not proof" in out["recommendation"]
+
+
+def test_the_three_kinds_of_no_stay_distinct():
+    no_route = E.define_reaction("PE")["recommendation"]
+    non_enzymatic = E.define_reaction("glass")["recommendation"]
+    unidentified = E.define_reaction("something nobody named")["recommendation"]
+    assert no_route != non_enzymatic != unidentified
+    assert "characterize" in unidentified
 
 
 def test_unidentified_material_does_not_get_a_guessed_reaction():

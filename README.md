@@ -1,190 +1,135 @@
-# ShrapMind — the Fragment-to-Catalyst engine
+# ShrapMind — Fragment-to-Catalyst
 
-**A design-and-simulation loop that works out what a retained fragment is made of,
-searches for an enzyme candidate that could erode *that specific material* inside a
-product-capturing hydrogel, and refuses to recommend anything that fails a safety
-gate.**
+**An evidence engine and simulator for retained fragments: what is this fragment made
+of, is there a curated enzyme that could erode *that* material, and does the evidence
+actually support saying so?**
+
+Built for Nucleate Israel BioBattle 2026, MAFAT track — *Management of Retained
+Shrapnel in High-Risk Anatomical Locations*. Architecture ported from
+[VooDo](https://github.com/VooDo-AI/VooDo), winner of HackAgents BIU 2026.
 
 > ### Read this first
 >
-> ShrapMind is a **research simulation tool**. It models material chemistry using a
-> parametric kinetic model fitted to published data. It is **not** molecular dynamics,
-> **not** a protein-structure predictor, and **not** a medical device.
+> **Research prototype. Not a medical device, not a clinical decision aid, and not
+> validated for use in or on a person.**
 >
-> Every candidate it produces is a **simulation hypothesis requiring wet-lab
-> validation**. The system does not provide dosing, indications, eligibility
-> judgements or treatment protocols, and a hard gate in `shared/safety.py` **refuses**
-> to generate them — the design loop halts rather than answering.
->
-> Nothing here has been validated in vitro, in vivo or clinically.
-
-Built for BioBattle 2026. Architecture ported from
-[VooDo](https://github.com/VooDo-AI/VooDo), winner of HackAgents BIU 2026.
+> The simulator is a parametric kinetic model, not molecular dynamics and not a
+> structure predictor. Every output is a hypothesis requiring wet-lab validation. The
+> system does not provide dosing, indications or treatment protocols, and a hard gate
+> in `shared/safety.py` **refuses** to generate them — the design loop halts rather
+> than answering.
 
 ---
 
-## The problem
+## The honest headline
 
-A patient has a fragment — wood, polymer, metal — retained in soft tissue. It hurts,
-it impairs function, and the only two options are both bad: cut it out, risking
-iatrogenic damage to nerves and vessels in a crowded compartment, or leave it and
-watch a fibrotic capsule tighten around it for years.
+This system's most important output is a refusal, and it is worth stating plainly
+before anything else:
 
-Literature review puts 50–70% of penetrating fragments in the upper and lower limbs,
-most at 1–6 cm depth — shallow enough to reach with an ultrasound-guided needle. That
-is the opening: **a middle option between watchful waiting and the knife.**
+**No turnover number in the knowledge base was ever measured on a solid fragment.**
 
-ShrapMind is the computational half of that idea. It does not inject anything. It
-answers a narrower, tractable question: *given this material, is there an enzyme
-candidate whose simulated behaviour inside a capturing hydrogel is worth taking to a
-wet lab — and which measurement should we make first?*
+Of 289 kinetic measurements across 505 experimentally-verified enzymes, 168 were made
+on chromogenic model esters (4-nitrophenyl acetate and relatives), 42 on soluble
+oligomers, 58 record no substrate at all, and **none** on the real material. Only 8 of
+the 505 enzymes have a `k_cat` at all. **None** has a measured half-life. One of the
+eight is Proteinase K at 3509 s⁻¹ — measured on *casein*, milk protein. Fed naively
+into a surface-erosion model, that single number predicts spectacular PLA degradation.
 
-| Problem | How ShrapMind addresses it |
+So most runs end in a reasoned no-go, naming the substrate each constant was actually
+measured on and citing the paper. That is the finding, not a fault. A system that
+turned these constants into confident µm/day figures would be more impressive and
+less true.
+
+---
+
+## What it does
+
+```
+fragment  →  characterise  →  retrieve curated evidence  →  simulate in hydrogel
+                                                         →  14 safety gates
+                                                         →  rank, or refuse
+                                                         →  what to measure next
+```
+
+### Two halves, joined
+
+| | |
 |---|---|
-| Fragment material varies per case, and "metal" or "plastic" is not a specification | A **fragment passport** with an explicit confidence score. Confidence 0 is a valid output meaning *identify it before designing anything* |
-| A high `k_cat` from a paper says little about 37 °C in serum | Every kinetic record carries **the conditions it was measured under**, and the agent is required to carry that caveat into its report |
-| Partial degradation could create mobile microparticles — worse than leaving the fragment whole | A **fragmentation gate** on the simulated particle fraction, and a surface-erosion model rather than a bulk-scission one |
-| The reaction creates products inside tissue | A closed **mass balance** plus capture and free-product gates. For the metal route, capture — not rate — is the binding constraint |
-| Literature precedent gets oversold in pitches | The precedent table stores **what each paper does not prove**, and the report must repeat it |
-| A model asked for a dose will produce one | A **clinical-output gate** that halts the run instead of answering |
+| **`f2c/` — the evidence layer** | 505 experimentally-verified plastic-degrading enzymes from PAZy, enriched from UniProtKB and BRENDA 2026.1. 420 condition-bearing observations, **a citation on every number**, measurement-level so assays at different pH are never collapsed. Plus its own retrieval-and-ranking engine and CLI. |
+| **`server/` + `client/` — the architecture** | Streaming agent loop, surface-erosion simulator with uncertainty bands, the gate battery, approval workflow, console. |
 
----
+The join is `server/db/evidence.py`, and its whole job is to stop a number crossing
+without its provenance.
 
-## What makes it a system rather than a lookup table
+### The rules that do the work
 
-**The gates are not advisory.** `run_safety_gates` runs ten checks — mass balance,
-fragmentation, free product, capture efficiency, forbidden products, predictive
-confidence, meaningful erosion, tissue off-target, anatomical tier, material
-identification — and each reports *the number that decided it*. A failure **halts the
-loop**. The agent cannot rephrase past it, the ranking never puts a failing candidate
-above a passing one, and the approval endpoint refuses to promote one. A gate you can
-argue with is not a gate.
+Both halves share one design rule, taken from f2c because it is the stricter one:
 
-**Uncertainty is the product, not a caveat.** The assay returns a 5–95 percentile band
-over sampled kinetic parameters, because published constants for the same enzyme vary
-by an order of magnitude. If the band spans an order of magnitude, the finding is *"we
-need this measurement"* — and `plan_next_experiment` ranks experiments by exactly that:
-uncertainty × plausible upside. Measuring a candidate that is confidently bad teaches
-you nothing.
+> *A number never travels without its evidence. `None` means "not measured", which is
+> different from "measured and found to be zero".*
 
-**A no-go is a result.** Seven materials are marked no-go with reasons
-(polyethylene, polypropylene, polystyrene, glass, lead, copper, aluminium). The agent
-reports that rather than substituting a weaker candidate to have something to show.
+Concretely:
 
-**Scores are auditable, not learned.** `predict_properties` is an additive heuristic
-over a documented edit catalogue and returns its per-edit contributions. It says so in
-its own output. A trained black box would score better and justify less.
+- **Provenance bounds the claim.** f2c's `substrate.classify()` is carried through to
+  the simulation, taking the **weakest** class across the constants used — f2c scores
+  on the strongest evidence available, but a simulation must be judged on its weakest
+  input, because that is what bounds the result.
+- **Provenance sets the uncertainty.** `polymer` 0.25 · `oligomer` 0.50 · `model` 0.90
+  · `unknown` 1.20. A model-ester-derived rate comes back spanning roughly an order of
+  magnitude, which trips the confidence gate *unaided* — no special case needed.
+- **Nothing is silently defaulted.** A missing `k_cat`, `K_m` or half-life is reported
+  in `assumed_parameters` and fails a gate. A quietly substituted default is how a
+  simulation starts lying: the number looks identical whether it came from a paper or
+  from a fallback dict.
+- **Three kinds of "no" stay distinct.** *No enzymatic route* (glass, lead, titanium —
+  f2c's list) · *no documented route* (polyethylene: absent evidence, **not** proof of
+  impossibility) · *not identified yet* (characterise first). Collapsing them would let
+  "nobody has looked" masquerade as "it cannot work".
+- **Coverage is stated, not implied.** Ten polymers are curated. Cellulose and cotton
+  return an explicit empty naming what *is* covered, rather than a plausible
+  placeholder.
 
----
+### The 14 gates
 
-## Architecture
+Mass balance · fragmentation · free product · capture efficiency · forbidden products ·
+product characterised · hazard resolved · predictive confidence · meaningful erosion ·
+tissue off-target · anatomical tier · material identified · **kinetics provenance** ·
+**measured inputs**
 
-Four deployment units sharing one wire-protocol package.
+Each reports *the number that decided it*. A failure ends the **recommendation**, not
+the run: the loop locks into report-only mode where simulating, gating and submitting
+are blocked, but ranking, experiment planning and `finish(success=false)` remain —
+because "the measurement everyone needs has never been made" is the most useful thing
+this system can say, and halting outright would throw away the write-up.
 
-```
-  browser ──/ws──► FastAPI (server/app/main.py)
-                     │  asyncio.Queue ◄── emit() from the worker thread
-                     ▼
-                run_design()  (server/agent/agent.py — synchronous, in to_thread)
-                     │  dispatch() ──► Bench ──► bridge.call_sync()
-                     ▼                              │
-                LLMClient                     /worker WS ◄── dials out
-                     │                                      simulation worker
-                server/db/client.py (Postgres + pgvector)   (client/worker/)
-                                                             engines.py
-                                                             kinetics.py
-```
+`hazard_resolved` fails in the committed state **by design**: GHS codes are regulatory
+strings that must be fetched, never hand-entered. A gate firing on a half-remembered
+hazard code would be worse than no data. It clears when `tools/fetch_chemistry.py` can
+reach PubChem.
 
-**The worker dials out.** The backend never connects inward, so the machine with the
-compute — a GPU box, a lab workstation, a laptop behind NAT — needs no inbound port and
-no VPN. One backend can fan work to several workers keyed by `client_id`.
+### The chemistry layer
 
-**The agent loop is synchronous.** A step-by-step loop with explicit guards is easier
-to reason about and to argue with in review than an async one. `asyncio.to_thread` plus
-a thread-safe `emit` shim is the only seam between it and the live UI.
+The simulator's physics depended on compound properties nothing sourced — nine
+hand-written molecular radii were setting the mesh-hindrance term and, through it, the
+capture gate. Now (`f2c/sources/chemistry.py`), three tiers, and the tier travels with
+the value:
 
-**History is rebuilt every turn.** The model never receives a growing transcript of its
-own tool calls. It gets the case, a plain-text log of what was attempted, and the
-**current bench state** serialized fresh. Given a transcript of its own actions a model
-assumes they succeeded; given current state it has to look.
+| tier | meaning |
+|---|---|
+| `resolved` | fetched live from PubChem or ChEBI |
+| `derived` | **computed here** — molecular weight from atomic masses, radius from a cited correlation with a stated validity floor |
+| `reference` | the molecular **formula** only, hand-entered as chemical identity and tied to its ChEBI id |
 
-**Guardrails are pushback, not failure.** Nearly every guard appends a coaching line to
-the action log and continues. The two exceptions — a gate failure and a clinical-output
-refusal — break the loop immediately.
-
-### The ten stages
-
-```
-INSPECT      read_passport
-CHARACTERIZE characterize_fragment    → material family + confidence
-REACTION     define_reaction          → bond class, products, FORBIDDEN products
-             get_material_notes       → what the real rate limit is
-RETRIEVE     retrieve_enzymes         → families, filtered by material
-             retrieve_precedents      → and what they do NOT prove
-GENERATE     propose_variants         → sequence-level proposals
-PREDICT      predict_properties       → auditable developability scores
-             score_kinetics           → cheap shortlisting
-SIMULATE     simulate_hydrogel_assay  → the virtual experiment, with a band
-             check_mass_balance       → did the books close?
-GATE         run_safety_gates         → MANDATORY. A failure ends the run.
-RANK         rank_candidates          → multi-objective, gates first
-             plan_next_experiment     → what to measure in the wet lab
-REPORT       submit_candidate         → queue for human review
-             finish                   → the report
-```
-
-### Two modes
-
-- **Run** — executes the pipeline: retrieval, simulation, gates, ranking, report.
-- **Explain** — walks the same pipeline on the same case and teaches each stage.
-  Simulation and write tools are **withheld from the schema**, not offered and then
-  refused, and a simulation call is rewritten into a `highlight_step` annotation.
-
-### The simulation
-
-`client/worker/kinetics.py` integrates four coupled pools with RK4 and closes mass
-balance to ~1e-16:
-
-```
-fragment ──► free products ──► gel-captured ──► cleared
-         └──► particles (the fragmentation gate watches this)
-```
-
-Rate is proportional to *accessible surface area*, which shrinks as the fragment does
-(shrinking-core). Modulated by Arrhenius temperature rise × a Gaussian denaturation
-envelope, a pH envelope, Ogston mesh hindrance on both enzyme and product, serum
-protein fouling, and exponential enzyme inactivation. The mesh term is what makes the
-gel a selective filter: small products diffuse out, microparticles do not.
-
-### Approval is the write chokepoint
-
-Nothing reaches `validated_library` on the hot path. The agent and the dashboard both
-call `submit_pending_candidate`, which sanitizes every text field in one place; only
-`approve_pending_candidate` promotes a row, computing the embedding at approval time —
-and it **refuses** a candidate whose gates did not pass.
-
-Approving means *"this is a hypothesis worth a wet-lab experiment."* It does not mean
-validated, safe, or clinically usable, and the dashboard says so on screen.
-
----
-
-## Repo layout
-
-| Path | Runs on | Purpose |
-|---|---|---|
-| [`shared/`](shared/) | both | Wire types, config, safety. Source of truth for the tool vocabulary |
-| [`shared/safety.py`](shared/safety.py) | both | Four fail-closed layers, including the clinical-output gate |
-| [`server/agent/`](server/agent/) | backend | The design loop, LLM client, tool registry, per-material notes |
-| [`server/app/`](server/app/) | backend | FastAPI, the console, the reviewer dashboard, the reverse-WS bridge |
-| [`server/db/`](server/db/) | backend | Postgres + pgvector, seed data, approval workflow |
-| [`client/worker/`](client/worker/) | GPU / lab box | Thin dial-out client: the engines and the kinetic model |
-| [`tests/`](tests/) | dev | 53 tests, including both hard stops |
+Hazard is **never** hand-entered. The difference is visible in the physics: ethylene
+glycol (r = 0.26 nm, derived from C₂H₆O₂) escapes the gel to 43% capture where
+cellobiose (r = 0.51 nm) holds at 58% — which is exactly why the material notes flag
+ethylene glycol as the product to bound on the polyester route.
 
 ---
 
 ## Quickstart
 
-### Fastest path — no API key, no database, no dataset
+### No API key, no database, no dataset beyond what is committed
 
 ```bash
 pip install -r server/app/requirements.txt -r client/worker/requirements.txt
@@ -198,48 +143,35 @@ cp .env.example .env
 MOCK_LLM=1 SKIP_DB=1 PYTHONPATH=. python -m uvicorn server.app.main:app --port 7860
 ```
 
-If you left `WORKER_TOKEN` empty, the backend mints one at startup and prints it:
-
-```
-[config] WORKER_TOKEN not set - minted a dev token: f3c970e34549b07d...
-```
-
-Paste that into a second terminal (or set `WORKER_TOKEN` in `.env` to skip this step):
+The backend prints a dev worker token if you left `WORKER_TOKEN` empty. Paste it into
+a second terminal:
 
 ```bash
 PYTHONPATH=. python -m client.worker.main --backend ws://localhost:7860 --token <the-printed-token>
 ```
 
-Open <http://localhost:7860>. The scripted run walks all ten stages with the **real**
-simulator — only the LLM is mocked.
+Open <http://localhost:7860>. The scripted run walks a **PET** case against the real
+warehouse — only the LLM is mocked — and correctly ends in a no-go, citing
+PMID:35557867 and naming 4-nitrophenyl butanoate as what the constant came from.
 
-To exercise the console with no worker at all, use `MOCK_AGENT=1` instead.
-
-### Full stack
+### f2c's own CLI still works
 
 ```bash
-cp .env.example .env
+python -m f2c.cli select --material PET --mass-mg 50 --crystallinity 55
 ```
 
-Fill in `WORKER_TOKEN`, `POSTGRES_PASSWORD`, `REVIEWER_PASSWORD`, `ADMIN_PASSWORD` and
-an LLM key, then:
+```bash
+python -m f2c.cli stats
+```
+
+### Full stack
 
 ```bash
 ./server/scripts/dev_all.sh
 ```
 
-That brings up Postgres + pgvector and the backend, waits for `/health`, and seeds the
-knowledge base only if it is empty. Start the worker as above.
-
-- console — <http://localhost:7860/>
-- reviewer — <http://localhost:7860/review>
-- health — <http://localhost:7860/health>
-
-### Standalone, no web UI
-
-```bash
-PYTHONPATH=. python -m server.agent.agent --case "wood splinter in forearm" --mock-llm --skip-db
-```
+Postgres + pgvector for semantic search at scale. **Not required** to get real
+evidence — the warehouse is read directly, so `SKIP_DB=1` still runs on real data.
 
 ### Tests and lint
 
@@ -247,56 +179,84 @@ PYTHONPATH=. python -m server.agent.agent --case "wood splinter in forearm" --mo
 python -m pytest tests/ -q
 ```
 
+109 tests: 31 f2c (unchanged) and 78 here, including that mass balance closes to
+~1e-16 across a parameter sweep, that proxy kinetics are refused and the refusal names
+the assay substrate, that molecular weights are computed rather than recalled, and
+that both hard stops halt the loop.
+
 ```bash
 ruff check .
 ```
 
+`f2c/` and `tools/` are kept byte-for-byte as written and excluded from this project's
+lint settings — their tests establish their correctness, and reformatting them would
+be churn for no benefit.
+
 ---
 
-## Configuration
+## Refreshing the data
 
-Any OpenAI-compatible endpoint works — set `LLM_MODEL` and `LLM_BASE_URL`. Leave
-`LLM_BASE_URL` empty to use OpenRouter; a Gemini model id with `GEMINI_API_KEY` routes
-to Google's compat endpoint automatically.
+| source | how | current |
+|---|---|---|
+| PAZy | `python -m f2c.cli build` | live |
+| UniProtKB | same, per-accession, disk-cached | live |
+| BRENDA | **manual** — the licence box on brenda-enzymes.org must be ticked by a person | frozen at 2026.1 |
+| ChEBI / PubChem | `python tools/fetch_chemistry.py` | **not yet resolved** |
 
-Set `SHRAPMIND_PROD=1` in deployment. It refuses to boot on a missing LLM key, a short
-`WORKER_TOKEN` or a weak dashboard password, and it force-disables `MOCK_LLM`,
-`MOCK_AGENT` and `SKIP_DB` so a stray env var cannot quietly downgrade a deploy to the
-scripted demo.
+`/health` and the console sidebar both report the snapshot date, what it covers, and
+whether hazard has been resolved — because a recommendation read without knowing
+whether the data is five days or five months old is a recommendation read wrong.
 
-Every tool call is written to a one-line-per-call JSON audit log
-(`~/.shrapmind/audit.log` by default) with control characters scrubbed, so a tool
-argument cannot forge a log line.
+**Network.** The chemistry fetchers need `pubchem.ncbi.nlm.nih.gov` and
+`www.ebi.ac.uk`. A restricted cloud environment denies both; add them under **Allowed
+domains** in the environment's network settings. Offline, the fetchers are a no-op
+that leave the snapshot untouched and exit non-zero rather than writing partial data.
+
+---
+
+## Repo layout
+
+| Path | Purpose |
+|---|---|
+| [`f2c/`](f2c/) | The evidence layer: schema, warehouse, PAZy/UniProt/BRENDA sources, substrate classifier, and f2c's own engine |
+| [`f2c/sources/chemistry.py`](f2c/sources/chemistry.py) | Compound identity, derived physics, GHS hazard |
+| [`server/db/evidence.py`](server/db/evidence.py) | **The join.** Warehouse → simulator inputs, carrying provenance |
+| [`server/agent/`](server/agent/) | The design loop, tool registry, per-material notes |
+| [`server/app/`](server/app/) | FastAPI, console, reviewer dashboard, reverse-WS bridge |
+| [`client/worker/`](client/worker/) | Dial-out worker: the engines and the kinetic model |
+| [`data/`](data/) | The committed snapshots — warehouse, BRENDA subset, compounds |
+| [`tools/`](tools/) | Fetch and verification scripts |
 
 ---
 
 ## Limits, stated plainly
 
-- **The simulator is parametric.** It predicts what a given set of kinetic parameters
-  implies under given conditions. It does not predict whether a designed sequence
-  folds, expresses, or binds — nothing here is structurally modelled.
-- **`propose_variants` is an enumeration**, not a generative model. It proposes
-  sequence-level edits from a documented catalogue with directional effects.
-- **Seed kinetics are order-of-magnitude placeholders** drawn from the cited
-  literature. The `enzyme_families` table is shaped to receive a real BRENDA import;
-  `scripts/ingest_brenda.py` is the natural next task.
-- **Material identification is the weakest link.** The spectral heuristics in
-  `characterize_fragment` are coarse and documented as such; real deployment needs a
-  spectral library match. The system is built to say "confidence 0, go get a sample."
-- **The metal route is not near-term.** It is seeded, gated and reported as research —
-  slow, oxygen- and passivation-limited, and constrained by ion capture rather than
-  rate.
+- **The evidence covers plastics.** PAZy is a plastics-active enzyme database. Cellulose
+  and cotton have **zero** curated enzymes here, so the wood route — which the concept
+  brief leads with, on the sound argument that glucose and cellobiose are the mildest
+  products of any material — carries no kinetic support in this system. The gap is
+  reported, never filled with a constant borrowed from a polyester.
+- **The metal route is contested, and both positions are shown.** f2c classes iron as
+  non-enzymatic (redox corrosion, not hydrolysis). This project keeps it research-tier,
+  gated on ion capture rather than rate, and reports f2c's objection alongside any
+  result.
+- **`propose_variants` is an enumeration**, not a generative model, over a documented
+  edit catalogue with directional effects. No folding, expression or binding is
+  predicted anywhere.
+- **Developability scores are an additive heuristic** and say so in their own output,
+  returning per-edit contributions so they can be audited rather than trusted.
 - **Nothing has been validated.** No wet-lab work, no animal model, no clinical data.
 
 ---
 
 ## Team
 
-BioBattle 2026 — L. Samia · A. Nini Barak · Y. Shenhav · T. Tzadikevich · N. Talor
+L. Samia · A. Nini Barak · Y. Shenhav · T. Tzadikevich · N. Talor
 
 Mentorship on clinical framing and the imaging trade-off: Dr. Noa (field-hospital
 fragment-injury care; Weizmann Institute).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). PAZy, UniProtKB, BRENDA (CC BY 4.0), ChEBI and PubChem
+each ask to be cited; see `data/raw/manifest.json` for provenance.

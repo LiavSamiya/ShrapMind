@@ -121,6 +121,35 @@ async def health() -> dict[str, Any]:
         "mock_agent": bool(_flag("MOCK_AGENT")),
         "skip_db": bool(_flag("SKIP_DB")),
     }
+    # Data provenance and freshness. A user is entitled to know how old the
+    # evidence is and what it does not cover before reading a recommendation.
+    try:
+        from server.db.evidence import index
+
+        cov = index().coverage()
+        out["evidence"] = {
+            "snapshot": cov.get("built_at"),
+            "proteins": cov.get("proteins"),
+            "with_kcat": cov.get("with_kcat"),
+            "with_half_life": cov.get("with_half_life"),
+            "polymer_level_kinetics": cov.get("polymer_level_kinetics"),
+            "materials": sorted(cov.get("materials", {})),
+        }
+    except Exception as e:  # noqa: BLE001
+        out["evidence"] = {"ok": False, "error": str(e)}
+    try:
+        from f2c.sources.chemistry import load as load_compounds
+
+        comps = load_compounds()
+        out["chemistry"] = {
+            "compounds": len(comps),
+            "hazard_resolved": sum(1 for c in comps.values() if c.hazard_resolved),
+            "note": "hazard_resolved 0 means GHS classification has not been "
+                    "fetched; run tools/fetch_chemistry.py (needs network access "
+                    "to PubChem)",
+        }
+    except Exception as e:  # noqa: BLE001
+        out["chemistry"] = {"ok": False, "error": str(e)}
     if not _flag("SKIP_DB"):
         try:
             from server.db.client import db_health
@@ -286,10 +315,31 @@ async def ws_console(ws: WebSocket) -> None:
     await ws.accept()
     state = _clients[client_id]
     state.subscribers.add(ws)
+    snapshot = None
+    coverage: list[str] = []
+    hazard_resolved = None
+    try:
+        from server.db.evidence import index
+
+        cov = index().coverage()
+        snapshot = cov.get("built_at")
+        coverage = sorted(cov.get("materials", {}))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from f2c.sources.chemistry import load as load_compounds
+
+        comps = load_compounds()
+        hazard_resolved = sum(1 for c in comps.values() if c.hazard_resolved)
+    except Exception:  # noqa: BLE001
+        pass
     await ws.send_json(AgentEvent(kind="status", payload={
         "msg": "connected",
         "worker_connected": bridge.is_connected(client_id),
         "mode": state.mode,
+        "snapshot": snapshot,
+        "covered_materials": coverage,
+        "hazard_resolved": hazard_resolved,
     }).model_dump())
     try:
         while True:

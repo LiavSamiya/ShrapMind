@@ -44,6 +44,12 @@
       <div class="status-row">
         <span class="dot" id="worker-dot"></span><span id="worker-text">worker unknown</span>
       </div>
+      <div class="status-row">
+        <span class="dot" id="snapshot-dot"></span><span id="snapshot-text">evidence &mdash;</span>
+      </div>
+      <div class="status-row">
+        <span class="dot" id="hazard-dot"></span><span id="hazard-text">hazard &mdash;</span>
+      </div>
       <div class="side-links">
         <a href="/review">Reviewer</a>
         <button id="theme-toggle" class="linkish">Theme</button>
@@ -70,21 +76,28 @@
       <div class="intro">
         <h1>Describe the fragment case</h1>
         <p class="intro-lead">
-          ShrapMind works out what a retained fragment is made of, searches for an
-          enzyme candidate that could erode <em>that</em> material, and simulates it
-          inside a product-capturing hydrogel &mdash; then refuses to recommend
-          anything that fails a safety gate.
+          ShrapMind works out what a retained fragment is made of, searches
+          <strong>505 curated enzymes</strong> for a candidate that could erode
+          <em>that</em> material, and simulates it inside a product-capturing
+          hydrogel &mdash; then refuses to recommend anything that fails a safety gate.
         </p>
         <div class="scope-note">
           <strong>Research simulation.</strong> Every result is a hypothesis requiring
           wet-lab validation. This system models material chemistry; it does not
           provide clinical guidance, dosing or treatment direction, and it will
           refuse requests for them.
+          <br><br>
+          Expect refusals. No turnover number in the knowledge base was ever
+          measured on a solid fragment &mdash; of 289 kinetic measurements, 168
+          are on chromogenic model esters and none on the real material &mdash;
+          so the provenance gate blocks most rate claims by design. That is the
+          finding, not a fault.
         </div>
         <div class="chips">
-          <button class="chip">Wood splinter retained in the forearm, symptomatic 8 months, surgery declined</button>
-          <button class="chip">PET fibre fragment in peri-articular soft tissue, confirmed by FTIR</button>
-          <button class="chip">Iron fragment, oxidised surface, chronic pain, no imaging available</button>
+          <button class="chip">PET polyester fibre fragment in the forearm, confirmed by FTIR, surgery declined</button>
+          <button class="chip">Nylon fragment in soft tissue, symptomatic 8 months</button>
+          <button class="chip">Wood splinter in the forearm &mdash; is there any curated evidence for cellulose?</button>
+          <button class="chip">Iron fragment, oxidised surface, chronic pain</button>
           <button class="chip">Unidentified fragment, no sample taken &mdash; what can you tell me?</button>
         </div>
       </div>

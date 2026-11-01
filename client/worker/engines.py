@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import time
 from typing import Any
 
@@ -36,7 +37,22 @@ try:
 except ImportError:  # pragma: no cover
     from client.worker import kinetics  # type: ignore[no-redef]
 
-ENGINE_VERSION = "0.1.0"
+ENGINE_VERSION = "0.2.0"
+
+
+def _compounds() -> dict[str, Any]:
+    """The compound store: identity, derived physics and hazard status.
+
+    Loaded lazily so the worker still runs if the chemistry snapshot is
+    missing - in which case properties are absent rather than invented, and
+    the gates say so.
+    """
+    try:
+        from f2c.sources.chemistry import load
+
+        return load()
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def _mock() -> bool:
@@ -52,121 +68,292 @@ def _mock() -> bool:
 # a reviewer has to be able to read it and disagree with it.
 # --------------------------------------------------------------------------
 
-MATERIALS: dict[str, dict[str, Any]] = {
-    "cellulose": {
-        "aliases": ["wood", "timber", "splinter", "plant", "cellulosic"],
-        "bond_class": "beta-1,4-glycosidic",
-        "mechanism": "hydrolysis",
+def _f2c_tables() -> dict[str, Any]:
+    """f2c's own material tables. Real values, already reviewed, already
+    tested - so they are imported rather than retyped here."""
+    try:
+        from f2c.formulate import (
+            CRYSTALLINITY_BARRIER_PCT,
+            DENSITY_G_CM3,
+            HYDROLYSIS_PRODUCTS,
+            METABOLIC,
+            REPEAT_UNIT_G_PER_MOL,
+        )
+        from f2c.retrieve import ALIASES, NON_ENZYMATIC
+
+        return {"repeat": REPEAT_UNIT_G_PER_MOL, "density": DENSITY_G_CM3,
+                "products": HYDROLYSIS_PRODUCTS, "metabolic": METABOLIC,
+                "aliases": ALIASES, "non_enzymatic": NON_ENZYMATIC,
+                "crystallinity_barrier": CRYSTALLINITY_BARRIER_PCT}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+_T = _f2c_tables()
+
+# Map f2c's product names onto the compound-store keys, so the physics can
+# look up a radius for each one.
+_PRODUCT_KEY = {
+    "terephthalic acid": "terephthalic_acid",
+    "ethylene glycol": "ethylene_glycol",
+    "2,5-furandicarboxylic acid": "furandicarboxylic_acid",
+    "lactic acid": "lactic_acid",
+    "3-hydroxybutyric acid": "3_hydroxybutyric_acid",
+    "succinic acid": "succinic_acid",
+    "1,4-butanediol": "butanediol",
+    "bisphenol A": "bisphenol_a",
+    "carbonate": "carbonate",
+    "6-aminohexanoic acid": "aminohexanoic_acid",
+    "glucose": "glucose",
+    "cellobiose": "cellobiose",
+}
+
+# Per-material detail that f2c's tables do not carry: the bond class the enzyme
+# has to attack, the mechanism, how accessible the surface is, and how mature
+# the route is. Keyed by the PAZy abbreviation so it joins onto the warehouse.
+_MATERIAL_DETAIL: dict[str, dict[str, Any]] = {
+    "PET": {
+        "aliases": ["pet", "polyester", "polyethylene terephthalate", "plastic",
+                    "fibre", "fiber"],
+        "bond_class": "aromatic ester", "mechanism": "hydrolysis",
+        "maturity": "flagship", "default_surface": "semi-crystalline",
+        "note": "The flagship route, because it is the one the evidence "
+                "actually supports: 323 curated enzyme records against this "
+                "substrate. Read the assay conditions before quoting any "
+                "constant - nearly all published PET enzymology is 50-70 C on "
+                "amorphous film, and this application is 37 C on "
+                "semi-crystalline fibre in serum. Ethylene glycol is the "
+                "product to bound explicitly.",
+    },
+    "PEF": {
+        "aliases": ["pef", "polyethylene furanoate", "furanoate"],
+        "bond_class": "aromatic ester", "mechanism": "hydrolysis",
+        "maturity": "research", "default_surface": "semi-crystalline",
+        "note": "Furanoate analogue of PET with far thinner evidence (7 "
+                "records). Treat PET results as suggestive, not transferable.",
+    },
+    "PA": {
+        "aliases": ["pa", "nylon", "polyamide", "nylon-6"],
+        "bond_class": "amide", "mechanism": "hydrolysis",
+        "maturity": "benchmark", "default_surface": "semi-crystalline",
+        "note": "Polyamide hydrolysis. The nylon oligomer hydrolases are the "
+                "one family in the warehouse with constants measured on a "
+                "genuine oligomer of the target rather than a chromogenic "
+                "ester, which makes them the strongest available evidence - "
+                "still oligomer-level, not polymer-level.",
+    },
+    "PLA": {
+        "aliases": ["pla", "polylactic acid", "polylactide"],
+        "bond_class": "aliphatic ester", "mechanism": "hydrolysis",
+        "maturity": "benchmark", "default_surface": "semi-crystalline",
+        "note": "Lactic acid is an ordinary metabolite, so the product profile "
+                "is mild. But the candidates retrieved for PLA are broad "
+                "proteases: one of them has its turnover number measured on "
+                "casein. A constant from milk protein says nothing about a "
+                "solid polyester, and the provenance gate will say so.",
+    },
+    "PHA": {
+        "aliases": ["pha", "polyhydroxyalkanoate", "phb"],
+        "bond_class": "aliphatic ester", "mechanism": "hydrolysis",
+        "maturity": "benchmark", "default_surface": "semi-crystalline",
+        "note": "3-hydroxybutyrate is a ketone body and clears metabolically. "
+                "One of the mildest product profiles here.",
+    },
+    "PBS": {
+        "aliases": ["pbs", "polybutylene succinate"],
+        "bond_class": "aliphatic ester", "mechanism": "hydrolysis",
+        "maturity": "research", "default_surface": "semi-crystalline",
+        "note": "Succinate clears metabolically; 1,4-butanediol does not and "
+                "needs capture.",
+    },
+    "PC": {
+        "aliases": ["pc", "polycarbonate"],
+        "bond_class": "carbonate ester", "mechanism": "hydrolysis",
+        "maturity": "research", "default_surface": "semi-crystalline",
+        "note": "Bisphenol A is a hydrolysis product. Its hazard status must "
+                "be resolved before this route is discussed as an option at "
+                "all - it currently lands in requires-capture by set "
+                "difference, with no toxicological basis recorded anywhere.",
+    },
+    "PUR": {
+        "aliases": ["pur", "pu", "polyurethane", "foam"],
+        "bond_class": "carbamate ester", "mechanism": "hydrolysis",
+        "maturity": "research", "default_surface": "unknown",
+        "note": "Aromatic amine release is a hard blocker, and f2c "
+                "deliberately records no repeat unit for polyurethane because "
+                "it is not fixed by the class - so the product mass balance is "
+                "not computable. Both facts have to be reported, not "
+                "papered over.",
+    },
+    "PBAT": {
+        "aliases": ["pbat"],
+        "bond_class": "aliphatic-aromatic ester", "mechanism": "hydrolysis",
+        "maturity": "research", "default_surface": "semi-crystalline",
+        "note": "A copolyester; like PUR its repeat unit is not fixed by the "
+                "class, so mass balance is not computable.",
+    },
+    "NR": {
+        "aliases": ["nr", "natural rubber", "latex", "rubber"],
+        "bond_class": "polyisoprene C=C", "mechanism": "redox",
+        "maturity": "research", "default_surface": "unknown",
+        "note": "Rubber cleavage is oxidative rather than hydrolytic, and the "
+                "evidence is thin (8 records).",
+    },
+    "PE": {
+        "aliases": ["pe", "polyethylene", "polythene"],
+        "bond_class": "aliphatic C-C", "mechanism": "redox",
+        "maturity": "no_documented_route", "default_surface": "semi-crystalline",
+        "note": "No depolymerisation route is documented at body conditions: "
+                "the backbone is unactivated C-C and would need oxidation "
+                "first. Note the distinction f2c draws and this project keeps - "
+                "this is ABSENT EVIDENCE, not a proof of impossibility. Saying "
+                "'polyethylene cannot be degraded' would overstate what the "
+                "record supports.",
+    },
+    "PP": {
+        "aliases": ["pp", "polypropylene"],
+        "bond_class": "aliphatic C-C", "mechanism": "redox",
+        "maturity": "no_documented_route", "default_surface": "semi-crystalline",
+        "note": "As polyethylene: unactivated backbone, no documented route at "
+                "body conditions, absent evidence rather than impossibility.",
+    },
+    "PS": {
+        "aliases": ["ps", "polystyrene", "styrofoam"],
+        "bond_class": "aliphatic C-C with pendant aryl", "mechanism": "redox",
+        "maturity": "no_documented_route", "default_surface": "amorphous",
+        "note": "As polyethylene: no documented route at body conditions.",
+    },
+    # Kept, but with no curated enzyme evidence in this knowledge base.
+    "CELLULOSE": {
+        "aliases": ["cellulose", "wood", "timber", "splinter", "cellulosic"],
+        "bond_class": "beta-1,4-glycosidic", "mechanism": "hydrolysis",
+        "maturity": "unsupported", "default_surface": "crystalline",
+        "molar_mass_g_mol": 162.14, "density_g_cm3": 1.5,
         "products": ["cellobiose", "glucose"],
-        "forbidden_products": ["microparticle", "formaldehyde"],
-        "cofactors": [],
-        "molar_mass_g_mol": 162.14,
-        "density_g_cm3": 1.5,
-        "default_product": "cellobiose",
-        "maturity": "flagship",
-        "note": (
-            "Best-evidenced route. Hydrolysis to cellobiose and glucose, both "
-            "ordinary metabolites. Main unknowns are crystallinity limiting "
-            "accessible surface and the non-sterile nature of a wood fragment."
-        ),
+        "note": "The concept brief leads with wood because the product "
+                "profile is the mildest of any material: hydrolysis to "
+                "cellobiose and glucose, both ordinary metabolites. That "
+                "argument stands. What does NOT stand is any kinetic claim - "
+                "PAZy is a plastics-active enzyme database and contains no "
+                "cellulase, so this knowledge base has zero curated evidence "
+                "for this material. Report the gap; do not borrow a constant "
+                "from a polyester.",
     },
-    "pet": {
-        "aliases": ["polyester", "polyethylene terephthalate", "plastic", "fibre", "fiber"],
-        "bond_class": "aromatic ester",
-        "mechanism": "hydrolysis",
-        "products": ["mhet", "terephthalic_acid", "ethylene_glycol"],
-        "forbidden_products": ["microparticle"],
-        "cofactors": [],
-        "molar_mass_g_mol": 192.17,
-        "density_g_cm3": 1.38,
-        "default_product": "mhet",
-        "maturity": "benchmark",
-        "note": (
-            "Strong published precedent for the enzyme chemistry, but nearly "
-            "all of it at elevated temperature on amorphous substrate. "
-            "Activity at 37 degC in serum is the open question, and ethylene "
-            "glycol release has to be bounded, not assumed harmless."
-        ),
-    },
-    "cotton": {
-        "aliases": ["fabric", "textile", "cloth"],
-        "bond_class": "beta-1,4-glycosidic",
-        "mechanism": "hydrolysis",
+    "COTTON": {
+        "aliases": ["cotton", "fabric", "textile", "cloth"],
+        "bond_class": "beta-1,4-glycosidic", "mechanism": "hydrolysis",
+        "maturity": "unsupported", "default_surface": "crystalline",
+        "molar_mass_g_mol": 162.14, "density_g_cm3": 1.54,
         "products": ["cellobiose", "glucose"],
-        "forbidden_products": ["microparticle", "dye_leachate"],
-        "cofactors": [],
-        "molar_mass_g_mol": 162.14,
-        "density_g_cm3": 1.54,
-        "default_product": "cellobiose",
-        "maturity": "benchmark",
-        "note": (
-            "Same chemistry as cellulose but far higher crystallinity, so "
-            "accessibility is the rate limit. Textile dyes and finishes are "
-            "an additive risk the gate list has to carry."
-        ),
+        "note": "As cellulose, with higher crystallinity and the additional "
+                "risk of dyes and finishes. No curated evidence here either.",
     },
-    "iron_steel": {
-        "aliases": ["iron", "steel", "metal", "ferrous", "shrapnel"],
-        "bond_class": "metallic Fe(0)",
-        "mechanism": "redox",
-        "products": ["fe_ion", "metal_ion"],
-        "forbidden_products": ["microparticle", "free_fe_ion_unbound"],
-        "cofactors": ["electron_acceptor", "chelator"],
-        "molar_mass_g_mol": 55.85,
-        "density_g_cm3": 7.87,
-        "default_product": "fe_ion",
-        "maturity": "research",
-        "note": (
-            "Highest-risk route and the one the concept brief itself flags. "
-            "Enzyme-assisted corrosion is documented but slow, oxygen- and "
-            "passivation-limited, and it liberates ions rather than "
-            "metabolites - so capture, not rate, is the binding constraint."
-        ),
-    },
-    "polyurethane": {
-        "aliases": ["pu", "foam"],
-        "bond_class": "carbamate ester",
-        "mechanism": "hydrolysis",
-        "products": ["oligomer"],
-        "forbidden_products": ["microparticle", "aromatic_amine"],
-        "cofactors": [],
-        "molar_mass_g_mol": 220.0,
-        "density_g_cm3": 1.2,
-        "default_product": "oligomer",
-        "maturity": "research",
-        "note": (
-            "Aromatic amine release is a hard blocker; any route that cannot "
-            "demonstrate amine-free products should not advance."
-        ),
+    "IRON_STEEL": {
+        "aliases": ["iron", "steel", "ferrous", "shrapnel", "metal"],
+        "bond_class": "metallic Fe(0)", "mechanism": "redox",
+        "maturity": "research", "default_surface": "oxidised",
+        "molar_mass_g_mol": 55.85, "density_g_cm3": 7.87,
+        "products": ["fe_ion"], "cofactors": ["electron_acceptor", "chelator"],
+        "note": "Research-tier and contested. f2c classes iron as "
+                "non-enzymatic on the grounds that degradation would be redox "
+                "corrosion rather than hydrolysis, and that objection is "
+                "reported alongside any result here. The hydrogenase "
+                "literature is real but slow, anaerobic and oxygen- and "
+                "passivation-limited. The reaction liberates ions rather than "
+                "metabolites, so CAPTURE and not rate is the binding "
+                "constraint: if the capture gate fails, the answer is no-go, "
+                "not 'optimise the enzyme'.",
     },
 }
+
+
+def _build_materials() -> dict[str, dict[str, Any]]:
+    """Assemble the material registry from f2c's tables plus the detail above.
+
+    Molar masses, densities and product lists come from f2c/formulate.py
+    rather than being retyped, so there is one copy of each number. Where f2c
+    deliberately omits a repeat unit (PUR, PBAT, NR - "not fixed by the
+    class"), the omission is carried through as computable=False instead of
+    being filled with a representative value.
+    """
+    out: dict[str, dict[str, Any]] = {}
+    repeat = _T.get("repeat", {})
+    density = _T.get("density", {})
+    products = _T.get("products", {})
+    for abbr, detail in _MATERIAL_DETAIL.items():
+        prods = detail.get("products")
+        if prods is None:
+            prods = [_PRODUCT_KEY.get(p, p) for p in products.get(abbr, [])]
+        mm = detail.get("molar_mass_g_mol", repeat.get(abbr))
+        dens = detail.get("density_g_cm3", density.get(abbr))
+        out[abbr.lower()] = {
+            "abbreviation": abbr,
+            "aliases": detail["aliases"],
+            "bond_class": detail["bond_class"],
+            "mechanism": detail["mechanism"],
+            "products": prods,
+            # Particulate is forbidden everywhere; hazard-bearing products are
+            # caught by the gate against resolved GHS classification instead
+            # of by a hand-written opinion list.
+            "forbidden_products": ["microparticle"],
+            "cofactors": detail.get("cofactors", []),
+            "molar_mass_g_mol": mm,
+            "density_g_cm3": dens,
+            "mass_balance_computable": mm is not None,
+            "default_product": (prods[0] if prods else "oligomer"),
+            "maturity": detail["maturity"],
+            "default_surface": detail["default_surface"],
+            "note": detail["note"],
+        }
+    return out
+
+
+MATERIALS: dict[str, dict[str, Any]] = _build_materials()
 
 # Materials with no credible enzymatic depolymerisation route at body
 # conditions. Naming them explicitly is more useful than silently returning
 # a weak candidate - a no-go is a finding.
-NO_GO_MATERIALS = {
-    "polyethylene": "no credible depolymerisation route without prior oxidation",
-    "polypropylene": "no credible depolymerisation route without prior oxidation",
-    "polystyrene": "no credible depolymerisation route without prior oxidation",
-    "glass": "silicate; no enzymatic route - chelation and redox both inapplicable",
-    "lead": "toxic ion load; chelation and redox are separate problems, not one route",
-    "copper": "toxic ion load; chelation and redox are separate problems, not one route",
-    "aluminium": "passivating oxide; ion capture dominates and no enzyme route applies",
+NO_GO_MATERIALS: dict[str, str] = dict(_T.get("non_enzymatic", {}))
+# f2c blocks iron, steel and titanium as non-enzymatic. This project keeps the
+# iron route as research-tier, so it is lifted out of the block list - but its
+# reason is preserved in IRON_OBJECTION and reported with every iron result,
+# so a reviewer sees both positions rather than only ours.
+IRON_OBJECTION = {
+    k: NO_GO_MATERIALS.pop(k)
+    for k in ("iron", "steel") if k in NO_GO_MATERIALS
 }
 
 
 def resolve_material(text: str) -> tuple[str, float]:
-    """Map free text onto a material family. Returns (family, confidence)."""
-    s = (text or "").lower()
-    for family, spec in MATERIALS.items():
-        if family in s:
-            return family, 0.9
+    """Map free text onto a material family. Returns (family_key, confidence).
+
+    Matching is on WORD BOUNDARIES, not substrings. Several abbreviations here
+    are two letters - PA, PC, NR - and a substring search for "pa" matches
+    "particle", "pad" and "apart". Getting the material wrong is the cheapest
+    possible way to produce a confident wrong answer, so the match is strict
+    and an unrecognised material returns confidence 0 rather than a guess.
+    """
+    s_norm = (text or "").lower()
+    tokens = set(re.findall(r"[a-z0-9]+", s_norm))
+
+    # An explicit family key or abbreviation is the strongest signal.
+    for key, spec in MATERIALS.items():
+        if key in tokens or spec["abbreviation"].lower() in tokens:
+            return key, 0.9
+    # Then the longer aliases: multi-word ones matched as phrases, single
+    # words as whole tokens.
+    for key, spec in MATERIALS.items():
         for alias in spec["aliases"]:
-            if alias in s:
-                return family, 0.75
+            a = alias.lower()
+            if (" " in a and a in s_norm) or (" " not in a and a in tokens):
+                return key, 0.75
+    # A material with no enzymatic route at all is still an identification.
     for name in NO_GO_MATERIALS:
-        if name in s:
+        if name in tokens:
             return name, 0.8
+    for name in IRON_OBJECTION:
+        if name in tokens:
+            return "iron_steel", 0.8
     return "unknown", 0.0
 
 
@@ -295,6 +482,18 @@ def define_reaction(material_family: str, surface_state: str = "unknown") -> dic
             "ok": False,
             "reason": f"unknown material family {fam!r}",
             "recommendation": "characterize the fragment before defining a reaction",
+        }
+    # Three distinct kinds of "no", kept apart on purpose. Collapsing them
+    # would let "nobody has looked" masquerade as "it cannot work".
+    if spec["maturity"] == "no_documented_route":
+        return {
+            "ok": False,
+            "reason": spec["note"],
+            "recommendation": "no-go on current evidence: no depolymerisation "
+                              "route is documented for this material at body "
+                              "conditions. This is absent evidence, not proof "
+                              "of impossibility - report it as such.",
+            "maturity": spec["maturity"],
         }
     accessibility = {
         "crystalline": 0.25,
@@ -616,6 +815,7 @@ def score_kinetics(
         "time_to_half_h": r["time_to_half_h"],
         "mass_balance_residual": r["mass_balance_residual"],
         "k_surface_umol_mm2_h": r["k_surface_umol_mm2_h"],
+        "product_radius_known": r.get("product_radius_known", False),
         "method": "point estimate; run simulate_hydrogel_assay for the band",
     }
 
@@ -710,6 +910,8 @@ def simulate_hydrogel_assay(
         "product": r["product"],
         "n_samples": r["n_samples"],
         "kinetics_provenance": provenance,
+        "product_radius_nm": r.get("product_radius_nm"),
+        "product_radius_known": r.get("product_radius_known", False),
         "rel_sigma": r.get("rel_sigma"),
         "assumed_parameters": assumed,
         "measured_on": (base or {}).get("measured_on"),
@@ -851,7 +1053,7 @@ def run_safety_gates(
          if cf >= t else
          "capture is too low - the gel is not containing the products it creates")
 
-    # 5. Forbidden products.
+    # 5. Forbidden products, now informed by hazard classification.
     produced = set()
     if assay.get("product"):
         produced.add(str(assay["product"]))
@@ -859,9 +1061,53 @@ def run_safety_gates(
         produced.add("microparticle")
     forbidden = {str(x) for x in (spec.get("forbidden_products") or [])}
     hit = sorted(produced & forbidden)
-    gate("forbidden_products", not hit, ", ".join(hit) or "none", sorted(forbidden),
-         "no forbidden product in the simulated mix" if not hit else
-         f"forbidden product present: {', '.join(hit)}")
+
+    # A resolved GHS health hazard (H3xx) on a product is a forbidden product
+    # on evidence rather than on opinion. This is the half of the check that
+    # used to rest entirely on a hand-written list.
+    store = _compounds()
+    hazard_hits: list[str] = []
+    for prod in sorted(produced):
+        c = store.get(prod)
+        if c is None or not getattr(c, "hazard_resolved", False):
+            continue
+        health = [h for h in (c.ghs_codes or []) if h.startswith("H3")]
+        if health:
+            hazard_hits.append(f"{prod} ({', '.join(health)})")
+    all_hits = hit + hazard_hits
+    gate("forbidden_products", not all_hits, ", ".join(all_hits) or "none",
+         sorted(forbidden) + ["any resolved GHS H3xx"],
+         "no forbidden product in the simulated mix, and no resolved GHS "
+         "health hazard among the products" if not all_hits else
+         f"forbidden product present: {', '.join(all_hits)}")
+
+    # 5b. Product characterisation. The capture and free-product gates above
+    #     are computed from each product's molecular radius. If a product is
+    #     not in the compound store, that radius was a generic fallback and
+    #     those numbers do not mean what they appear to mean.
+    prod_known = bool(assay.get("product_radius_known", True))
+    prod_name = str(assay.get("product") or "unspecified")
+    gate("product_characterised", prod_known, prod_name, "present in the compound store",
+         f"{prod_name} is characterised; its radius is derived from its formula"
+         if prod_known else
+         f"{prod_name} is not in the compound store, so the mesh-hindrance "
+         f"term used a generic fallback radius. The capture and free-product "
+         f"numbers above are therefore not trustworthy for this product")
+
+    # 5c. Hazard resolution. Not a pass/fail on safety - a pass/fail on whether
+    #     the safety question was ASKED. Unresolved hazard is reported as
+    #     unresolved, never as safe.
+    unresolved = [p for p in sorted(produced)
+                  if p in store and not getattr(store[p], "hazard_resolved", False)]
+    missing_entirely = [p for p in sorted(produced) if p not in store]
+    pending = unresolved + missing_entirely
+    gate("hazard_resolved", not pending, ", ".join(pending) or "none",
+         "GHS classification resolved for every product",
+         "hazard classification is resolved for every product"
+         if not pending else
+         f"no hazard classification has been resolved for: {', '.join(pending)}. "
+         f"This is NOT a finding of safety - it is an unanswered question. "
+         f"Run tools/fetch_chemistry.py to resolve it against PubChem")
 
     # 6. Predictive confidence.
     un = float(assay.get("uncertainty", 99.0))

@@ -278,6 +278,28 @@ function resultCard(p) {
   const body = el("card-body");
 
   const assay = p.assay || null;
+
+  /* Provenance first, above the numbers. If the kinetics came from a
+   * chromogenic stand-in, that is the most important thing on the card and it
+   * must not sit below a large bold erosion rate. */
+  if (assay && assay.kinetics_provenance) {
+    const prov = assay.kinetics_provenance;
+    const good = prov === "polymer" || prov === "oligomer";
+    const banner = el("prov " + (good ? "prov-ok" : "prov-bad"));
+    const on = assay.measured_on || "an unrecorded substrate";
+    banner.textContent = good
+      ? "Kinetics measured on " + on + " \u2014 " + prov + "-level evidence."
+      : "Kinetics measured on " + on + " \u2014 " + prov +
+        "-level evidence, not on the fragment material. The rate below is an " +
+        "extrapolation across substrates, not a prediction.";
+    body.appendChild(banner);
+  }
+  if (assay && (assay.assumed_parameters || []).length) {
+    const warn = el("prov prov-bad",
+      "Assumed, not measured: " + assay.assumed_parameters.join(", ") +
+      ". These fell back to generic defaults.");
+    body.appendChild(warn);
+  }
   if (assay) {
     const m = el("metrics");
     const ci = assay.erosion_rate_ci || [];
@@ -366,6 +388,30 @@ function resultCard(p) {
     body.appendChild(h);
   }
 
+  if (assay && (assay.evidence_citations || []).length) {
+    const cites = el("cites");
+    cites.appendChild(el("k", "evidence"));
+    const list = document.createElement("div");
+    list.className = "cite-list";
+    const seen = {};
+    assay.evidence_citations.forEach((c) => {
+      if (!c || seen[c]) return;
+      seen[c] = 1;
+      const m = /^PMID:(\d+)$/.exec(c);
+      if (m) {
+        const a = document.createElement("a");
+        a.href = "https://pubmed.ncbi.nlm.nih.gov/" + m[1] + "/";
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = c;
+        list.appendChild(a);
+      } else {
+        list.appendChild(el("cite", c));
+      }
+    });
+    cites.appendChild(list);
+    body.appendChild(cites);
+  }
   if (p.disclaimer) body.appendChild(el("disclaimer", p.disclaimer));
   card.appendChild(body);
   return card;
@@ -396,6 +442,7 @@ function renderEvent(ev, replaying) {
   switch (kind) {
     case "status": {
       if (p.worker_connected !== undefined) setWorker(p.worker_connected);
+      if (p.snapshot !== undefined && p.snapshot) setSnapshot(p.snapshot, p.covered_materials, p.hazard_resolved);
       if (p.user_prompt) {
         append(el("msg user", p.user_prompt));
         if (!replaying) {
@@ -503,6 +550,43 @@ function setLink(up) {
   const txt = document.getElementById("link-text");
   dot.className = "dot " + (up ? "on" : "off");
   txt.textContent = up ? "connected" : "reconnecting";
+}
+
+/* The evidence snapshot's age, and what it covers. Shown because a
+ * recommendation read without knowing the data is five days or five months
+ * old is a recommendation read wrong. */
+function setSnapshot(iso, materials, hazardResolved) {
+  const el2 = document.getElementById("snapshot-text");
+  const dot = document.getElementById("snapshot-dot");
+  if (!el2) return;
+  let days = null;
+  try {
+    days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  } catch (e) { /* ignore */ }
+  const age = days === null ? "" : days <= 0 ? " (today)"
+    : days === 1 ? " (1 day old)" : " (" + days + " days old)";
+  el2.textContent = "evidence " + String(iso).slice(0, 10) + age;
+  el2.title = (materials && materials.length)
+    ? "Curated materials: " + materials.join(", ")
+    : "";
+  if (dot) dot.className = "dot " + (days !== null && days > 90 ? "off" : "on");
+
+  const hz = document.getElementById("hazard-text");
+  const hzdot = document.getElementById("hazard-dot");
+  if (hz) {
+    if (hazardResolved === null || hazardResolved === undefined) {
+      hz.textContent = "hazard data unknown";
+      if (hzdot) hzdot.className = "dot";
+    } else if (hazardResolved > 0) {
+      hz.textContent = "hazard resolved (" + hazardResolved + ")";
+      if (hzdot) hzdot.className = "dot on";
+    } else {
+      hz.textContent = "hazard not resolved";
+      hz.title = "GHS classification has not been fetched. Run " +
+                 "tools/fetch_chemistry.py (needs network access to PubChem).";
+      if (hzdot) hzdot.className = "dot off";
+    }
+  }
 }
 
 function setWorker(up) {

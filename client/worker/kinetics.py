@@ -49,18 +49,32 @@ except ImportError:  # pragma: no cover - worker requirements install numpy
 _R = 8.314462618  # J/(mol*K)
 _T_REF = 310.15  # 37 degC in K
 
-# Molecular radius proxies (nm) per product class, for mesh hindrance.
-_PRODUCT_RADIUS_NM = {
-    "glucose": 0.4,
-    "cellobiose": 0.6,
-    "oligomer": 1.2,
-    "terephthalic_acid": 0.5,
-    "ethylene_glycol": 0.3,
-    "mhet": 0.6,
-    "fe_ion": 0.1,
-    "metal_ion": 0.1,
-    "microparticle": 50.0,
-}
+# Molecular radius (nm) per product, for the mesh-hindrance term.
+#
+# These used to be nine hand-written guesses. They now come from the compound
+# store, where each radius is either derived from the compound's molecular
+# weight (itself computed from its formula) or, for ions, an ionic radius -
+# with the provenance recorded per value. See f2c/sources/chemistry.py.
+#
+# This matters more than it looks: the radius feeds mesh_hindrance(), which
+# sets how much product escapes the gel, which is what the capture gate
+# measures. Guessed radii meant a guessed safety verdict.
+_FALLBACK_RADIUS_NM = 1.0
+
+
+def _product_radii() -> dict[str, float]:
+    try:
+        from f2c.sources.chemistry import load
+
+        return {k: c.radius_nm for k, c in load().items() if c.radius_nm}
+    except Exception:  # noqa: BLE001 - the simulator must still run standalone
+        return {}
+
+
+try:
+    _PRODUCT_RADIUS_NM: dict[str, float] = _product_radii()
+except Exception:  # noqa: BLE001
+    _PRODUCT_RADIUS_NM = {}
 
 
 @dataclass
@@ -216,7 +230,8 @@ def simulate(
     k_surf = effective_rate_constant(enzyme, gel, cond)
     r0 = _sphere_radius_mm(fragment.volume_mm3)
     k_inact = math.log(2.0) / max(enzyme.half_life_h, 1e-6)
-    prod_radius = _PRODUCT_RADIUS_NM.get(enzyme.product, 1.0)
+    prod_radius = _PRODUCT_RADIUS_NM.get(enzyme.product, _FALLBACK_RADIUS_NM)
+    radius_known = enzyme.product in _PRODUCT_RADIUS_NM
     escape = mesh_hindrance(prod_radius, gel.mesh_nm)
 
     # State: fragment, free, captured, cleared, particles (umol)
@@ -317,6 +332,8 @@ def simulate(
         "particle_fraction": (y[4] / consumed) if consumed > 1e-12 else 0.0,
         "k_surface_umol_mm2_h": k_surf,
         "product": enzyme.product,
+        "product_radius_nm": prod_radius,
+        "product_radius_known": radius_known,
     }
 
 
