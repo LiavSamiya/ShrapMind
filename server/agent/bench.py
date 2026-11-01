@@ -128,8 +128,11 @@ class Bench:
                 continue
             found = self.base_params_for(str(key))
             if found:
-                # Caller-supplied values take precedence over the warehouse.
+                # Caller-supplied values take precedence over the warehouse,
+                # but the host-safety screen is not overridable - it is not an
+                # input, it is a property of the protein.
                 merged = {**found, **{k: v for k, v in base.items() if v is not None}}
+                merged["enzyme_safety"] = self.enzyme_safety_for(str(key))
                 return merged
         return base
 
@@ -278,11 +281,12 @@ class Bench:
                 "covered_materials": covered,
             }
 
+        unsafe = [h.name for h in hits if h.safety and h.safety.blocking]
         self.state["families"] = [h.to_dict() for h in hits]
         # Keep the full records so simulate can lift measured parameters, and
         # the citations travel with them.
         self._evidence = {h.name: h for h in hits}
-        return {
+        out: dict[str, Any] = {
             "families": self.state["families"],
             "n": len(hits),
             "snapshot": idx.built_at,
@@ -291,6 +295,16 @@ class Bench:
                     "fragment, so pass base_params from these records rather than "
                     "inventing values, and expect the provenance gate to bite.",
         }
+        if unsafe:
+            out["host_unsafe_candidates"] = unsafe
+            out["warning"] = (
+                f"HOST SAFETY: {', '.join(unsafe)} would act on human tissue, "
+                f"not only on the fragment. Each one's `enzyme_safety` field "
+                f"names the host substrate at risk. These are listed last and "
+                f"must not be selected: the gate battery will refuse them, and "
+                f"an enzyme that digests the tissue holding the wound together "
+                f"is worse than leaving the fragment in place.")
+        return out
 
     def base_params_for(self, family_name: str) -> dict[str, Any]:
         """Measured parameters for one retrieved family, ready for the
@@ -307,6 +321,15 @@ class Bench:
         if kcat is not None:
             out["measured_on"] = kcat.substrate_name or "an unrecorded substrate"
         return out
+
+    def enzyme_safety_for(self, family_name: str) -> dict[str, Any]:
+        """Host-safety screen for one retrieved family."""
+        ev = getattr(self, "_evidence", {})
+        rec = ev.get(family_name)
+        if rec is None:
+            key = str(family_name).strip().lower()
+            rec = next((v for k, v in ev.items() if k.strip().lower() == key), None)
+        return rec.safety.to_dict() if (rec and rec.safety) else {}
 
     def retrieve_precedents(self, query: str, top_k: int = 3) -> Any:
         """Literature precedents, carrying what each does NOT prove."""

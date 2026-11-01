@@ -23,6 +23,7 @@ import re
 import time
 from typing import Any
 
+from shared.biosafety import assess_products
 from shared.safety import (
     check_clinical_output,
     sanitize_for_prompt,
@@ -916,6 +917,7 @@ def simulate_hydrogel_assay(
         "assumed_parameters": assumed,
         "measured_on": (base or {}).get("measured_on"),
         "evidence_citations": (base or {}).get("evidence_citations") or [],
+        "enzyme_safety": (base or {}).get("enzyme_safety"),
         "disclaimer": simulation_disclaimer(),
     }
 
@@ -1182,8 +1184,60 @@ def run_safety_gates(
          f"simulation fell back to a generic default, so the rate reflects that "
          f"default rather than this enzyme")
 
+    # 15. HOST SAFETY OF THE ENZYME ITSELF.
+    #
+    #     Gate 8 asked whether the REACTION we are running attacks a bond type
+    #     present in human tissue. This asks the different and equally
+    #     necessary question: what else can THIS PARTICULAR PROTEIN do?
+    #
+    #     The knowledge base shows why both are needed. Every one of the four
+    #     peptidases in it is retrieved as a PLA candidate. PLA hydrolysis is
+    #     aliphatic-ester chemistry, so gate 8 passes them - but Proteinase K
+    #     and the subtilisins are broad-spectrum serine proteases whose own
+    #     activity is on peptide bonds, which is what collagen, elastin and
+    #     fibronectin are made of. Proteinase K's turnover number here was
+    #     measured on casein: a protein.
+    enzyme_safety = assay.get("enzyme_safety") or {}
+    if enzyme_safety:
+        risks = enzyme_safety.get("risks") or []
+        blocking_risks = [r for r in risks if r.get("severity") == "blocking"]
+        detail_ok = (
+            f"{enzyme_safety.get('name', 'the candidate')} has no host-substrate "
+            f"activity flagged from its classification. Absence of a flag is not "
+            f"evidence of selectivity."
+        )
+        gate("enzyme_host_safety", not blocking_risks,
+             enzyme_safety.get("worst_severity", "unknown"),
+             "no blocking host-substrate activity",
+             detail_ok if not blocking_risks else
+             "; ".join(f"{r['kind']} on {r['host_substrate']} - {r['why']}"
+                       for r in blocking_risks)[:600])
+    else:
+        gate("enzyme_host_safety", False, "not screened",
+             "an enzyme safety screen",
+             "no host-safety screen was supplied for the candidate enzyme. The "
+             "question of whether this protein attacks host tissue has not been "
+             "asked, which is not the same as a negative answer")
+
+    # 16. PRODUCT HAZARD MECHANISM.
+    #     Distinct from the GHS gate: that one asks whether a regulatory
+    #     classification has been fetched, this one asks whether the product has
+    #     a known mechanism of local harm.
+    prods = list(spec.get("products") or [])
+    if assay.get("product"):
+        prods.append(str(assay["product"]))
+    passess = assess_products(sorted(set(prods)))
+    pblock = passess.get("blocking") or []
+    gate("product_hazard", not pblock, ", ".join(pblock) or passess["worst_severity"],
+         "no product with a blocking hazard mechanism",
+         passess["summary"] if not pblock else
+         "; ".join(h["mechanism"][:200] for h in passess["hazards"]
+                   if h["severity"] == "blocking"))
+
     failed = [g["name"] for g in gates if not g["passed"]]
     return {
+        "product_assessment": passess,
+        "enzyme_safety": enzyme_safety or None,
         "gates": gates,
         "passed": not failed,
         "failed": failed,

@@ -77,6 +77,32 @@ HOW TO BE USEFUL RATHER THAN IMPRESSIVE
 - Avoid buzzwords. Write for a working scientist who will ask you which
   number you are basing that on.
 
+HOST SAFETY - ASK IT TWICE
+There are two separate questions and passing one does not pass the other.
+
+  1. Does the REACTION attack a bond type present in human tissue?
+  2. What else can THIS PARTICULAR PROTEIN do?
+
+The knowledge base shows why both are needed. Every peptidase in it is
+retrieved as a candidate for PLA. PLA hydrolysis is aliphatic-ester chemistry,
+which is not a human tissue bond, so question 1 passes them - but Proteinase K
+and the subtilisins are broad-spectrum serine proteases, and peptide bonds are
+what collagen, elastin and fibronectin are made of. Proteinase K's turnover
+number in this warehouse was measured on casein, a protein. An enzyme that
+digests the tissue holding the wound together is worse than leaving the
+fragment in place.
+
+Every retrieved family carries an `enzyme_safety` field. Read it. If it is
+blocking, do not select that candidate - say why it was excluded and move to
+the next. Never select a protease, collagenase, elastase, hyaluronidase or
+phospholipase for a local injection.
+
+Products need the same treatment. Each material's product panel has documented
+hazard mechanisms where any are known: ethylene glycol oxidises to oxalate,
+1,4-butanediol to GHB, free iron drives Fenton chemistry in an inflamed wound
+where peroxide is already abundant, bisphenol A is an oestrogen-receptor
+agonist. State the mechanism, not just "the products are captured".
+
 THE GATES
 run_safety_gates is mandatory before submit_candidate or finish(success=true).
 If a gate fails, the run stops and you report the failure. Do not re-run the
@@ -84,7 +110,9 @@ same candidate with different wording, do not route around the gate, and do
 not describe a gate failure as a minor issue. The gates are: mass balance,
 fragmentation, free product, capture efficiency, forbidden products,
 predictive confidence, meaningful erosion, tissue off-target, anatomical
-tier, material identification.
+tier, material identification, kinetics provenance, measured inputs,
+product characterisation, hazard resolution, ENZYME HOST SAFETY and
+PRODUCT HAZARD.
 """
 
 SYSTEM_PROMPT_RUN = f"""{_SHARED_RULES}

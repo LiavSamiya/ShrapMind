@@ -45,6 +45,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from shared.biosafety import assess_enzyme
+
 log = logging.getLogger("shrapmind.evidence")
 
 # f2c lives at the repo root alongside server/ and client/.
@@ -124,6 +126,10 @@ class EnzymeEvidence:
     missing: list[str] = field(default_factory=list)
     retrieved_at: str | None = None
     source_version: str | None = None
+    # Host-safety screen: does this protein attack the patient? Attached here
+    # so it travels with the candidate rather than being an optional extra
+    # step the agent might skip.
+    safety: Any = None
 
     # ------------------------------------------------------------------ export
 
@@ -149,6 +155,8 @@ class EnzymeEvidence:
             out["half_life_h"] = self.measured["half_life_h"].value
         out["kinetics_provenance"] = self.kinetics_provenance
         out["assumed_parameters"] = list(self.missing)
+        if self.safety is not None:
+            out["enzyme_safety"] = self.safety.to_dict()
         out["evidence_citations"] = [
             m.citation for m in self.measured.values() if m.citation
         ]
@@ -171,6 +179,7 @@ class EnzymeEvidence:
             "kinetics_provenance": self.kinetics_provenance,
             "measured": {k: v.describe() for k, v in self.measured.items()},
             "missing": self.missing,
+            "enzyme_safety": self.safety.to_dict() if self.safety else None,
             "retrieved_at": self.retrieved_at,
             "source_version": self.source_version,
         }
@@ -250,6 +259,11 @@ def _build(protein: Any) -> EnzymeEvidence:
         if needed not in ev.measured:
             ev.missing.append(label)
 
+    t_opt = ev.measured.get("temperature_optimum_c")
+    ev.safety = assess_enzyme(
+        ev.name, ev.ec_numbers, ev.organism,
+        t_opt.value if t_opt else None)
+
     first = next(iter(ev.measured.values()), None)
     if first is not None:
         ev.retrieved_at = first.retrieved_at
@@ -279,8 +293,13 @@ class EvidenceIndex:
         # Strongest evidence first: real material, then more papers.
         rank = {"polymer": 3, "oligomer": 2, "model": 1, "unknown": 0}
         for abbr in self.by_material:
+            # A candidate that would attack host tissue is never ranked above
+            # one that would not, whatever its kinetics - the same rule the
+            # gate battery applies, applied at retrieval so the agent sees the
+            # safe options first.
             self.by_material[abbr].sort(
-                key=lambda r: (rank.get(r.kinetics_provenance, 0),
+                key=lambda r: (0 if (r.safety and r.safety.blocking) else 1,
+                               rank.get(r.kinetics_provenance, 0),
                                r.publication_count,
                                len(r.measured)),
                 reverse=True)
@@ -349,6 +368,8 @@ class EvidenceIndex:
             "with_kcat": sum(1 for r in self.records if "kcat" in r.measured),
             "with_half_life": sum(1 for r in self.records if "half_life_h" in r.measured),
             "polymer_level_kinetics": prov.get("polymer", 0),
+            "host_unsafe": sum(1 for r in self.records
+                               if r.safety and r.safety.blocking),
         }
 
 

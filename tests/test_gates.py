@@ -12,7 +12,11 @@ _BASE = {"k_cat": 3.0, "k_m_uM": 45.0, "half_life_h": 96.0, "volume_mm3": 8.0,
          "accessibility": 0.3, "mesh_nm": 20.0, "capture_rate_per_h": 0.6,
          "capture_capacity_umol": 200.0, "molar_mass_g_mol": 162.14,
          "density_g_cm3": 1.5, "kinetics_provenance": "polymer",
-         "measured_on": "amorphous PET film"}
+         "measured_on": "amorphous PET film",
+         # A sound run also has to have ASKED whether the enzyme attacks the
+         # patient. An unscreened candidate fails gate 15 by design.
+         "enzyme_safety": {"name": "a clean esterase", "risks": [],
+                           "worst_severity": "note", "blocking": False}}
 _CAND = {"name": "cellulase-WT", "parent_family": "cellulase", "edits": []}
 
 
@@ -36,7 +40,7 @@ def test_a_sound_run_passes_every_gate_except_unresolved_hazard():
     of danger, and it clears once tools/fetch_chemistry.py can reach PubChem.
     """
     r = E.run_safety_gates(_assay(), _RX, _PP)
-    assert len(r["gates"]) == 14
+    assert len(r["gates"]) == 16
     assert r["failed"] == ["hazard_resolved"], r["summary"]
     detail = _gate(r, "hazard_resolved")["detail"]
     assert "NOT a finding of safety" in detail
@@ -186,3 +190,55 @@ def test_measured_inputs_pass_when_both_constants_are_real():
     assert "K_m" not in a["assumed_parameters"]
     r = E.run_safety_gates(a, _RX, _PP)
     assert "measured_inputs" not in r["failed"]
+
+
+# ---------------------------------------------------------------- host safety
+#
+# The gate that exists because every peptidase in the knowledge base is
+# retrieved as a PLA candidate, and a spec-level bond-class check waves them
+# through.
+
+
+def test_a_protease_candidate_is_refused_even_when_the_target_bond_is_not_a_tissue_bond():
+    """PLA hydrolysis is aliphatic-ester chemistry, so the reaction-level
+    tissue check passes. The enzyme-level check must not."""
+    proteinase_k = {"name": "Proteinase K", "ec_numbers": ["3.4.21.64"],
+                    "risks": [{"kind": "proteolysis",
+                               "host_substrate": "host structural proteins",
+                               "why": "broad-spectrum serine endopeptidase",
+                               "severity": "blocking", "tier": "established",
+                               "basis": "EC 3.4.21"}],
+                    "worst_severity": "blocking", "blocking": True}
+    r = E.run_safety_gates(_assay(enzyme_safety=proteinase_k), _RX, _PP)
+    assert r["blocking"]
+    assert "enzyme_host_safety" in r["failed"]
+    # and the ester-bond reaction check still passes, proving the two are
+    # genuinely independent questions
+    assert "tissue_off_target" not in r["failed"]
+
+
+def test_an_unscreened_enzyme_fails_rather_than_passing_by_default():
+    """Not asking is not the same as a negative answer."""
+    base = {k: v for k, v in _BASE.items() if k != "enzyme_safety"}
+    a = E.simulate_hydrogel_assay(_CAND, base, {"hours": 336.0},
+                                  product="cellobiose", n_samples=16, seed=5)
+    r = E.run_safety_gates(a, _RX, _PP)
+    assert "enzyme_host_safety" in r["failed"]
+    detail = _gate(r, "enzyme_host_safety")["detail"]
+    assert "not the same as a negative answer" in detail
+
+
+def test_free_iron_products_block_on_their_mechanism():
+    rx = {"bond_class": "metallic Fe(0)", "mechanism": "redox",
+          "products": ["fe_ion"], "forbidden_products": ["microparticle"]}
+    r = E.run_safety_gates(_assay(), rx, _PP)
+    assert "product_hazard" in r["failed"]
+    assert "Fenton" in _gate(r, "product_hazard")["detail"]
+
+
+def test_a_metabolite_only_product_panel_passes_the_hazard_gate():
+    rx = {"bond_class": "beta-1,4-glycosidic", "mechanism": "hydrolysis",
+          "products": ["cellobiose", "glucose"],
+          "forbidden_products": ["microparticle"]}
+    r = E.run_safety_gates(_assay(), rx, _PP)
+    assert "product_hazard" not in r["failed"]
