@@ -89,12 +89,43 @@ Concretely:
   return an explicit empty naming what *is* covered, rather than a plausible
   placeholder.
 
-### The 14 gates
+### Two presentations — the choice that decides which problem you are solving
+
+Set in the console sidebar, or inferred from the case text and reported as
+inferred. It is the most consequential field in the passport.
+
+| | **Single fragment** | **Dispersed particulate** |
+|---|---|---|
+| What it is | One macroscopic object | Micro-shrapnel, implant wear debris, metallosis |
+| Surface area, 8 mm³ total | 8.7 mm² | 720 mm² at 30 µm — 565,884 particles |
+| Specific area | 1.1 mm²/mm³ | 90 mm²/mm³ |
+| Time to half consumed* | 12 days | 1.4 hours |
+| Mechanical alternative | **Forceps, if it can be reached** | None at any cost |
+| What it must prove | That the fragment genuinely cannot be reached safely, or that surgery was declined | Only the chemistry |
+
+<sub>*same enzyme, same conditions, same total mass — the difference is
+entirely geometric.</sub>
+
+The fifth row is why this is a choice and not a detail. The comparator for a
+single fragment is **not** doing nothing — it is retrieval. If a cannula can
+reach it under ultrasound then so can forceps, and removal takes minutes with
+a proven technique. The `clinical_necessity` gate refuses that case and
+recommends conventional retrieval. For dispersed particulate the question
+answers itself: you cannot pick out half a million particles.
+
+Both halves of the project agree on the geometry, which is worth stating
+because they use different conventions. f2c's `formulate.geometry()`
+approximates a fragment as cubes of a stated edge; the simulator uses spheres.
+For specific surface area the two are identical when the cube edge equals the
+sphere diameter — 6/a versus 3/r = 6/d — so the figures are directly
+comparable.
+
+### The 17 gates
 
 Mass balance · fragmentation · free product · capture efficiency · forbidden products ·
 product characterised · hazard resolved · predictive confidence · meaningful erosion ·
-tissue off-target · anatomical tier · material identified · **kinetics provenance** ·
-**measured inputs**
+tissue off-target · anatomical tier · material identified · kinetics provenance ·
+measured inputs · enzyme host safety · product hazard · **clinical necessity**
 
 Each reports *the number that decided it*. A failure ends the **recommendation**, not
 the run: the loop locks into report-only mode where simulating, gating and submitting
