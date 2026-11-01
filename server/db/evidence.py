@@ -321,11 +321,16 @@ class EvidenceIndex:
 
     def search(self, query: str, material: str | None = None,
                top_k: int = 5) -> list[EnzymeEvidence]:
-        """Keyword search over name, EC and reaction text.
+        """Find candidate enzymes.
 
-        Deliberately simple. The semantic index lives in Postgres; this is the
-        offline path, and a transparent keyword match is easier to defend in a
-        review than an embedding whose behaviour nobody can inspect.
+        With a material named, results are ordered by EVIDENCE QUALITY:
+        host-safe first, then by what the kinetics were measured on, then by
+        whether a turnover number exists at all, then by replication. With no
+        material, keyword overlap leads.
+
+        Deliberately transparent rather than embedding-based. The semantic
+        index lives in Postgres; this is the offline path, and a ranking a
+        reviewer can read is easier to defend than one nobody can inspect.
         """
         if material:
             pool = self.for_material(material, top_k=10_000)
@@ -334,8 +339,6 @@ class EvidenceIndex:
         else:
             pool = self.records
         terms = [t for t in (query or "").lower().split() if len(t) > 2]
-        if not terms:
-            return pool[:int(top_k)]
 
         def hits(rec: EnzymeEvidence) -> int:
             hay = " ".join([
@@ -346,12 +349,38 @@ class EvidenceIndex:
             ])
             return sum(1 for t in terms if t in hay)
 
-        scored = [(hits(r), r) for r in pool]
-        scored = [(h, r) for h, r in scored if h > 0] or [(0, r) for r in pool]
-        rank = {"polymer": 3, "oligomer": 2, "model": 1, "unknown": 0}
-        scored.sort(key=lambda hr: (hr[0], rank.get(hr[1].kinetics_provenance, 0),
-                                    hr[1].publication_count), reverse=True)
-        return [r for _, r in scored[:max(1, int(top_k))]]
+        prov_rank = {"polymer": 3, "oligomer": 2, "model": 1, "unknown": 0}
+
+        def quality(rec: EnzymeEvidence) -> tuple:
+            return (
+                # Never rank a host-unsafe candidate above a safe one.
+                0 if (rec.safety and rec.safety.blocking) else 1,
+                prov_rank.get(rec.kinetics_provenance, 0),
+                1 if "kcat" in rec.measured else 0,
+                rec.publication_count,
+                len(rec.measured),
+            )
+
+        # EVIDENCE QUALITY OUTRANKS KEYWORD MATCH once a material is named.
+        #
+        # This was the other way round, and it actively excluded the best
+        # records in the warehouse. NylB and NylC are the only enzymes here
+        # with a turnover number measured on a genuine oligomer of their own
+        # target - the strongest kinetic evidence in the entire dataset - but
+        # the words "amide" and "hydrolysis" appear nowhere in their name, EC
+        # string or reaction text, so a keyword-first ranking buried them
+        # beneath esterases that merely mentioned the right words. Once the
+        # caller has named the material, the chemistry is already constrained
+        # and keyword overlap adds little while being able to do real harm.
+        if material:
+            return sorted(pool, key=quality, reverse=True)[:max(1, int(top_k))]
+
+        # With no material filter the keyword IS the query, so it leads.
+        if not terms:
+            return pool[:max(1, int(top_k))]
+        scored = sorted(pool, key=lambda r: (hits(r), quality(r)), reverse=True)
+        matched = [r for r in scored if hits(r) > 0]
+        return (matched or scored)[:max(1, int(top_k))]
 
     def coverage(self) -> dict[str, Any]:
         """What the knowledge base does and does not cover - used by /health

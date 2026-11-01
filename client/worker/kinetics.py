@@ -46,6 +46,11 @@ except ImportError:  # pragma: no cover - worker requirements install numpy
     np = None  # type: ignore[assignment]
 
 # Gas constant / reference temperature for the Arrhenius-style factor.
+# Reported instead of infinity when the relative band width is undefined or
+# astronomically large. Any value this high fails the confidence gate, and
+# unlike inf it survives JSON serialisation.
+_UNCERTAINTY_CAP = 999.0
+
 _R = 8.314462618  # J/(mol*K)
 _T_REF = 310.15  # 37 degC in K
 
@@ -425,7 +430,18 @@ def simulate_with_uncertainty(
     arr = np.array(rates, dtype=float)
     lo, hi = (float(np.percentile(arr, 5)), float(np.percentile(arr, 95)))
     median = float(np.median(arr))
-    spread = (hi - lo) / median if median > 0 else float("inf")
+    # Relative band width. When the median rate is zero the ratio is
+    # undefined, and it must NOT be reported as infinity: float('inf')
+    # serialises to the token `Infinity`, which is not valid JSON and which
+    # JSON.parse rejects outright - so an unmeasurable rate would arrive at
+    # the console as a parse error instead of as a finding. A large finite
+    # sentinel fails the confidence gate just as decisively and survives the
+    # wire.
+    if median > 0:
+        spread = (hi - lo) / median
+        spread = min(spread, _UNCERTAINTY_CAP)
+    else:
+        spread = _UNCERTAINTY_CAP
 
     base["erosion_rate_um_per_day"] = median
     base["erosion_rate_ci"] = (lo, hi)

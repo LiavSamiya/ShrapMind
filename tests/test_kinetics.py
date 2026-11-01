@@ -74,3 +74,31 @@ def test_zero_mass_fragment_is_refused():
     with pytest.raises(ValueError):
         K.simulate(_params(), K.GelParams(), K.FragmentParams(volume_mm3=0.0),
                    K.Conditions())
+
+
+def test_uncertainty_is_never_infinite_because_infinity_is_not_valid_json():
+    """A zero median rate makes the relative band width undefined. Reporting
+    float('inf') would serialise to the token `Infinity`, which JSON.parse
+    rejects - so a legitimate "this rate is unmeasurable" finding would reach
+    the console as an opaque parse error instead."""
+    import json
+
+    r = K.simulate_with_uncertainty(
+        _params(k_cat=1e-30), K.GelParams(mesh_nm=2.0),
+        K.FragmentParams(volume_mm3=50.0), K.Conditions(hours=24.0),
+        n_samples=16, seed=3, provenance="unknown")
+    assert r["uncertainty"] <= K._UNCERTAINTY_CAP
+    blob = json.dumps(r)
+    assert "Infinity" not in blob and "NaN" not in blob
+    json.loads(blob)
+
+
+def test_provenance_sets_the_band_width():
+    """polymer < oligomer < model < unknown, monotonically."""
+    widths = []
+    for prov in ("polymer", "oligomer", "model", "unknown"):
+        r = K.simulate_with_uncertainty(
+            _params(), K.GelParams(), K.FragmentParams(volume_mm3=8.0),
+            K.Conditions(hours=336.0), n_samples=96, seed=11, provenance=prov)
+        widths.append(r["uncertainty"])
+    assert widths == sorted(widths), widths

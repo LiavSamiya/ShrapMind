@@ -60,6 +60,19 @@ def _mock() -> bool:
     return os.getenv("SHRAPMIND_MOCK_ENGINES", "").lower() in ("1", "true", "yes")
 
 
+def _finite(v: Any) -> Any:
+    """Last line of defence against a non-finite number reaching the wire.
+
+    json.dumps happily emits NaN and Infinity, neither of which is valid JSON
+    and both of which the browser's JSON.parse refuses outright. Without this,
+    a legitimate "this rate is unmeasurable" result would arrive at the console
+    as an opaque parse failure rather than as the finding it is.
+    """
+    if isinstance(v, float) and (v != v or v in (float("inf"), float("-inf"))):
+        return None
+    return v
+
+
 # --------------------------------------------------------------------------
 # Material registry.
 #
@@ -811,10 +824,10 @@ def score_kinetics(
         "name": enz.name,
         "kinetics_provenance": str((base or {}).get("kinetics_provenance") or "unknown"),
         "assumed_parameters": assumed,
-        "erosion_rate_um_per_day": round(r["erosion_rate_um_per_day"], 4),
-        "consumed_fraction": round(r["consumed_fraction"], 4),
+        "erosion_rate_um_per_day": _finite(round(r["erosion_rate_um_per_day"], 4)),
+        "consumed_fraction": _finite(round(r["consumed_fraction"], 4)),
         "time_to_half_h": r["time_to_half_h"],
-        "mass_balance_residual": r["mass_balance_residual"],
+        "mass_balance_residual": _finite(r["mass_balance_residual"]),
         "k_surface_umol_mm2_h": r["k_surface_umol_mm2_h"],
         "product_radius_known": r.get("product_radius_known", False),
         "method": "point estimate; run simulate_hydrogel_assay for the band",
@@ -896,18 +909,18 @@ def simulate_hydrogel_assay(
             "fragment_volume_mm3": frag.volume_mm3, "accessibility": frag.accessibility,
         },
         "timeseries": series,
-        "erosion_rate_um_per_day": round(r["erosion_rate_um_per_day"], 4),
+        "erosion_rate_um_per_day": _finite(round(r["erosion_rate_um_per_day"], 4)),
         "erosion_rate_ci": [round(r["erosion_rate_ci"][0], 4), round(r["erosion_rate_ci"][1], 4)],
-        "uncertainty": round(r["uncertainty"], 4),
-        "consumed_fraction": round(r["consumed_fraction"], 4),
+        "uncertainty": _finite(round(r["uncertainty"], 4)),
+        "consumed_fraction": _finite(round(r["consumed_fraction"], 4)),
         "time_to_half_h": r["time_to_half_h"],
         "depleted_at_h": r["depleted_at_h"],
-        "captured_fraction": round(r["captured_fraction"], 4),
-        "free_fraction": round(r["free_fraction"], 4),
-        "particle_fraction": round(r["particle_fraction"], 4),
+        "captured_fraction": _finite(round(r["captured_fraction"], 4)),
+        "free_fraction": _finite(round(r["free_fraction"], 4)),
+        "particle_fraction": _finite(round(r["particle_fraction"], 4)),
         "particle_fraction_p95": round(r["particle_fraction_p95"], 6),
-        "captured_fraction_p05": round(r["captured_fraction_p05"], 4),
-        "mass_balance_residual": r["mass_balance_residual"],
+        "captured_fraction_p05": _finite(round(r["captured_fraction_p05"], 4)),
+        "mass_balance_residual": _finite(r["mass_balance_residual"]),
         "product": r["product"],
         "n_samples": r["n_samples"],
         "kinetics_provenance": provenance,
