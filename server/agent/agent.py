@@ -101,6 +101,11 @@ def run_design(
     mode = mode if mode in ("run", "explain") else "run"
     reset_session_limits()
 
+    # An explicit presentation from the console overrides inference. Passed to
+    # the bench so characterize_fragment uses it even if the model omits the
+    # argument - the user's stated choice is not the model's to second-guess.
+    chosen_presentation = getattr(message, "presentation", None)
+
     run = DesignRun(case_summary=case_text[:500], success=False)
     emit(AgentEvent(kind="status", payload={"msg": "Reading the case...", "mode": mode}))
 
@@ -119,7 +124,8 @@ def run_design(
                     "MOCK_LLM=1 for the scripted demo."}))
         return run
 
-    bench = Bench(client_id=client_id, skip_db=skip_db, mode=mode)
+    bench = Bench(client_id=client_id, skip_db=skip_db, mode=mode,
+                  presentation=chosen_presentation, case_text=case_text)
     llm = LLMClient(mock=mock_llm, mode=mode)
     tools = schemas_for(mode)
 
@@ -404,6 +410,24 @@ def run_design(
                     run.passport = FragmentPassport(**payload["passport"])
                 except Exception:  # noqa: BLE001
                     pass
+                pp = payload.get("passport") or {}
+                if pp.get("presentation") == "dispersed_particulate":
+                    action_log.append(
+                        f"PRESENTATION: dispersed particulate, about "
+                        f"{pp.get('particle_count')} particles at "
+                        f"{pp.get('particle_size_um')} um "
+                        f"({payload.get('presentation_basis')})"
+                        + (" - PARTICLE SIZE WAS ASSUMED, which sets the whole "
+                           "surface area; say so in the report"
+                           if payload.get("particle_size_assumed") else "")
+                        + ". Mechanical retrieval is not an option for this case.")
+                elif pp.get("retrievable_mechanically"):
+                    action_log.append(
+                        "PRESENTATION: a single fragment that appears mechanically "
+                        "retrievable. The comparator here is forceps under "
+                        "ultrasound, not doing nothing, and the clinical-necessity "
+                        "gate will refuse a catalytic route unless the fragment "
+                        "cannot safely be reached or surgery was declined.")
                 if payload.get("no_go"):
                     action_log.append(
                         f"NO-GO: {payload.get('no_go_reason')}. Report this as the "
@@ -537,8 +561,15 @@ def _summarize(name: str, payload: Any) -> str:
         return str(payload)[:200]
     if name == "characterize_fragment":
         p = payload.get("passport", {})
-        return (f"material={p.get('material_family')} confidence={p.get('confidence')} "
-                f"source={p.get('source')} no_go={payload.get('no_go')}")
+        pres = p.get("presentation")
+        extra = ""
+        if pres == "dispersed_particulate":
+            extra = (f" particles={p.get('particle_count')} "
+                     f"size={p.get('particle_size_um')}um")
+        return (f"material={p.get('material_family')} presentation={pres}"
+                f"{extra} retrievable={p.get('retrievable_mechanically')} "
+                f"confidence={p.get('confidence')} source={p.get('source')} "
+                f"({payload.get('presentation_basis')}) no_go={payload.get('no_go')}")
     if name == "define_reaction":
         if not payload.get("ok"):
             return f"REFUSED: {payload.get('reason')}"
@@ -561,7 +592,10 @@ def _summarize(name: str, payload: Any) -> str:
         return (f"{payload.get('name')} {payload.get('erosion_rate_um_per_day')} um/day "
                 f"consumed={payload.get('consumed_fraction')}")
     if name == "simulate_hydrogel_assay":
-        return (f"{payload.get('candidate')} {payload.get('erosion_rate_um_per_day')} "
+        return (f"{payload.get('candidate')} [{payload.get('presentation')}, "
+                f"n={payload.get('n_particles')}, "
+                f"area={payload.get('initial_area_mm2')}mm2] "
+                f"{payload.get('erosion_rate_um_per_day')} "
                 f"um/day band={payload.get('erosion_rate_ci')} "
                 f"uncertainty={payload.get('uncertainty')} "
                 f"captured={payload.get('captured_fraction')} "

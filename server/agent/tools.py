@@ -71,10 +71,39 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "spectra": {"type": "object",
                                 "description": "Optional instrument data: "
                                                "{'peaks': [cm-1...], 'elements': {'Fe': 72}}."},
-                    "volume_mm3": {"type": "number", "description": "Fragment volume in mm3."},
+                    "volume_mm3": {"type": "number",
+                                   "description": "TOTAL material volume in mm3 - for "
+                                                  "dispersed particulate this is the sum "
+                                                  "over all particles, not one of them."},
                     "anatomy_class": {"type": "string",
                                       "enum": ["soft_tissue", "peri_articular", "near_nerve",
                                                "intra_articular", "vascular", "cns", "ocular"]},
+                    "presentation": {
+                        "type": "string",
+                        "enum": ["single_fragment", "dispersed_particulate"],
+                        "description": "How the material presents. This is the most "
+                                       "consequential field in the passport. "
+                                       "'single_fragment' is one macroscopic object, "
+                                       "mechanically retrievable if it can be reached. "
+                                       "'dispersed_particulate' is micro-shrapnel, wear "
+                                       "debris or metallosis - thousands of micron-scale "
+                                       "particles that cannot be retrieved at any cost, "
+                                       "with orders of magnitude more surface area. Leave "
+                                       "it out to have it inferred from the case text.",
+                    },
+                    "particle_size_um": {
+                        "type": "number", "minimum": 0.1, "maximum": 1000,
+                        "description": "Dispersed presentation only: particle diameter in "
+                                       "micrometres. Sets the surface area and therefore "
+                                       "the whole rate, so state it when it is known.",
+                    },
+                    "retrievable_mechanically": {
+                        "type": "boolean",
+                        "description": "Whether conventional retrieval is a realistic "
+                                       "alternative. Omit to have it inferred. The honest "
+                                       "comparator for this approach is forceps, not doing "
+                                       "nothing.",
+                    },
                 },
                 "required": ["description"],
             },
@@ -482,6 +511,7 @@ def _audit(event: str, name: str, args: dict[str, Any], result: Any = None) -> N
 # shared.safety.BOUNDS knows.
 _NUMERIC_ARGS: dict[str, str] = {
     "volume_mm3": "fragment_volume_mm3",
+    "particle_size_um": "particle_size_um",
     "n_samples": "n_samples",
     "n_variants": "n_variants",
     "top_k": "top_k",
@@ -489,7 +519,7 @@ _NUMERIC_ARGS: dict[str, str] = {
 }
 
 _CONDITION_KEYS = {"temperature_c", "ph", "enzyme_uM", "serum_fraction", "hours",
-                   "timestep_h", "mesh_nm", "gel_volume_ul"}
+                   "timestep_h", "mesh_nm", "gel_volume_ul", "particle_size_um"}
 
 
 def _validate_args(call: ToolCall, mode: str = "run") -> dict[str, Any] | None:

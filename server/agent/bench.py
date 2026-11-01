@@ -41,10 +41,18 @@ class Bench:
     """One design session's view of the world."""
 
     def __init__(self, client_id: str = "default", *, skip_db: bool = False,
-                 mode: str = "run") -> None:
+                 mode: str = "run", presentation: str | None = None,
+                 case_text: str = "") -> None:
         self.client_id = client_id
         self.skip_db = skip_db
         self.mode = mode
+        # The user's explicit presentation choice, if they made one. It wins
+        # over whatever the model passes, because it is a statement about the
+        # case rather than a modelling decision.
+        self.presentation = presentation
+        # The original case text, forwarded to characterisation so presentation
+        # inference sees the whole case rather than only the model's paraphrase.
+        self.case_text = case_text
         # Full evidence records for the families retrieved this session, so
         # base_params_for() can hand the simulator measured values + citations.
         self._evidence: dict[str, Any] = {}
@@ -76,10 +84,17 @@ class Bench:
 
     def characterize_fragment(self, description: str = "", spectra: dict | None = None,
                               volume_mm3: float | None = None,
-                              anatomy_class: str = "soft_tissue") -> Any:
+                              anatomy_class: str = "soft_tissue",
+                              presentation: str | None = None,
+                              particle_size_um: float | None = None,
+                              retrievable_mechanically: bool | None = None) -> Any:
         r = self._call("characterize_fragment", {
             "description": description, "spectra": spectra,
-            "volume_mm3": volume_mm3, "anatomy_class": anatomy_class})
+            "volume_mm3": volume_mm3, "anatomy_class": anatomy_class,
+            "presentation": self.presentation or presentation,
+            "particle_size_um": particle_size_um,
+            "retrievable_mechanically": retrievable_mechanically,
+            "case_text": self.case_text})
         if isinstance(r, dict) and r.get("passport"):
             self.state["passport"] = r["passport"]
         return r
@@ -121,6 +136,18 @@ class Bench:
         possible - it just has to be explicit.
         """
         base = dict(base_params or {})
+        # Geometry comes from the passport, always. The model established the
+        # presentation and particle size at characterisation; making it repeat
+        # them through every simulate call is how they end up inconsistent
+        # between candidates in the same run.
+        pp = self.state.get("passport") or {}
+        for key in ("presentation", "particle_size_um", "volume_mm3"):
+            if base.get(key) is None and pp.get(key) is not None:
+                base[key] = pp[key]
+        sub = self.state.get("substrate") or {}
+        for key in ("molar_mass_g_mol", "density_g_cm3", "accessibility"):
+            if base.get(key) is None and sub.get(key) is not None:
+                base[key] = sub[key]
         if base.get("k_cat") is not None:
             return base
         for key in (candidate.get("parent_family"), candidate.get("name")):

@@ -410,6 +410,12 @@ async def _handle_console_message(msg: dict[str, Any], ws: WebSocket,
         mode = "run"
     state.mode = mode
 
+    # Presentation: the console's explicit choice, or None to let the engine
+    # infer it from the case text and report that it inferred it.
+    presentation = msg.get("presentation")
+    if presentation not in ("single_fragment", "dispersed_particulate"):
+        presentation = None
+
     task = state.current_task
     if task is not None and not task.done():
         paused = (state.session["interrupt"] is not None
@@ -439,7 +445,8 @@ async def _handle_console_message(msg: dict[str, Any], ws: WebSocket,
         "msg": f"case: {text[:120]}", "user_prompt": text, "mode": mode}))
 
     state.current_task = asyncio.create_task(_run_one_case(
-        CaseMessage(text=text, mode=mode),  # type: ignore[arg-type]
+        CaseMessage(text=text, mode=mode,  # type: ignore[arg-type]
+                    presentation=presentation),  # type: ignore[arg-type]
         client_id=client_id, mode=mode,
         cancel_event=state.session["cancel"],
         interrupt_event=state.session["interrupt"],

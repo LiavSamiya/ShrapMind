@@ -376,11 +376,30 @@ def resolve_material(text: str) -> tuple[str, float]:
 # --------------------------------------------------------------------------
 
 
+# Phrases that indicate dispersed particulate rather than a single object.
+_DISPERSED_HINTS = (
+    "micro-shrapnel", "microshrapnel", "micro shrapnel", "metallosis",
+    "wear debris", "particulate", "dispersed", "peppered", "dust",
+    "many small", "multiple small", "micro-fragments", "microfragments",
+    "cloud of", "shower of", "blast debris",
+)
+
+# Default particle diameter when a dispersed case gives no size. Blast
+# micro-shrapnel and orthopaedic wear debris both cluster in the tens of
+# microns; 30 um is a mid-range stand-in and is REPORTED as an assumption,
+# because the particle size sets the surface area and therefore the whole rate.
+_DEFAULT_PARTICLE_UM = 30.0
+
+
 def characterize_fragment(
     description: str = "",
     spectra: dict[str, Any] | None = None,
     volume_mm3: float | None = None,
     anatomy_class: str = "soft_tissue",
+    presentation: str | None = None,
+    particle_size_um: float | None = None,
+    retrievable_mechanically: bool | None = None,
+    case_text: str = "",
 ) -> dict[str, Any]:
     """Build a FragmentPassport from a description and/or instrument data.
 
@@ -449,17 +468,72 @@ def characterize_fragment(
     if volume_mm3 is not None:
         vol = validate_number("fragment_volume_mm3", volume_mm3)
 
+    # Presentation: taken from the caller if given, otherwise inferred from the
+    # case text. It is never guessed silently - an inferred value is reported
+    # with how it was arrived at, because it changes the whole problem.
+    pres = str(presentation or "").strip().lower()
+    pres_source = "stated"
+    if pres not in ("single_fragment", "dispersed_particulate"):
+        # Inference reads the description AND the original case text. The
+        # caller may paraphrase, and a paraphrase that drops "micro-shrapnel"
+        # would silently flip the whole problem from a particle cloud to a
+        # single object.
+        low = (desc + " " + sanitize_for_prompt(case_text, 2000)).lower()
+        if any(h in low for h in _DISPERSED_HINTS):
+            pres, pres_source = "dispersed_particulate", "inferred from the case text"
+        else:
+            pres, pres_source = "single_fragment", "assumed (no indication of dispersal)"
+
+    psize = None
+    size_assumed = False
+    if pres == "dispersed_particulate":
+        if particle_size_um is not None:
+            psize = float(validate_number("particle_size_um", particle_size_um))
+        else:
+            psize = _DEFAULT_PARTICLE_UM
+            size_assumed = True
+
+    # Particle count, from the stated volume and the particle size.
+    pcount = None
+    if pres == "dispersed_particulate" and psize and vol:
+        r_mm = (psize / 1000.0) / 2.0
+        one = (4.0 / 3.0) * math.pi * r_mm ** 3
+        pcount = int(vol / one) if one > 0 else None
+
+    # Is conventional retrieval a realistic alternative? This is the honest
+    # comparator and the system is not allowed to skip it: for a single
+    # reachable fragment, forceps under ultrasound is faster, cheaper and
+    # proven, and a catalyst has to be justified against that rather than
+    # against doing nothing.
+    retr = retrievable_mechanically
+    if retr is None:
+        if pres == "dispersed_particulate":
+            retr = False  # thousands of micron particles cannot be picked out
+        else:
+            hard = anatomy_class in ("near_nerve", "intra_articular", "vascular",
+                                     "cns", "ocular")
+            declined = any(k in (desc + " " + case_text).lower()
+                           for k in ("declined", "refused", "inoperable",
+                                     "unresectable", "not a surgical candidate"))
+            retr = not (hard or declined)
+
     blocker = NO_GO_MATERIALS.get(family)
     return {
         "passport": {
             "material_family": family,
+            "presentation": pres,
             "surface_state": surface,
             "additives": additives,
             "anatomy_class": validate_identifier(anatomy_class, field="anatomy_class"),
             "volume_mm3": vol,
+            "particle_size_um": psize,
+            "particle_count": pcount,
+            "retrievable_mechanically": retr,
             "confidence": round(conf, 2),
             "source": source,
         },
+        "presentation_basis": pres_source,
+        "particle_size_assumed": size_assumed,
         "no_go": bool(blocker),
         "no_go_reason": blocker or "",
         "material_note": MATERIALS.get(family, {}).get("note", ""),
@@ -813,6 +887,9 @@ def score_kinetics(
         density_g_cm3=float(base.get("density_g_cm3", 1.4)),
         molar_mass_g_mol=float(base.get("molar_mass_g_mol", 162.14)),
         accessibility=float(base.get("accessibility", 0.6)),
+        presentation=str(base.get("presentation") or "single_fragment"),
+        particle_size_um=(validate_number("particle_size_um", base["particle_size_um"])
+                          if base.get("particle_size_um") else None),
     )
     gel = kinetics.GelParams(
         mesh_nm=validate_number("mesh_nm", base.get("mesh_nm", 20.0)),
@@ -830,6 +907,8 @@ def score_kinetics(
         "mass_balance_residual": _finite(r["mass_balance_residual"]),
         "k_surface_umol_mm2_h": r["k_surface_umol_mm2_h"],
         "product_radius_known": r.get("product_radius_known", False),
+        "presentation": r.get("presentation"),
+        "n_particles": r.get("n_particles"),
         "method": "point estimate; run simulate_hydrogel_assay for the band",
     }
 
@@ -869,6 +948,9 @@ def simulate_hydrogel_assay(
         density_g_cm3=float(base.get("density_g_cm3", 1.4)),
         molar_mass_g_mol=float(base.get("molar_mass_g_mol", 162.14)),
         accessibility=float(base.get("accessibility", 0.6)),
+        presentation=str(base.get("presentation") or "single_fragment"),
+        particle_size_um=(validate_number("particle_size_um", base["particle_size_um"])
+                          if base.get("particle_size_um") else None),
     )
     gel = kinetics.GelParams(
         mesh_nm=validate_number("mesh_nm", base.get("mesh_nm", 20.0)),
@@ -924,6 +1006,11 @@ def simulate_hydrogel_assay(
         "product": r["product"],
         "n_samples": r["n_samples"],
         "kinetics_provenance": provenance,
+        "presentation": r.get("presentation"),
+        "n_particles": r.get("n_particles"),
+        "initial_area_mm2": _finite(round(r.get("initial_area_mm2") or 0.0, 3)),
+        "specific_area_mm2_per_mm3": _finite(
+            round(r.get("specific_area_mm2_per_mm3") or 0.0, 3)),
         "product_radius_nm": r.get("product_radius_nm"),
         "product_radius_known": r.get("product_radius_known", False),
         "rel_sigma": r.get("rel_sigma"),
@@ -1247,8 +1334,47 @@ def run_safety_gates(
          "; ".join(h["mechanism"][:200] for h in passess["hazards"]
                    if h["severity"] == "blocking"))
 
+    # 17. CLINICAL NECESSITY.
+    #
+    #     The comparator for this whole approach is not "do nothing" - it is
+    #     conventional retrieval. If a single fragment can be reached with a
+    #     cannula under ultrasound, it can usually be reached with forceps,
+    #     and removal then takes minutes with a proven technique. A catalyst
+    #     has to be justified against THAT, and a system that never asks the
+    #     question is quietly assuming its own necessity.
+    #
+    #     The two presentations give genuinely different answers, which is why
+    #     presentation is a first-class choice rather than a detail:
+    #       - single_fragment, reachable  -> refuse; recommend retrieval
+    #       - single_fragment, unreachable -> proceed, and say why it qualifies
+    #       - dispersed_particulate       -> proceed; thousands of micron-scale
+    #                                        particles cannot be retrieved
+    #                                        mechanically at any cost
+    pres = str(passport.get("presentation") or "single_fragment")
+    retrievable = passport.get("retrievable_mechanically")
+    anat = str(passport.get("anatomy_class", "soft_tissue")).lower()
+    if pres == "dispersed_particulate":
+        gate("clinical_necessity", True, "dispersed_particulate",
+             "not mechanically retrievable",
+             f"dispersed particulate over ~{int(assay.get('n_particles') or 0):,} "
+             f"particles. Mechanical retrieval is not an option at any cost, so "
+             f"a chemical route has no conventional comparator to beat")
+    elif retrievable is True:
+        gate("clinical_necessity", False, "retrievable", "not retrievable, or declined",
+             "this is a single fragment in tissue that appears mechanically "
+             "retrievable. Removal under ultrasound guidance takes minutes with "
+             "a proven technique, so a catalytic route is not justified here. "
+             "Recommend conventional retrieval. The approach is for fragments "
+             "that cannot safely be reached, or where surgery has been declined")
+    else:
+        gate("clinical_necessity", True, "not retrievable",
+             "not retrievable, or declined",
+             f"single fragment, mechanical retrieval not a realistic option "
+             f"(location: {anat}). The approach has a genuine gap to fill here")
+
     failed = [g["name"] for g in gates if not g["passed"]]
     return {
+        "presentation": pres,
         "product_assessment": passess,
         "enzyme_safety": enzyme_safety or None,
         "gates": gates,

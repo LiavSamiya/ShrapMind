@@ -239,3 +239,50 @@ def test_no_worker_connected_is_reported_clearly(monkeypatch):
     assert not run.success
     err = next(e for e in events if e.kind == "error")
     assert "No simulation worker" in err.payload["text"]
+
+
+# ---------------------------------------------------------------- presentation
+
+
+def test_presentation_is_inferred_from_the_case_text(fake_worker):
+    """Inference must read the whole case, not only the paraphrase the model
+    echoes into the description argument - a paraphrase that drops
+    "micro-shrapnel" would silently flip the problem being solved."""
+    run, _ = _run(case="blast micro-shrapnel peppered through the forearm, PET fibres")
+    assert run.passport is not None
+    assert run.passport.presentation == "dispersed_particulate"
+    assert run.passport.particle_count and run.passport.particle_count > 1000
+
+
+def test_a_single_fragment_case_stays_a_single_fragment(fake_worker):
+    run, _ = _run(case="a single PET fibre fragment in the forearm, surgery declined")
+    assert run.passport is not None
+    assert run.passport.presentation == "single_fragment"
+    assert run.passport.particle_count is None
+
+
+def test_an_explicit_choice_overrides_inference(fake_worker):
+    """The user's stated presentation is a statement about the case, not a
+    modelling decision for the agent to second-guess."""
+    from server.agent.agent import run_design
+    from shared.protocol import CaseMessage
+
+    events: list = []
+    run = run_design(
+        CaseMessage(text="blast micro-shrapnel peppered through the forearm",
+                    presentation="single_fragment"),
+        events.append, mock_llm=True, skip_db=True)
+    assert run.passport is not None
+    assert run.passport.presentation == "single_fragment"
+
+
+def test_dispersal_is_reported_in_the_action_log(fake_worker):
+    """The agent has to be told what it is working on, loudly enough that the
+    report cannot omit it."""
+    _, events = _run(case="metallosis around a hip implant, fine wear debris")
+    obs = [e for e in events if e.kind == "observation"
+           and e.payload.get("name") == "characterize_fragment"]
+    assert obs
+    p = obs[0].payload["result"]["passport"]
+    assert p["presentation"] == "dispersed_particulate"
+    assert p["retrievable_mechanically"] is False

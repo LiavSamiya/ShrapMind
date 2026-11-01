@@ -16,6 +16,7 @@ const sendBtn = document.getElementById("send");
 const pauseBtn = document.getElementById("pause");
 const stopBtn = document.getElementById("stop");
 const modeSel = document.getElementById("mode");
+const presSel = document.getElementById("presentation");
 const modeHint = document.getElementById("mode-hint");
 const caseList = document.getElementById("case-list");
 
@@ -279,7 +280,22 @@ function resultCard(p) {
 
   const assay = p.assay || null;
 
-  /* Provenance first, above the numbers. If the kinetics came from a
+  if (assay && assay.presentation) {
+    const d = assay.presentation === "dispersed_particulate";
+    const row = el("prov " + (d ? "prov-ok" : "prov-bad"));
+    row.textContent = d
+      ? "Dispersed particulate: " +
+        Math.round(assay.n_particles || 0).toLocaleString() + " particles, " +
+        num(assay.initial_area_mm2) + " mm\u00b2 accessible surface (" +
+        num(assay.specific_area_mm2_per_mm3) + " mm\u00b2 per mm\u00b3). " +
+        "Not mechanically retrievable, so there is no conventional alternative."
+      : "Single fragment: " + num(assay.initial_area_mm2) +
+        " mm\u00b2 accessible surface. The comparator is conventional " +
+        "retrieval, which this has to be justified against.";
+    body.appendChild(row);
+  }
+
+  /* Provenance next, still above the numbers. If the kinetics came from a
    * chromogenic stand-in, that is the most important thing on the card and it
    * must not sit below a large bold erosion rate. */
   if (assay && assay.kinetics_provenance) {
@@ -625,7 +641,18 @@ function submit() {
   input.value = "";
   input.style.height = "auto";
   setBusy(true);
-  send({ type: "message", text: text, mode: modeSel.value });
+  send({ type: "message", text: text, mode: modeSel.value,
+         presentation: presSel && presSel.value ? presSel.value : null });
+}
+
+function updatePresentationHint() {
+  const hint = document.getElementById("presentation-hint");
+  if (!hint || !presSel) return;
+  hint.textContent = presSel.value === "dispersed_particulate"
+    ? "Micro-shrapnel, wear debris or metallosis. Far more surface area, and no mechanical alternative to beat."
+    : presSel.value === "single_fragment"
+      ? "One macroscopic object. The comparator is forceps, so the fragment has to be genuinely unreachable."
+      : "Inferred from the case text, and reported as inferred.";
 }
 
 function updateModeHint() {
@@ -647,6 +674,7 @@ input.addEventListener("input", () => {
 pauseBtn.onclick = () => { send({ type: paused ? "resume" : "pause" }); };
 stopBtn.onclick = () => { send({ type: "stop" }); setBusy(false); };
 modeSel.onchange = () => { send({ type: "set_mode", mode: modeSel.value }); updateModeHint(); };
+if (presSel) presSel.onchange = updatePresentationHint;
 
 document.getElementById("new-case").onclick = () => {
   createCase("New case");
@@ -717,4 +745,5 @@ ensureActive();
 renderCaseList();
 renderChat(activeId);
 updateModeHint();
+updatePresentationHint();
 connect();

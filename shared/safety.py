@@ -168,12 +168,20 @@ def simulation_disclaimer() -> str:
 BOUNDS: dict[str, tuple[float, float]] = {
     "temperature_c": (4.0, 45.0),
     "ph": (5.0, 8.5),
-    "hours": (0.1, 2160.0),  # up to 90 days
+    # Up to one year. A retained fragment is a chronic problem and the brief
+    # describes cyclical treatment over months, so a 90-day ceiling was cutting
+    # off exactly the horizon the slower routes need to be judged over.
+    "hours": (0.1, 8760.0),
     "timestep_h": (0.01, 6.0),
     "enzyme_uM": (0.001, 500.0),
     "mesh_nm": (1.0, 500.0),
     "gel_volume_ul": (10.0, 5000.0),
     "fragment_volume_mm3": (0.01, 5000.0),
+    # Dispersed presentation: particle diameter. The lower bound is where
+    # particles stop behaving as a solid phase and start behaving as a
+    # nanoparticle with its own toxicology; the upper is where "particulate"
+    # has become a fragment you could pick out individually.
+    "particle_size_um": (0.1, 1000.0),
     "surface_area_mm2": (0.01, 20000.0),
     "serum_fraction": (0.0, 1.0),
     "n_samples": (1.0, 512.0),

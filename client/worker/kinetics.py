@@ -116,7 +116,21 @@ class GelParams:
 
 @dataclass
 class FragmentParams:
-    """Geometry of the solid. Sphere-equivalent shrinking-core."""
+    """Geometry of the solid. Sphere-equivalent shrinking-core.
+
+    Handles both presentations through one mechanism. `presentation` decides
+    whether the stated volume is a single object or a population of identical
+    particles; everything downstream reads n_particles() and the per-particle
+    radius, so the integrator itself never branches.
+
+    A note on conventions, because the two halves of this project use
+    different ones and it matters that they agree. f2c's formulate.geometry()
+    approximates a fragment as cubes of a stated edge length; this module uses
+    spheres. For SPECIFIC surface area the two are identical when the cube edge
+    equals the sphere diameter - a cube gives 6/a, a sphere gives 3/r = 6/d -
+    so moving between them changes no physics and the two codebases stay
+    directly comparable.
+    """
 
     volume_mm3: float = 10.0
     density_g_cm3: float = 1.4
@@ -124,6 +138,34 @@ class FragmentParams:
     # Fraction of the surface that is chemically accessible (coating,
     # crystallinity and protein fouling all reduce this).
     accessibility: float = 0.6
+    presentation: str = "single_fragment"
+    # Dispersed presentation only: particle diameter in micrometres.
+    particle_size_um: float | None = None
+
+    def particle_radius_mm(self) -> float:
+        """Radius of one particle, in mm."""
+        if self.presentation == "dispersed_particulate" and self.particle_size_um:
+            return (float(self.particle_size_um) / 1000.0) / 2.0
+        return _sphere_radius_mm(self.volume_mm3)
+
+    def n_particles(self) -> float:
+        """How many particles the stated volume represents.
+
+        Deliberately not rounded to an integer: at these sizes the count runs
+        into the millions, and a fractional particle is a rounding artefact
+        far below the uncertainty in the volume estimate itself.
+        """
+        if self.presentation != "dispersed_particulate" or not self.particle_size_um:
+            return 1.0
+        r = self.particle_radius_mm()
+        one = (4.0 / 3.0) * math.pi * r ** 3
+        return max(self.volume_mm3 / one, 1.0) if one > 0 else 1.0
+
+    def initial_area_mm2(self) -> float:
+        """Total accessible surface area at t=0."""
+        return (self.n_particles()
+                * _sphere_area_mm2(self.particle_radius_mm())
+                * self.accessibility)
 
 
 @dataclass
@@ -233,7 +275,11 @@ def simulate(
         raise ValueError("fragment has zero substrate mass")
 
     k_surf = effective_rate_constant(enzyme, gel, cond)
-    r0 = _sphere_radius_mm(fragment.volume_mm3)
+    # Per-particle radius, and how many of them. For a single fragment this is
+    # one sphere of the whole volume; for dispersed particulate it is millions
+    # of small ones, which is where the surface area comes from.
+    r0 = fragment.particle_radius_mm()
+    n_particles = fragment.n_particles()
     k_inact = math.log(2.0) / max(enzyme.half_life_h, 1e-6)
     prod_radius = _PRODUCT_RADIUS_NM.get(enzyme.product, _FALLBACK_RADIUS_NM)
     radius_known = enzyme.product in _PRODUCT_RADIUS_NM
@@ -250,8 +296,10 @@ def simulate(
         frag = max(frag, 0.0)
         # Shrinking-core: current radius from remaining fraction.
         frac = frag / total_umol
+        # Identical particles erode together, so the remaining fraction maps
+        # onto a per-particle radius the same way whatever the count is.
         radius = r0 * (frac ** (1.0 / 3.0)) if frac > 0 else 0.0
-        area = _sphere_area_mm2(radius) * fragment.accessibility
+        area = n_particles * _sphere_area_mm2(radius) * fragment.accessibility
         activity = math.exp(-k_inact * t)
         release = k_surf * area * activity  # umol/h off the surface
         release = min(release, frag / dt if dt > 0 else release)
@@ -280,7 +328,8 @@ def simulate(
         tr.cleared_umol.append(y[3])
         tr.particles_umol.append(y[4])
         tr.radius_mm.append(radius)
-        tr.area_mm2.append(_sphere_area_mm2(radius) * fragment.accessibility)
+        tr.area_mm2.append(n_particles * _sphere_area_mm2(radius)
+                           * fragment.accessibility)
         if i == n:
             break
         # RK4
@@ -326,6 +375,12 @@ def simulate(
         "erosion_rate_um_per_day": erosion_um_day,
         "depleted_at_h": depleted_at_h,
         "time_to_half_h": time_to_half_h,
+        "presentation": fragment.presentation,
+        "n_particles": n_particles,
+        "initial_area_mm2": fragment.initial_area_mm2(),
+        "specific_area_mm2_per_mm3": (
+            fragment.initial_area_mm2() / fragment.volume_mm3
+            if fragment.volume_mm3 > 0 else 0.0),
         "radius_start_mm": r0,
         "radius_end_mm": tr.radius_mm[-1],
         "free_end_umol": y[1],

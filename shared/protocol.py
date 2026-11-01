@@ -75,6 +75,20 @@ Stage = Literal[
 
 Mode = Literal["run", "explain"]
 
+# How the material presents in the tissue. This is a first-class choice, not a
+# detail, because it changes which problem is being solved.
+#
+#   single_fragment      one macroscopic object. Removable with forceps if it
+#                        can be reached, so the case for a catalyst rests
+#                        entirely on it being unreachable or unsafe to reach.
+#   dispersed_particulate  thousands of micron-scale particles through a tissue
+#                        volume - blast micro-shrapnel, implant wear debris,
+#                        metallosis. Not retrievable mechanically at any cost,
+#                        and the surface-area-to-volume ratio is orders of
+#                        magnitude higher, which is what makes the chemistry
+#                        tractable.
+Presentation = Literal["single_fragment", "dispersed_particulate"]
+
 
 class CaseMessage(BaseModel):
     """app -> agent. The user's description of the fragment case."""
@@ -82,6 +96,9 @@ class CaseMessage(BaseModel):
     text: str
     attachments: list[str] = Field(default_factory=list)  # base64 instrument exports
     mode: Mode = "run"
+    # An explicit presentation from the console. None means "infer it from the
+    # case text, and say that it was inferred".
+    presentation: Presentation | None = None
 
 
 class ToolCall(BaseModel):
@@ -96,17 +113,32 @@ class AgentEvent(BaseModel):
 
 
 class FragmentPassport(BaseModel):
-    """What the fragment is made of and where it sits. The output of stage 1-2.
+    """What the material is made of, how it presents, and where it sits.
 
     `confidence` matters: a passport inferred from imaging alone is weaker
     evidence than one from a physical sample, and the agent is told to say so.
+
+    `presentation` matters more. A single macroscopic fragment and a cloud of
+    micron-scale particles are the same chemistry and two different
+    engineering problems: surface area differs by orders of magnitude, the
+    clinical justification is not the same argument, and in the dispersed case
+    the right answer may not involve an enzyme at all.
     """
 
-    material_family: str  # cellulose | pet | cotton | iron_steel | polyurethane | unknown
+    material_family: str  # pet | pa | pla | iron_steel | cellulose | ... | unknown
+    presentation: Presentation = "single_fragment"
     surface_state: str = "unknown"  # oxidised | coated | crystalline | pristine
     additives: list[str] = Field(default_factory=list)
     anatomy_class: str = "soft_tissue"  # soft_tissue | peri_articular | near_nerve
     volume_mm3: float | None = None
+    # Dispersed presentation only: the particle size distribution's centre,
+    # and how many particles that implies for the stated total volume.
+    particle_size_um: float | None = None
+    particle_count: int | None = None
+    # Whether conventional retrieval is a realistic alternative. The honest
+    # comparator for this entire approach, and what the clinical-necessity
+    # gate turns on.
+    retrievable_mechanically: bool | None = None
     confidence: float = 0.0  # 0..1
     source: str = "unspecified"  # sample | imaging | assumed
 

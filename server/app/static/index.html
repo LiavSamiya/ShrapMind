@@ -33,6 +33,17 @@
     </div>
 
     <div class="side-section">
+      <div class="side-label">Presentation</div>
+      <select id="presentation">
+        <option value="">Infer from the case</option>
+        <option value="single_fragment">Single fragment</option>
+        <option value="dispersed_particulate">Dispersed particulate</option>
+      </select>
+      <p class="side-hint" id="presentation-hint">Inferred from the case text, and
+        reported as inferred.</p>
+    </div>
+
+    <div class="side-section">
       <div class="side-label">Cases</div>
       <div id="case-list" class="case-list"></div>
     </div>
@@ -95,10 +106,11 @@
         </div>
         <div class="chips">
           <button class="chip">PET polyester fibre fragment in the forearm, confirmed by FTIR, surgery declined</button>
+          <button class="chip">Blast micro-shrapnel peppered through the forearm, particles around 20 &micro;m</button>
+          <button class="chip">Metallosis around a hip implant &mdash; fine metal wear debris through the capsule</button>
           <button class="chip">Nylon fragment in soft tissue, symptomatic 8 months</button>
+          <button class="chip">Steel fragment, reachable under ultrasound &mdash; is a catalyst justified here?</button>
           <button class="chip">Wood splinter in the forearm &mdash; is there any curated evidence for cellulose?</button>
-          <button class="chip">Iron fragment, oxidised surface, chronic pain</button>
-          <button class="chip">Unidentified fragment, no sample taken &mdash; what can you tell me?</button>
         </div>
       </div>
     </div>

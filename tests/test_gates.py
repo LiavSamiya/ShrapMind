@@ -4,7 +4,11 @@ import pytest
 
 _RX = {"bond_class": "beta-1,4-glycosidic", "mechanism": "hydrolysis",
        "products": ["cellobiose"], "forbidden_products": ["microparticle", "formaldehyde"]}
-_PP = {"material_family": "cellulose", "anatomy_class": "soft_tissue", "confidence": 0.8}
+# A "sound run" passport now also has to answer the comparator question: this
+# approach is measured against forceps, not against doing nothing.
+_PP = {"material_family": "cellulose", "anatomy_class": "soft_tissue",
+       "confidence": 0.8, "presentation": "single_fragment",
+       "retrievable_mechanically": False}
 # A "sound run" fixture now has to state what its kinetics were measured on.
 # Provenance "polymer" is the hypothetical case the knowledge base does not yet
 # contain anywhere - which is exactly why the gate exists.
@@ -40,7 +44,7 @@ def test_a_sound_run_passes_every_gate_except_unresolved_hazard():
     of danger, and it clears once tools/fetch_chemistry.py can reach PubChem.
     """
     r = E.run_safety_gates(_assay(), _RX, _PP)
-    assert len(r["gates"]) == 16
+    assert len(r["gates"]) == 17
     assert r["failed"] == ["hazard_resolved"], r["summary"]
     detail = _gate(r, "hazard_resolved")["detail"]
     assert "NOT a finding of safety" in detail
@@ -242,3 +246,61 @@ def test_a_metabolite_only_product_panel_passes_the_hazard_gate():
           "forbidden_products": ["microparticle"]}
     r = E.run_safety_gates(_assay(), rx, _PP)
     assert "product_hazard" not in r["failed"]
+
+
+# ---------------------------------------------------------------- presentation
+#
+# The two approaches the project can take, and the different questions each has
+# to answer.
+
+
+def test_a_retrievable_single_fragment_is_refused_in_favour_of_surgery():
+    """The comparator for this whole approach is forceps, not doing nothing.
+    A system that never asks is assuming its own necessity."""
+    r = E.run_safety_gates(_assay(), _RX,
+                           {**_PP, "retrievable_mechanically": True})
+    assert r["blocking"]
+    assert "clinical_necessity" in r["failed"]
+    detail = _gate(r, "clinical_necessity")["detail"]
+    assert "conventional retrieval" in detail
+
+
+def test_an_unreachable_single_fragment_qualifies():
+    r = E.run_safety_gates(_assay(), _RX,
+                           {**_PP, "retrievable_mechanically": False})
+    assert "clinical_necessity" not in r["failed"]
+
+
+def test_dispersed_particulate_has_no_conventional_comparator():
+    """Thousands of micron-scale particles cannot be picked out at any cost, so
+    the necessity question answers itself."""
+    a = _assay(presentation="dispersed_particulate", particle_size_um=30.0)
+    r = E.run_safety_gates(a, _RX, {**_PP,
+                                    "presentation": "dispersed_particulate",
+                                    "retrievable_mechanically": False})
+    assert "clinical_necessity" not in r["failed"]
+    assert "not an option at any cost" in _gate(r, "clinical_necessity")["detail"]
+
+
+def test_dispersal_raises_surface_area_by_orders_of_magnitude():
+    """The reason the dispersed case is tractable at all: same mass, vastly
+    more surface."""
+    single = _assay()
+    dispersed = _assay(presentation="dispersed_particulate", particle_size_um=30.0)
+    assert dispersed["n_particles"] > 100_000
+    assert dispersed["initial_area_mm2"] > 20 * single["initial_area_mm2"]
+    assert dispersed["specific_area_mm2_per_mm3"] > single["specific_area_mm2_per_mm3"]
+
+
+def test_dispersal_shortens_time_to_half_consumption():
+    single = _assay()
+    dispersed = _assay(presentation="dispersed_particulate", particle_size_um=30.0)
+    assert dispersed["time_to_half_h"] is not None
+    assert single["time_to_half_h"] is not None
+    assert dispersed["time_to_half_h"] < single["time_to_half_h"]
+
+
+def test_mass_balance_still_closes_for_a_particle_population():
+    """Millions of particles must not break conservation."""
+    a = _assay(presentation="dispersed_particulate", particle_size_um=10.0)
+    assert a["mass_balance_residual"] < 1e-6
