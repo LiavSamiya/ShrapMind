@@ -532,14 +532,19 @@ def _validate_args(call: ToolCall, mode: str = "run") -> dict[str, Any] | None:
             return {"error": f"candidate cap reached ({cap} this session). Narrow the "
                              f"search rather than widening it."}
 
-    # Numeric bounds.
+    # Numeric bounds. Integer-valued arguments are cast back to int after
+    # validation: validate_number returns a float, and a float reaching a
+    # slice index or a range() is a TypeError the model cannot do anything
+    # useful about.
+    _INT_ARGS = {"top_k", "n_samples", "n_variants"}
     try:
         for arg_name, canonical in _NUMERIC_ARGS.items():
             if arg_name in args and args[arg_name] is not None:
                 if arg_name == "seconds":
                     args[arg_name] = max(0.0, min(float(args[arg_name]), 5.0))
                 else:
-                    args[arg_name] = validate_number(canonical, args[arg_name])
+                    checked = validate_number(canonical, args[arg_name])
+                    args[arg_name] = int(checked) if arg_name in _INT_ARGS else checked
         conds = args.get("conditions")
         if isinstance(conds, dict):
             for k in list(conds):

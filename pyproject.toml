@@ -16,6 +16,13 @@ requires-python = ">=3.10"
 line-length = 100
 target-version = "py310"
 
+# f2c/ and tools/ are the evidence layer, vendored from the project's own
+# earlier codebase and deliberately kept byte-for-byte as written. Their tests
+# cover them; reformatting them to this project's lint settings would create
+# churn in files whose correctness is established, for no benefit. Same for
+# their test module.
+extend-exclude = ["f2c", "tools", "tests/test_engine.py"]
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S"]
 ignore = [

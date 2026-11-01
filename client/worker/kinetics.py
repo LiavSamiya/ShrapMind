@@ -327,6 +327,29 @@ def _jitter(value: float, rel: float, rng: Any) -> float:
     return float(value * math.exp(rng.normal(0.0, rel)))
 
 
+# How wide to make the band, given what the kinetic constants were measured on.
+#
+# This is the single most important table in the simulator. Nobody has measured
+# a turnover number on a solid retained fragment, so every k_cat available is a
+# constant measured on something else: a chromogenic ester, a soluble oligomer,
+# in the worst case an unrelated protein substrate. Reporting a tight band from
+# such a constant would be false precision of the most persuasive kind.
+#
+# So the provenance sets the spread, and a model-ester-derived rate comes back
+# with a band spanning roughly an order of magnitude - which then trips the
+# predictive_confidence gate on its own, without needing a special case.
+PROVENANCE_SIGMA = {
+    "polymer": 0.25,
+    "oligomer": 0.50,
+    "model": 0.90,
+    "unknown": 1.20,
+}
+
+
+def sigma_for(provenance: str | None) -> float:
+    return PROVENANCE_SIGMA.get(str(provenance or "unknown"), 1.20)
+
+
 def simulate_with_uncertainty(
     enzyme: EnzymeParams,
     gel: GelParams,
@@ -335,7 +358,8 @@ def simulate_with_uncertainty(
     *,
     n_samples: int = 64,
     seed: int = 0,
-    rel_sigma: float = 0.25,
+    rel_sigma: float | None = None,
+    provenance: str | None = None,
 ) -> dict[str, Any]:
     """Run the model over sampled kinetic parameters and return a band.
 
@@ -349,6 +373,9 @@ def simulate_with_uncertainty(
     """
     if np is None:
         raise RuntimeError("numpy is required for simulate_with_uncertainty")
+    # Provenance decides the spread unless a caller overrides it explicitly.
+    if rel_sigma is None:
+        rel_sigma = sigma_for(provenance)
     n = int(max(1, min(n_samples, 512)))
     rng = np.random.default_rng(seed)
     base = simulate(enzyme, gel, fragment, cond)
@@ -395,4 +422,6 @@ def simulate_with_uncertainty(
     )
     base["particle_fraction_p95"] = float(np.percentile(np.array(parts), 95))
     base["captured_fraction_p05"] = float(np.percentile(np.array(caps), 5))
+    base["kinetics_provenance"] = str(provenance or "unknown")
+    base["rel_sigma"] = rel_sigma
     return base

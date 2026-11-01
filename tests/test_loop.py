@@ -46,12 +46,44 @@ def _result(events):
 # ---------------------------------------------------------------- happy path
 
 
-def test_scripted_run_completes_and_reports(fake_worker):
+def test_scripted_run_reports_an_evidence_no_go(fake_worker):
+    """The demo runs a PET case on the real warehouse, where every available
+    turnover number was measured on a chromogenic stand-in. The correct
+    outcome is therefore a reasoned refusal, not a recommendation - and the
+    report has to distinguish "no evidence" from "will not work"."""
     run, events = _run()
-    assert run.success
+    assert not run.success
     res = _result(events)
-    assert res is not None and res.payload["success"]
-    assert "requires wet-lab validation" in res.payload["summary"]
+    assert res is not None
+    assert res.payload["success"] is False
+    assert res.payload["halted"] == "safety_gate"
+    summary = res.payload["summary"]
+    assert "requires wet-lab validation" in summary
+    # The distinction that matters scientifically.
+    assert "does NOT establish" in summary
+    assert "nobody has measured" in summary
+    # It must name the substrate the constant actually came from.
+    assert "4-nitrophenyl butanoate" in summary
+
+
+def test_a_failed_gate_still_produces_a_written_report(fake_worker):
+    """A gate failure ends the recommendation, not the run. Breaking
+    immediately would throw away the write-up and keep only the error."""
+    run, events = _run()
+    called = [e.payload["name"] for e in events if e.kind == "tool_call"]
+    assert "finish" in called, "the agent must still get to write its no-go report"
+    # But it may not route around the gate.
+    gated_after = called[called.index("run_safety_gates") + 1:]
+    assert "simulate_hydrogel_assay" not in gated_after
+    assert "submit_candidate" not in gated_after
+
+
+def test_the_experiment_plan_survives_a_gate_failure(fake_worker):
+    """The most valuable output of a refused run is what to measure next."""
+    _, events = _run()
+    res = _result(events)
+    assert res is not None
+    assert res.payload.get("next_experiments")
 
 
 def test_every_pipeline_stage_is_announced(fake_worker):
@@ -72,7 +104,7 @@ def test_reasoning_is_streamed_not_dumped(fake_worker):
 def test_run_record_captures_passport_and_candidate(fake_worker):
     run, _ = _run()
     assert run.passport is not None
-    assert run.passport.material_family == "cellulose"
+    assert run.passport.material_family == "pet"
     assert run.reaction_spec is not None
     assert run.chosen_candidate is not None
     assert run.chosen_candidate.provenance in ("in-silico proposal", "wild-type reference")
@@ -110,10 +142,12 @@ def test_a_failing_gate_halts_the_run(fake_worker):
     res = _result(events)
     assert res is not None
     assert res.payload["halted"] == "safety_gate"
-    assert "SAFETY GATE FAILURE" in res.payload["summary"]
-    # The run stopped at the gate: finish never executed.
-    assert not any(e.kind == "tool_call" and e.payload["name"] == "finish"
-                   for e in events)
+    # The gate failure is surfaced as an error event with its deciding numbers.
+    errors = [e.payload.get("text", "") for e in events if e.kind == "error"]
+    assert any("SAFETY GATE FAILURE" in t for t in errors)
+    # And the attempt to declare success anyway was refused, not merely
+    # unreachable - the model asked, and was told no.
+    assert res.payload["success"] is False
 
 
 def test_a_clinical_request_halts_the_run(fake_worker):

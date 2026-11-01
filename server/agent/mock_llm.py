@@ -13,16 +13,18 @@ from typing import Any
 
 from shared.protocol import ToolCall
 
+# No kinetics here. The script retrieves them from the warehouse like a real
+# run does, so the demo exercises the actual evidence path rather than a set of
+# numbers baked into a fixture. bench._resolve_base_params fills them in.
 _BASE = {
-    "k_cat": 3.0, "k_m_uM": 45.0, "half_life_h": 96.0, "t_opt_c": 50.0,
-    "t_width_c": 14.0, "ph_opt": 5.0, "ph_width": 1.6, "radius_nm": 3.2,
-    "volume_mm3": 8.0, "molar_mass_g_mol": 162.14, "density_g_cm3": 1.5,
-    "accessibility": 0.3, "mesh_nm": 20.0, "capture_rate_per_h": 0.6,
+    "volume_mm3": 8.0,
+    "mesh_nm": 20.0,
+    "capture_rate_per_h": 0.6,
     "capture_capacity_umol": 200.0,
 }
 
-_WT = {"name": "cellulase-WT", "parent_family": "cellulase", "edits": []}
-_V1 = {"name": "cellulase-active_site_", "parent_family": "cellulase",
+_WT = {"name": "606-WT", "parent_family": "606", "edits": []}
+_V1 = {"name": "606-active_site_", "parent_family": "606",
        "edits": ["active_site_loop_graft"]}
 
 DEFAULT_SCRIPT: list[tuple[str, list[ToolCall]]] = [
@@ -31,122 +33,123 @@ DEFAULT_SCRIPT: list[tuple[str, list[ToolCall]]] = [
         "every downstream choice depends on it, so I will characterize before anything "
         "else and check how confident that identification actually is.",
         [ToolCall(name="characterize_fragment",
-                  args={"description": "wood splinter retained in forearm soft tissue, "
-                                       "symptomatic, declined surgery",
+                  args={"description": "PET polyester fibre fragment retained in "
+                                       "forearm soft tissue, symptomatic, surgery declined",
+                        "spectra": {"peaks": [1715, 1245]},
                         "volume_mm3": 8.0, "anatomy_class": "soft_tissue"})],
     ),
     (
-        "Cellulose, confidence 0.75, from the description rather than a sample - worth "
-        "stating in the report. Now the chemistry target and the material's own rate "
-        "limit.",
+        "FTIR gives the ester carbonyl at 1715 and the aromatic C-O at 1245, so this is "
+        "PET at 0.85 confidence from actual spectral data rather than from the case text. "
+        "Now the chemistry target and this material's real rate limit.",
         [ToolCall(name="define_reaction",
-                  args={"material_family": "cellulose", "surface_state": "crystalline"}),
-         ToolCall(name="get_material_notes", args={"material": "cellulose"})],
+                  args={"material_family": "pet", "surface_state": "semi-crystalline"}),
+         ToolCall(name="get_material_notes", args={"material": "pet"})],
     ),
     (
-        "The note is explicit that accessibility, not turnover, is the binding "
-        "constraint here, and that a wood fragment is not sterile. Retrieving families "
-        "measured on this substrate, and the precedents with their limits.",
+        "The note is explicit that crystallinity, not turnover, sets the achievable rate, "
+        "and that almost all published PET enzymology was measured at 50-70 C on "
+        "amorphous film. Retrieving the curated families for this substrate together "
+        "with what the precedents do not establish.",
         [ToolCall(name="retrieve_enzymes",
-                  args={"query": "beta-1,4-glycosidic hydrolysis of solid crystalline "
-                                 "cellulose at physiological temperature",
-                        "material": "cellulose", "top_k": 4}),
+                  args={"query": "aromatic ester hydrolysis of semi-crystalline PET at "
+                                 "physiological temperature",
+                        "material": "PET", "top_k": 4}),
          ToolCall(name="retrieve_precedents",
-                  args={"query": "enzymatic depolymerisation precedent and its limits",
-                        "top_k": 3})],
+                  args={"query": "enzymatic polyester depolymerisation precedent and "
+                                 "its limits", "top_k": 3})],
     ),
     (
-        "Proposing variants over the documented edit catalogue, biased toward activity "
-        "since accessibility is what hurts us. Carrying the wild type so every "
-        "engineered candidate has to beat something you could simply buy.",
+        "Retrieval is blunt about the evidence: every candidate's kinetics carry "
+        "model-level provenance. I will carry that through rather than quietly "
+        "dropping it. Proposing variants over the documented edit catalogue, and "
+        "keeping the wild type so any engineered construct has to beat it.",
         [ToolCall(name="propose_variants",
-                  args={"parent_family": "cellulase", "n_variants": 4,
+                  args={"parent_family": "606", "n_variants": 3,
                         "goal": "activity", "base_params": _BASE})],
     ),
     (
-        "Scoring developability on the two I care about before spending the full assay.",
+        "Scoring developability on the two candidates worth the full assay.",
         [ToolCall(name="predict_properties", args={"candidate": _WT}),
          ToolCall(name="predict_properties", args={"candidate": _V1})],
     ),
     (
-        "Running the virtual assay on both: 14 days at 37 C, pH 7.4, 10 percent serum, "
-        "inside a 20 nm mesh gel. I want the band, not a point estimate.",
+        "Running the virtual assay on the wild type: 14 days at 37 C, pH 7.4, 10 percent "
+        "serum, inside a 20 nm mesh gel. The kinetics come from the warehouse, so the "
+        "band will reflect what they were actually measured on.",
         [ToolCall(name="simulate_hydrogel_assay",
                   args={"candidate": _WT, "base_params": _BASE,
                         "conditions": {"hours": 336.0, "temperature_c": 37.0,
                                        "ph": 7.4, "enzyme_uM": 10.0,
                                        "serum_fraction": 0.1},
-                        "product": "cellobiose", "n_samples": 48, "seed": 3})],
+                        "product": "mhet", "n_samples": 48, "seed": 3})],
     ),
     (
-        "Now the engineered variant under identical conditions, same seed, so the "
+        "Now the engineered variant under identical conditions and the same seed, so the "
         "comparison is apples to apples.",
         [ToolCall(name="simulate_hydrogel_assay",
                   args={"candidate": _V1, "base_params": _BASE,
                         "conditions": {"hours": 336.0, "temperature_c": 37.0,
                                        "ph": 7.4, "enzyme_uM": 10.0,
                                        "serum_fraction": 0.1},
-                        "product": "cellobiose", "n_samples": 48, "seed": 3})],
+                        "product": "mhet", "n_samples": 48, "seed": 3})],
     ),
     (
         "Mass balance first - if the books do not close then neither number means "
-        "anything - then the full gate battery on the better candidate.",
+        "anything - then the full gate battery.",
         [ToolCall(name="check_mass_balance", args={"assay": {}}),
-         ToolCall(name="run_safety_gates", args={"assay": {}})],
+         ToolCall(name="run_safety_gates", args={})],
     ),
     (
-        "Gates passed. Ranking, then working out which wet-lab measurement would "
-        "remove the most uncertainty.",
+        "The provenance gate has failed, and it is right to. The turnover number driving "
+        "both of those rates was measured on 4-nitrophenyl butanoate - a chromogenic "
+        "stand-in - not on PET, and the band is correspondingly wide. That is the "
+        "finding. Ranking what I have and working out which measurement would actually "
+        "resolve it.",
         [ToolCall(name="rank_candidates", args={}),
          ToolCall(name="plan_next_experiment", args={"budget": 3})],
     ),
     (
-        "Queueing the lead for human review and writing the report.",
-        [ToolCall(name="submit_candidate",
-                  args={"candidate_name": "cellulase-active_site_",
-                        "summary": "Active-site loop graft on a cellulase, simulated "
-                                   "against a crystalline cellulose fragment in a "
-                                   "product-capturing hydrogel.",
-                        "rationale": "Highest simulated erosion rate of the shortlist "
-                                     "with all ten gates passed; accessibility remains "
-                                     "the binding constraint."})],
-    ),
-    (
-        "Writing up.",
+        "Writing up. This is a no-go on the evidence, not a candidate recommendation.",
         [ToolCall(name="finish",
-                  args={"success": True,
+                  args={"success": False,
                         "summary": (
-                            "SIMULATION HYPOTHESIS - requires wet-lab validation.\n\n"
-                            "Case: wood (cellulose) fragment, ~8 mm3, forearm soft "
-                            "tissue. Material family identified from the description "
-                            "only, confidence 0.75 - a physical sample or spectroscopy "
-                            "would raise that and should precede any real work.\n\n"
-                            "Chemistry: beta-1,4-glycosidic hydrolysis to cellobiose and "
-                            "glucose. Both are ordinary metabolites, which is why this "
-                            "material is the most defensible starting point - the "
-                            "product-toxicity question is largely answered before we "
-                            "begin. Forbidden products for this route are microparticles "
-                            "and formaldehyde.\n\n"
-                            "Lead candidate: cellulase-active_site_ (active-site loop "
-                            "graft). Simulated surface erosion is the highest of the "
-                            "shortlist, but read the band rather than the midpoint - it "
-                            "is wide, and that width is the honest finding.\n\n"
-                            "All ten safety gates passed, including mass-balance closure, "
-                            "no appreciable particulate release, and gel capture above "
-                            "the threshold. Capture matters more than speed here: a "
-                            "faster route that leaked product would have failed.\n\n"
-                            "What this does NOT establish: that the designed sequence "
-                            "folds, expresses or binds. Nothing here was structurally "
-                            "predicted. Published cellulase kinetics are mostly measured "
-                            "on milled substrate at the enzyme's own optimum, not on a "
-                            "solid splinter at 37 C in serum - closing that gap is the "
-                            "actual research question. The fragment is also not sterile, "
-                            "and biofilm on the surface would reduce the accessibility "
-                            "this model assumes.\n\n"
-                            "Next experiments, in priority order, are the three the "
-                            "planner returned - each chosen because measuring it would "
-                            "most reduce uncertainty about a candidate that could "
-                            "plausibly work.")})],
+                            "SIMULATION HYPOTHESIS - requires wet-lab validation. "
+                            "NO CANDIDATE CAN BE RECOMMENDED FROM CURRENT EVIDENCE.\n\n"
+                            "Case: PET polyester fragment, ~8 mm3, forearm soft tissue. "
+                            "Material identified at 0.85 confidence from FTIR peaks "
+                            "(1715 cm-1 ester C=O, 1245 cm-1 aromatic C-O) rather than "
+                            "from the case description.\n\n"
+                            "Chemistry: aromatic ester hydrolysis to MHET, terephthalic "
+                            "acid and ethylene glycol. Ethylene glycol is the product "
+                            "that has to be bounded rather than waved past, which is "
+                            "what the capture gate is for.\n\n"
+                            "Why this run does not produce a recommendation: the "
+                            "kinetics-provenance gate failed. The turnover number "
+                            "driving the simulated rate was measured on 4-nitrophenyl "
+                            "butanoate, a chromogenic stand-in, not on PET. No turnover "
+                            "number measured on a solid polymer fragment exists anywhere "
+                            "in the knowledge base - of 289 kinetic measurements across "
+                            "505 curated enzymes, 168 are on model esters, 42 on soluble "
+                            "oligomers, and none on the real material. The predictive-"
+                            "confidence gate failed for the same underlying reason: once "
+                            "the band is widened to reflect that provenance it spans "
+                            "roughly an order of magnitude, which cannot support a "
+                            "recommendation.\n\n"
+                            "Mass balance closed, capture cleared its threshold and no "
+                            "appreciable particulate was released, so the formulation "
+                            "side of the model is behaving. The blocker is the evidence, "
+                            "not the chemistry.\n\n"
+                            "What this does NOT establish: that these enzymes cannot "
+                            "work on PET at body temperature. It establishes that nobody "
+                            "has measured whether they do. Published PET enzymology is "
+                            "almost entirely at 50-70 C on amorphous film; this case is "
+                            "37 C on semi-crystalline fibre in serum, and closing that "
+                            "gap is the actual research question.\n\n"
+                            "The single most valuable next step is therefore a wet-lab "
+                            "turnover measurement on real PET substrate at 37 C in "
+                            "serum, for the candidates the planner ranked - which is "
+                            "exactly what would let this gate pass.")})],
     ),
 ]
 

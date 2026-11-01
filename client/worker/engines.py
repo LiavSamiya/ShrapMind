@@ -519,23 +519,48 @@ def predict_properties(candidate: dict[str, Any]) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 
 
+# Fallbacks used ONLY when a parameter was never measured. Each one is recorded
+# in `assumed_parameters` and surfaced in the report, because a quietly
+# substituted default is how a simulation starts lying: the number looks the
+# same whether it came from a paper or from this dict.
+_FALLBACKS = {
+    "k_cat": 1.0, "k_m_uM": 50.0, "t_opt_c": 37.0, "t_width_c": 12.0,
+    "ph_opt": 7.0, "ph_width": 1.2, "ea_kj": 45.0, "radius_nm": 3.0,
+    "half_life_h": 72.0, "fragmentation_fraction": 0.0,
+}
+
+
 def _enzyme_params_for(
     candidate: dict[str, Any], base: dict[str, Any] | None, product: str
-) -> kinetics.EnzymeParams:
-    """Build kinetic parameters for a candidate: the parent family's measured
-    record, moved by the documented kinetic effect of each edit."""
+) -> tuple[kinetics.EnzymeParams, list[str]]:
+    """Build kinetic parameters for a candidate, and report what was assumed.
+
+    Returns (params, assumed) where `assumed` names every parameter that came
+    from _FALLBACKS rather than from a measurement. The caller must carry that
+    list into the result; the gate battery reads it.
+    """
     base = base or {}
+    assumed: list[str] = list(base.get("assumed_parameters") or [])
+
+    def pick(key: str) -> float:
+        if base.get(key) is not None:
+            return float(base[key])
+        label = {"k_cat": "k_cat", "k_m_uM": "K_m", "half_life_h": "half_life"}.get(key, key)
+        if label not in assumed:
+            assumed.append(label)
+        return float(_FALLBACKS[key])
+
     p = kinetics.EnzymeParams(
         name=str(candidate.get("name", "unnamed")),
-        k_cat=float(base.get("k_cat", 1.0)),
-        k_m_uM=float(base.get("k_m_uM", 50.0)),
-        t_opt_c=float(base.get("t_opt_c", 37.0)),
-        t_width_c=float(base.get("t_width_c", 12.0)),
-        ph_opt=float(base.get("ph_opt", 7.0)),
-        ph_width=float(base.get("ph_width", 1.2)),
-        ea_kj=float(base.get("ea_kj", 45.0)),
-        radius_nm=float(base.get("radius_nm", 3.0)),
-        half_life_h=float(base.get("half_life_h", 72.0)),
+        k_cat=pick("k_cat"),
+        k_m_uM=pick("k_m_uM"),
+        t_opt_c=pick("t_opt_c"),
+        t_width_c=pick("t_width_c"),
+        ph_opt=pick("ph_opt"),
+        ph_width=pick("ph_width"),
+        ea_kj=pick("ea_kj"),
+        radius_nm=pick("radius_nm"),
+        half_life_h=pick("half_life_h"),
         product=product,
         fragmentation_fraction=float(base.get("fragmentation_fraction", 0.0)),
     )
@@ -547,7 +572,7 @@ def _enzyme_params_for(
     # mobility - the trade-off the gel imposes on every anchoring strategy.
     if "material_binding_peptide_fusion" in (candidate.get("edits") or []):
         p.radius_nm *= 1.25
-    return p
+    return p, assumed
 
 
 def score_kinetics(
@@ -580,10 +605,12 @@ def score_kinetics(
         mesh_nm=validate_number("mesh_nm", base.get("mesh_nm", 20.0)),
         volume_ul=validate_number("gel_volume_ul", base.get("gel_volume_ul", 500.0)),
     )
-    enz = _enzyme_params_for(candidate, base, product)
+    enz, assumed = _enzyme_params_for(candidate, base, product)
     r = kinetics.simulate(enz, gel, frag, cond)
     return {
         "name": enz.name,
+        "kinetics_provenance": str((base or {}).get("kinetics_provenance") or "unknown"),
+        "assumed_parameters": assumed,
         "erosion_rate_um_per_day": round(r["erosion_rate_um_per_day"], 4),
         "consumed_fraction": round(r["consumed_fraction"], 4),
         "time_to_half_h": r["time_to_half_h"],
@@ -636,9 +663,11 @@ def simulate_hydrogel_assay(
         capture_capacity_umol=float(base.get("capture_capacity_umol", 50.0)),
         clearance_rate_per_h=float(base.get("clearance_rate_per_h", 0.02)),
     )
-    enz = _enzyme_params_for(candidate, base, product)
+    enz, assumed = _enzyme_params_for(candidate, base, product)
     n = int(validate_number("n_samples", n_samples))
-    r = kinetics.simulate_with_uncertainty(enz, gel, frag, cond, n_samples=n, seed=int(seed))
+    provenance = str((base or {}).get("kinetics_provenance") or "unknown")
+    r = kinetics.simulate_with_uncertainty(
+        enz, gel, frag, cond, n_samples=n, seed=int(seed), provenance=provenance)
 
     # Downsample the trace for transport - the UI draws a sparkline, not a
     # 4000-point plot, and a 64 MB frame cap is not an invitation.
@@ -680,6 +709,11 @@ def simulate_hydrogel_assay(
         "mass_balance_residual": r["mass_balance_residual"],
         "product": r["product"],
         "n_samples": r["n_samples"],
+        "kinetics_provenance": provenance,
+        "rel_sigma": r.get("rel_sigma"),
+        "assumed_parameters": assumed,
+        "measured_on": (base or {}).get("measured_on"),
+        "evidence_citations": (base or {}).get("evidence_citations") or [],
         "disclaimer": simulation_disclaimer(),
     }
 
@@ -751,6 +785,12 @@ GATE_THRESHOLDS: dict[str, float] = {
     # A route that erodes nothing measurable is a no-go, not a safe option.
     "erosion_rate_min_um_per_day": 0.05,
 }
+
+# Which kinetics provenances may support a rate claim. Today NOTHING in the
+# knowledge base reaches "polymer", so this gate fails on essentially every
+# run - and that is the correct behaviour, not a bug. It is the system
+# reporting that the measurement everyone needs has never been made.
+ALLOWED_KINETICS_PROVENANCE = {"polymer", "oligomer"}
 
 
 def run_safety_gates(
@@ -865,6 +905,37 @@ def run_safety_gates(
          "material family identified with usable confidence" if conf >= 0.5 else
          "material ID too weak to design against - characterize first")
 
+    # 11. Kinetics provenance. The constants driving every number above were
+    #     measured on SOMETHING - and if that something was not the fragment
+    #     material, the rate is an extrapolation across substrates, not a
+    #     prediction. This gate exists because the knowledge base contains no
+    #     turnover number measured on a solid polymer: the available constants
+    #     come from chromogenic esters and, in one case, from casein.
+    prov = str(assay.get("kinetics_provenance") or "unknown")
+    measured_on = assay.get("measured_on") or "an unrecorded substrate"
+    ok_prov = prov in ALLOWED_KINETICS_PROVENANCE
+    gate("kinetics_provenance", ok_prov, prov, sorted(ALLOWED_KINETICS_PROVENANCE),
+         f"kinetics were measured on {measured_on}, which is {prov}-level evidence "
+         f"for this material"
+         if ok_prov else
+         f"the kinetic constants were measured on {measured_on} ({prov}-level), "
+         f"not on the fragment material. No turnover number measured on a solid "
+         f"fragment exists in the knowledge base, so this rate is an "
+         f"extrapolation across substrates and may not be reported as a "
+         f"prediction")
+
+    # 12. Assumed parameters. A simulation resting on unmeasured inputs has to
+    #     say which ones, and a rate claim cannot rest on an assumed k_cat.
+    assumed = list(assay.get("assumed_parameters") or [])
+    blocking_assumptions = [a for a in assumed if a in ("k_cat", "K_m")]
+    gate("measured_inputs", not blocking_assumptions,
+         ", ".join(assumed) or "none", "k_cat and K_m measured",
+         "the parameters driving the rate were measured"
+         if not blocking_assumptions else
+         f"no measured value exists for {', '.join(blocking_assumptions)}; the "
+         f"simulation fell back to a generic default, so the rate reflects that "
+         f"default rather than this enzyme")
+
     failed = [g["name"] for g in gates if not g["passed"]]
     return {
         "gates": gates,
@@ -872,6 +943,7 @@ def run_safety_gates(
         "failed": failed,
         # Any failure is blocking. There is no "advisory" tier on purpose.
         "blocking": bool(failed),
+        "kinetics_provenance": prov,
         "summary": (
             f"all {len(gates)} gates passed"
             if not failed

@@ -233,6 +233,7 @@ def run_design(
 
     final_summary = ""
     halted = False
+    gate_failure: dict[str, Any] | None = None
     last_tools: list[str] = []
     distinct_actions: set[str] = set()
 
@@ -312,9 +313,32 @@ def run_design(
                 action_log.append("Two waits in a row achieve nothing. Act or finish.")
                 continue
 
+            # --- report-only mode after a gate failure
+            #
+            # Blocks only what would route around the gate or spend more
+            # compute chasing it: simulating again, gating again, submitting a
+            # candidate. Reading, ranking and - above all - planning the
+            # experiment that would resolve the failure stay available, because
+            # those are the most valuable things a failed run can produce.
+            _REPORT_ONLY_BLOCKED = {
+                "simulate_hydrogel_assay", "score_kinetics", "run_safety_gates",
+                "submit_candidate", "propose_variants", "characterize_fragment",
+            }
+            if gate_failure is not None and name in _REPORT_ONLY_BLOCKED:
+                action_log.append(
+                    f"{name} is not available: a safety gate has failed. You may "
+                    f"still rank what you have and plan the measurement that "
+                    f"would resolve it, then finish(success=false).")
+                continue
+
             # --- finish guards
             if name == "finish":
                 success = bool(call.args.get("success", False))
+                if gate_failure is not None and success:
+                    action_log.append(
+                        "You cannot finish successfully after a safety-gate "
+                        "failure. Report the no-go with finish(success=false).")
+                    continue
                 if turn == 0:
                     action_log.append("You cannot finish on the first turn - nothing "
                                       "has been characterized, simulated or gated yet.")
@@ -334,7 +358,7 @@ def run_design(
                             "successful outcome to report. Either gate a candidate, or "
                             "finish with success=false and explain the no-go.")
                         continue
-                elif len(distinct_actions) < 3:
+                elif gate_failure is None and len(distinct_actions) < 3:
                     action_log.append(
                         "Before reporting failure, actually try: characterize the "
                         "fragment, define the reaction and retrieve candidates. You "
@@ -391,23 +415,34 @@ def run_design(
                     pass
 
             # --- THE HARD GATE
+            #
+            # A failure ends the RECOMMENDATION, not the run. The loop does not
+            # break here: it locks into report-only mode, where the single
+            # permitted action is finish(success=False). That matters because a
+            # gate failure is a scientific finding - "the measurement everyone
+            # needs has never been made" is the most useful thing this system
+            # can say - and breaking immediately would throw away the write-up
+            # while keeping only the error text.
+            #
+            # The model still cannot route around the gate: it cannot simulate
+            # again, cannot submit, and cannot finish successfully.
             if name == "run_safety_gates" and isinstance(payload, dict):
                 if payload.get("blocking"):
                     detail = "; ".join(
                         f"{g['name']}={g.get('value')} (limit {g.get('threshold')})"
                         for g in payload.get("gates", []) if not g.get("passed"))
-                    text = (f"SAFETY GATE FAILURE - run halted. "
-                            f"{payload.get('summary')}. {detail}. "
+                    text = (f"SAFETY GATE FAILURE. {payload.get('summary')}. {detail}. "
                             f"This is not a parameter to tune around: a candidate that "
                             f"fails a gate is a finding, not a draft.")
                     emit(AgentEvent(kind="error", payload={"text": text}))
-                    emit(AgentEvent(kind="result", payload={
-                        "success": False, "summary": text,
-                        "gates": payload.get("gates", []),
-                        "halted": "safety_gate"}))
-                    halted = True
-                    finished = True
-                    final_summary = text
+                    gate_failure = {"text": text, "gates": payload.get("gates", [])}
+                    action_log.append(
+                        f"{text} You may no longer simulate, submit or finish "
+                        f"successfully. Write the no-go report now with "
+                        f"finish(success=false): state which gates failed and the "
+                        f"number that decided each, what that says about the "
+                        f"evidence rather than about the chemistry, and the one "
+                        f"measurement that would change the answer.")
                     break
 
             if name == "finish" and isinstance(payload, dict):
@@ -464,6 +499,16 @@ def run_design(
                            if g.get("passed")), []),
             "assay": next((a for n, a in bench.state["assays"].items() if n == best), None),
             "next_experiments": bench.state["next_experiments"],
+            "disclaimer": simulation_disclaimer()}))
+    elif gate_failure is not None:
+        emit(AgentEvent(kind="result", payload={
+            "success": False,
+            "summary": final_summary or gate_failure["text"],
+            "gates": gate_failure["gates"],
+            "ranking": bench.state["ranking"],
+            "assay": next(iter(bench.state["assays"].values()), None),
+            "next_experiments": bench.state["next_experiments"],
+            "halted": "safety_gate",
             "disclaimer": simulation_disclaimer()}))
     elif not halted:
         emit(AgentEvent(kind="result", payload={

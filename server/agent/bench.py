@@ -45,6 +45,9 @@ class Bench:
         self.client_id = client_id
         self.skip_db = skip_db
         self.mode = mode
+        # Full evidence records for the families retrieved this session, so
+        # base_params_for() can hand the simulator measured values + citations.
+        self._evidence: dict[str, Any] = {}
         # Accumulated session state. This is what gets serialized into every
         # turn's message - the agent's equivalent of "the current screen".
         self.state: dict[str, Any] = {
@@ -104,17 +107,46 @@ class Bench:
             self.state["properties"][r["name"]] = r.get("scores", {})
         return r
 
+    def _resolve_base_params(self, candidate: dict,
+                             base_params: dict | None) -> dict[str, Any]:
+        """Fill in measured kinetics from the retrieved evidence.
+
+        The model should not have to echo k_cat, K_m and a citation list back
+        through a tool argument: that wastes tokens, invites truncation, and
+        gives it the opportunity to "tidy" a number. If the caller did not
+        supply kinetics, look them up from what retrieve_enzymes returned for
+        this candidate's parent family (or its own name).
+
+        Anything the caller DID supply wins, so an explicit what-if is still
+        possible - it just has to be explicit.
+        """
+        base = dict(base_params or {})
+        if base.get("k_cat") is not None:
+            return base
+        for key in (candidate.get("parent_family"), candidate.get("name")):
+            if not key:
+                continue
+            found = self.base_params_for(str(key))
+            if found:
+                # Caller-supplied values take precedence over the warehouse.
+                merged = {**found, **{k: v for k, v in base.items() if v is not None}}
+                return merged
+        return base
+
     def score_kinetics(self, candidate: dict, base_params: dict | None = None,
                        conditions: dict | None = None, product: str = "oligomer") -> Any:
         return self._call("score_kinetics", {
-            "candidate": candidate, "base_params": base_params,
+            "candidate": candidate,
+            "base_params": self._resolve_base_params(candidate, base_params),
             "conditions": conditions, "product": product})
 
     def simulate_hydrogel_assay(self, candidate: dict, base_params: dict | None = None,
                                 conditions: dict | None = None, product: str = "oligomer",
                                 n_samples: int = 64, seed: int = 0) -> Any:
         r = self._call("simulate_hydrogel_assay", {
-            "candidate": candidate, "base_params": base_params, "conditions": conditions,
+            "candidate": candidate,
+            "base_params": self._resolve_base_params(candidate, base_params),
+            "conditions": conditions,
             "product": product, "n_samples": n_samples, "seed": seed})
         if isinstance(r, dict) and r.get("candidate"):
             self.state["assays"][r["candidate"]] = r
@@ -206,18 +238,75 @@ class Bench:
 
     def retrieve_enzymes(self, query: str, material: str | None = None,
                          top_k: int = 5) -> Any:
-        """Semantic search over the enzyme knowledge base. Backend-side,
-        because the database lives here and not on the worker."""
-        if self.skip_db:
-            return {"families": [], "note": "database skipped (SKIP_DB) - no retrieval"}
-        try:
-            from server.db.client import search_enzyme_families
+        """Search the evidence warehouse for candidate enzyme families.
 
-            hits = search_enzyme_families(query, top_k=top_k, material=material)
+        Reads the committed f2c warehouse directly, so real evidence - with
+        citations and with the substrate each constant was measured on - is
+        available even when Postgres is not. Postgres adds semantic search at
+        scale; it is not required to get real data.
+
+        An uncovered material returns an explicit empty result naming the
+        materials that ARE covered. That is the honest answer and it is far
+        more useful than a plausible placeholder, which is what this used to
+        return.
+        """
+        try:
+            from server.db.evidence import index
+
+            idx = index()
         except Exception as e:  # noqa: BLE001
-            return {"families": [], "error": f"retrieval unavailable: {e}"}
-        self.state["families"] = [h.model_dump() for h in hits]
-        return {"families": self.state["families"], "n": len(hits)}
+            return {"families": [], "error": f"evidence warehouse unavailable: {e}"}
+
+        # f2c's own objection for materials with no enzymatic route at all.
+        if material:
+            blocked = idx.blocked_reason(material)
+            if blocked:
+                return {"families": [], "n": 0, "blocked": True,
+                        "blocked_reason": blocked,
+                        "note": "This material has no enzymatic degradation route. "
+                                "Report that as the finding."}
+
+        hits = idx.search(query, material=material, top_k=top_k)
+        if not hits and material:
+            covered = sorted(idx.by_material)
+            return {
+                "families": [], "n": 0,
+                "note": f"No enzymes in this knowledge base are curated for "
+                        f"{material!r}. Covered materials: {', '.join(covered)}. "
+                        f"Do not substitute a candidate from another material - "
+                        f"report the gap.",
+                "covered_materials": covered,
+            }
+
+        self.state["families"] = [h.to_dict() for h in hits]
+        # Keep the full records so simulate can lift measured parameters, and
+        # the citations travel with them.
+        self._evidence = {h.name: h for h in hits}
+        return {
+            "families": self.state["families"],
+            "n": len(hits),
+            "snapshot": idx.built_at,
+            "note": "`kinetics_provenance` says what each constant was measured "
+                    "on. Nothing in this knowledge base was measured on a solid "
+                    "fragment, so pass base_params from these records rather than "
+                    "inventing values, and expect the provenance gate to bite.",
+        }
+
+    def base_params_for(self, family_name: str) -> dict[str, Any]:
+        """Measured parameters for one retrieved family, ready for the
+        simulator. Only measured values; the rest are reported as assumed."""
+        ev = getattr(self, "_evidence", {})
+        rec = ev.get(family_name)
+        if rec is None:
+            key = str(family_name).strip().lower()
+            rec = next((v for k, v in ev.items() if k.strip().lower() == key), None)
+        if rec is None:
+            return {}
+        out = rec.to_base_params()
+        kcat = rec.measured.get("kcat")
+        if kcat is not None:
+            out["measured_on"] = kcat.substrate_name or "an unrecorded substrate"
+        return out
 
     def retrieve_precedents(self, query: str, top_k: int = 3) -> Any:
         """Literature precedents, carrying what each does NOT prove."""
@@ -231,6 +320,15 @@ class Bench:
             return {"precedents": [], "error": f"retrieval unavailable: {e}"}
         self.state["precedents"] = [h.model_dump() for h in hits]
         return {"precedents": self.state["precedents"], "n": len(hits)}
+
+    def _warehouse_coverage(self) -> dict[str, Any]:
+        """What the knowledge base covers, for the report and /health."""
+        try:
+            from server.db.evidence import index
+
+            return index().coverage()
+        except Exception as e:  # noqa: BLE001
+            return {"error": str(e)}
 
     def rank_candidates(self, weights: dict[str, float] | None = None) -> Any:
         """Multi-objective ranking over whatever has been simulated so far.
