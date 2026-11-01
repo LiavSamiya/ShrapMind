@@ -1,0 +1,62 @@
+name: shrapmind
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shrapmind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-shrapmind}
+    volumes:
+      - shrapmind-db-data:/var/lib/postgresql/data
+      # Applied on first boot of an empty volume.
+      - ./server/db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shrapmind} -d ${POSTGRES_DB:-shrapmind}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/docker/Dockerfile.backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shrapmind}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shrapmind}
+      # Required - compose refuses to start without them.
+      WORKER_TOKEN: ${WORKER_TOKEN:?generate one with: python -c "import secrets;print(secrets.token_hex(24))"}
+      REVIEWER_PASSWORD: ${REVIEWER_PASSWORD:?set REVIEWER_PASSWORD in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      # Optional.
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      REVIEWER_USERNAME: ${REVIEWER_USERNAME:-reviewer}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-15}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.85}
+      SHRAPMIND_PROD: ${SHRAPMIND_PROD:-}
+      MOCK_LLM: ${MOCK_LLM:-}
+      MOCK_AGENT: ${MOCK_AGENT:-}
+      SKIP_DB: ${SKIP_DB:-}
+    volumes:
+      # Bind-mounted read-only so --reload picks up edits without a rebuild.
+      - ./shared:/app/shared:ro
+      - ./server/agent:/app/server/agent:ro
+      - ./server/app:/app/server/app:ro
+      - ./server/db:/app/server/db:ro
+    command: uvicorn server.app.main:app --host 0.0.0.0 --port 7860 --reload
+    ports:
+      - "${APP_PORT:-7860}:7860"
+    restart: unless-stopped
+
+volumes:
+  shrapmind-db-data:

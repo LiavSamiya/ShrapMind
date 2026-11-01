@@ -1,0 +1,32 @@
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Requirements first, so a source edit does not invalidate the dependency
+# layer. The three files are installed together to keep it to one layer.
+COPY server/app/requirements.txt /tmp/req-app.txt
+COPY server/agent/requirements.txt /tmp/req-agent.txt
+COPY server/db/requirements.txt /tmp/req-db.txt
+RUN pip install -r /tmp/req-app.txt -r /tmp/req-agent.txt -r /tmp/req-db.txt
+
+# Baked in as a fallback for when the compose bind mounts are absent.
+COPY shared/ /app/shared/
+COPY server/ /app/server/
+RUN touch /app/server/__init__.py
+
+ENV PYTHONPATH=/app
+EXPOSE 7860
+
+HEALTHCHECK --interval=15s --timeout=4s --start-period=25s --retries=4 \
+  CMD curl -sf http://localhost:7860/health || exit 1
+
+CMD ["uvicorn", "server.app.main:app", "--host", "0.0.0.0", "--port", "7860"]

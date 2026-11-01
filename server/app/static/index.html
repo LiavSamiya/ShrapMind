@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShrapMind</title>
+<!-- Theme before the stylesheet, or the page flashes the wrong theme. -->
+<script>if(localStorage.getItem('shrapmind-theme')==='light')document.documentElement.classList.add('light');</script>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='24' font-size='24'%3E%F0%9F%A7%AA%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">SM</span>
+      <div>
+        <div class="brand-name">ShrapMind</div>
+        <div class="brand-sub">Fragment-to-Catalyst engine</div>
+      </div>
+    </div>
+
+    <button class="new-case" id="new-case">New case</button>
+
+    <div class="side-section">
+      <div class="side-label">Mode</div>
+      <select id="mode">
+        <option value="run">Run &mdash; execute the pipeline</option>
+        <option value="explain">Explain &mdash; walk it, no simulation</option>
+      </select>
+      <p class="side-hint" id="mode-hint">Runs retrieval, simulation and the gate battery.</p>
+    </div>
+
+    <div class="side-section">
+      <div class="side-label">Cases</div>
+      <div id="case-list" class="case-list"></div>
+    </div>
+
+    <div class="side-foot">
+      <div class="status-row">
+        <span class="dot" id="link-dot"></span><span id="link-text">connecting</span>
+      </div>
+      <div class="status-row">
+        <span class="dot" id="worker-dot"></span><span id="worker-text">worker unknown</span>
+      </div>
+      <div class="side-links">
+        <a href="/review">Reviewer</a>
+        <button id="theme-toggle" class="linkish">Theme</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- The ten stages. Lights up as tools fire. -->
+    <div class="pipeline" id="pipeline">
+      <div class="stage" data-stage="inspect"><i></i><span>Inspect</span></div>
+      <div class="stage" data-stage="characterize"><i></i><span>Characterize</span></div>
+      <div class="stage" data-stage="reaction"><i></i><span>Reaction</span></div>
+      <div class="stage" data-stage="retrieve"><i></i><span>Retrieve</span></div>
+      <div class="stage" data-stage="generate"><i></i><span>Generate</span></div>
+      <div class="stage" data-stage="predict"><i></i><span>Predict</span></div>
+      <div class="stage" data-stage="simulate"><i></i><span>Simulate</span></div>
+      <div class="stage" data-stage="gate"><i></i><span>Gate</span></div>
+      <div class="stage" data-stage="rank"><i></i><span>Rank</span></div>
+      <div class="stage" data-stage="report"><i></i><span>Report</span></div>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="intro">
+        <h1>Describe the fragment case</h1>
+        <p class="intro-lead">
+          ShrapMind works out what a retained fragment is made of, searches for an
+          enzyme candidate that could erode <em>that</em> material, and simulates it
+          inside a product-capturing hydrogel &mdash; then refuses to recommend
+          anything that fails a safety gate.
+        </p>
+        <div class="scope-note">
+          <strong>Research simulation.</strong> Every result is a hypothesis requiring
+          wet-lab validation. This system models material chemistry; it does not
+          provide clinical guidance, dosing or treatment direction, and it will
+          refuse requests for them.
+        </div>
+        <div class="chips">
+          <button class="chip">Wood splinter retained in the forearm, symptomatic 8 months, surgery declined</button>
+          <button class="chip">PET fibre fragment in peri-articular soft tissue, confirmed by FTIR</button>
+          <button class="chip">Iron fragment, oxidised surface, chronic pain, no imaging available</button>
+          <button class="chip">Unidentified fragment, no sample taken &mdash; what can you tell me?</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="composer-inner">
+        <textarea id="input" rows="1" placeholder="Material, location, how long it has been there, what is known..."></textarea>
+        <button id="send" class="send" title="Start the run">Run</button>
+        <button id="pause" class="ghost hidden" title="Pause">Pause</button>
+        <button id="stop" class="ghost hidden" title="Stop">Stop</button>
+      </div>
+      <div class="composer-foot">Simulation only &mdash; not clinical guidance.</div>
+    </div>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

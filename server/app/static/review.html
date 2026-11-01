@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShrapMind Review</title>
+<script>if(localStorage.getItem('shrapmind-theme')==='light')document.documentElement.classList.add('light');</script>
+<style>
+:root{--bg:#0d1117;--panel:#151b24;--panel2:#1b222d;--bd:#253040;--fg:#e6edf3;
+--mut:#8b98a9;--dim:#5d6b7d;--acc:#39d0b4;--ok:#3fb950;--err:#f85149;--warn:#d29922;
+--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+html.light{--bg:#f6f8fa;--panel:#fff;--panel2:#f2f5f8;--bd:#d7dee7;--fg:#1c2128;
+--mut:#5a6b7d;--dim:#8294a6;--acc:#0f9e86;--ok:#1a7f37;--err:#cf222e;--warn:#9a6700}
+*{box-sizing:border-box}
+*,*::before,*::after{transition:background-color .2s,border-color .2s,color .15s}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 "Inter",ui-sans-serif,
+system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;
+padding:16px 26px;border-bottom:1px solid var(--bd);background:var(--panel)}
+h1{margin:0;font-size:17px;font-weight:640;letter-spacing:-.2px}
+.sub{font-size:12px;color:var(--dim)}
+nav{display:flex;gap:14px;align-items:center}
+nav a,nav button{font-size:13px;color:var(--mut);text-decoration:none;background:none;
+border:none;cursor:pointer;font-family:inherit;padding:0}
+nav a:hover,nav button:hover{color:var(--acc)}
+main{max-width:1060px;margin:0 auto;padding:22px 26px 60px}
+.scope{border-left:3px solid var(--warn);background:var(--panel);padding:12px 15px;
+border-radius:0 9px 9px 0;font-size:12.5px;color:var(--mut);margin-bottom:22px}
+.scope strong{color:var(--fg)}
+.tabs{display:flex;gap:6px;margin-bottom:16px}
+.tab{padding:6px 14px;border:1px solid var(--bd);background:var(--panel);
+color:var(--mut);border-radius:20px;font:inherit;font-size:13px;cursor:pointer}
+.tab.on{border-color:var(--acc);color:var(--acc)}
+h2{font-size:12px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim);
+margin:0 0 11px}
+.card{border:1px solid var(--bd);border-radius:12px;background:var(--panel);
+margin-bottom:13px;overflow:hidden}
+.card.ok{border-left:3px solid var(--ok)}
+.card.bad{border-left:3px solid var(--err)}
+.chead{display:flex;align-items:center;justify-content:space-between;gap:12px;
+padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--panel2);
+flex-wrap:wrap}
+.cname{font-weight:620;font-size:14.5px}
+.meta{font-size:11.5px;color:var(--dim);font-family:var(--mono)}
+.badge{font-size:10.5px;font-weight:650;letter-spacing:.6px;text-transform:uppercase;
+padding:3px 8px;border-radius:20px}
+.badge.ok{background:var(--ok);color:#04140a}
+.badge.bad{background:var(--err);color:#1a0505}
+.badge.wait{background:var(--warn);color:#1a1200}
+.cbody{padding:14px 16px}
+.summary{margin:0 0 12px;font-size:14px;white-space:pre-wrap}
+.rationale{margin:0 0 12px;font-size:13px;color:var(--mut);white-space:pre-wrap;
+padding-left:11px;border-left:2px solid var(--bd)}
+.metrics{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.m{flex:1 1 120px;padding:8px 10px;background:var(--panel2);border:1px solid var(--bd);
+border-radius:8px}
+.m .k{font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--dim)}
+.m .v{font-size:16px;font-weight:620;font-family:var(--mono)}
+.gates{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.g{font-size:11px;font-family:var(--mono);padding:3px 8px;border-radius:5px;
+border:1px solid var(--ok);color:var(--ok)}
+.g.bad{border-color:var(--err);color:var(--err)}
+.acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.acts input{flex:1;min-width:200px;background:var(--bg);color:var(--fg);
+border:1px solid var(--bd);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px}
+button.go{border:none;border-radius:8px;padding:7px 15px;font:inherit;font-weight:620;
+font-size:13px;cursor:pointer;background:var(--ok);color:#04140a}
+button.no{border:1px solid var(--err);border-radius:8px;padding:7px 15px;font:inherit;
+font-size:13px;cursor:pointer;background:none;color:var(--err)}
+button.go:disabled{opacity:.4;cursor:not-allowed}
+button.go:hover:not(:disabled),button.no:hover{filter:brightness(1.1)}
+.note{font-size:11.5px;color:var(--dim);margin-top:9px}
+.empty{padding:30px;text-align:center;color:var(--dim);border:1px dashed var(--bd);
+border-radius:12px;font-size:13.5px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+background:var(--panel);border:1px solid var(--bd);border-radius:9px;
+padding:11px 17px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.4);
+max-width:620px}
+.toast.err{border-color:var(--err)}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>ShrapMind &mdash; scientific review</h1>
+    <div class="sub">Promote a simulated candidate to the validated library</div>
+  </div>
+  <nav>
+    <a href="/">Console</a>
+    <button id="theme">Theme</button>
+    <button id="refresh">Refresh</button>
+  </nav>
+</header>
+
+<main>
+  <div class="scope">
+    <strong>What approval means here.</strong> Approving marks a candidate as a
+    hypothesis worth a wet-lab experiment. It does not mark it validated, safe or
+    fit for any clinical use. A candidate that failed any safety gate cannot be
+    promoted at all &mdash; the server refuses it, so an advisory gate never
+    becomes a negotiable one.
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="pending">Awaiting review</button>
+    <button class="tab" data-tab="reviewed">Reviewed</button>
+    <button class="tab" data-tab="library">Validated library</button>
+  </div>
+
+  <div id="view"></div>
+</main>
+
+<script>
+"use strict";
+const view = document.getElementById("view");
+let tab = "pending";
+let pending = [], library = [];
+
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function num(v,d){const n=Number(v);if(v==null||!isFinite(n))return "—";
+  if(d!==undefined)return n.toFixed(d);
+  if(Math.abs(n)>=100)return n.toFixed(0);
+  if(Math.abs(n)>=1)return n.toFixed(2);
+  return n?n.toExponential(1):"0";}
+function when(s){if(!s)return "";try{return new Date(s).toLocaleString();}catch(e){return s;}}
+
+function toast(msg,isErr){
+  document.querySelectorAll(".toast").forEach(t=>t.remove());
+  const t=document.createElement("div");
+  t.className="toast"+(isErr?" err":"");
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),isErr?9000:3500);
+}
+
+async function api(path,opts){
+  const r=await fetch(path,opts||{});
+  const body=await r.json().catch(()=>({}));
+  if(!r.ok){throw new Error(body.detail||body.error||("HTTP "+r.status));}
+  return body;
+}
+
+async function load(){
+  view.innerHTML='<div class="empty">Loading…</div>';
+  try{
+    const p=await api("/api/pending-candidates");
+    pending=p.pending||[];
+  }catch(e){pending=[];toast("Could not load the review queue: "+e.message,true);}
+  try{
+    const l=await api("/api/library");
+    library=l.library||[];
+  }catch(e){library=[];}
+  render();
+}
+
+function metricsOf(a){
+  if(!a||!Object.keys(a).length)return "";
+  const ci=a.erosion_rate_ci||[];
+  return '<div class="metrics">'+
+    '<div class="m"><div class="k">erosion</div><div class="v">'+
+      num(a.erosion_rate_um_per_day)+' µm/d</div></div>'+
+    '<div class="m"><div class="k">band</div><div class="v">'+
+      (ci.length===2?num(ci[0])+"–"+num(ci[1]):"—")+'</div></div>'+
+    '<div class="m"><div class="k">captured</div><div class="v">'+
+      (a.captured_fraction!=null?(a.captured_fraction*100).toFixed(0)+"%":"—")+'</div></div>'+
+    '<div class="m"><div class="k">mass bal.</div><div class="v">'+
+      num(a.mass_balance_residual)+'</div></div>'+
+  '</div>';
+}
+
+function gatesOf(gates){
+  if(!gates||!gates.length)
+    return '<div class="gates"><span class="g bad">✗ no gates recorded</span></div>';
+  return '<div class="gates">'+gates.map(g=>
+    '<span class="g'+(g.passed?"":" bad")+'" title="'+esc(g.detail||"")+'">'+
+    (g.passed?"✓ ":"✗ ")+esc(g.name)+
+    (g.value!=null?" "+num(g.value):"")+'</span>').join("")+'</div>';
+}
+
+function pendingCard(c){
+  const ok=!!c.gates_passed;
+  return '<div class="card '+(ok?"ok":"bad")+'">'+
+    '<div class="chead"><div><div class="cname">'+esc(c.candidate_name)+'</div>'+
+      '<div class="meta">'+esc(c.material_family||"unknown material")+
+      ' · by '+esc(c.submitted_by)+' · '+esc(when(c.created_at))+'</div></div>'+
+      '<span class="badge '+(ok?"ok":"bad")+'">'+
+      (ok?"gates passed":"gates failed")+'</span></div>'+
+    '<div class="cbody">'+
+      '<p class="summary">'+esc(c.summary)+'</p>'+
+      (c.rationale?'<p class="rationale">'+esc(c.rationale)+'</p>':"")+
+      metricsOf(c.assay)+gatesOf(c.gates)+
+      '<div class="acts">'+
+        '<input placeholder="Reviewer note (stored with the decision)" '+
+          'data-note="'+esc(c.id)+'">'+
+        '<button class="go" data-approve="'+esc(c.id)+'"'+(ok?"":" disabled")+'>'+
+          'Approve</button>'+
+        '<button class="no" data-reject="'+esc(c.id)+'">Reject</button>'+
+      '</div>'+
+      (ok?'<div class="note">Approving records this as a hypothesis worth testing — '+
+          'not as validated or clinically usable.</div>'
+        :'<div class="note">This candidate failed a safety gate, so it cannot be '+
+          'promoted. Reject it, or re-run the design with the failure addressed.</div>')+
+    '</div></div>';
+}
+
+function libCard(c){
+  return '<div class="card ok"><div class="chead">'+
+    '<div><div class="cname">'+esc(c.candidate_name)+'</div>'+
+    '<div class="meta">'+esc(c.material_family||"")+' · approved by '+
+    esc(c.approved_by)+' · '+esc(when(c.created_at))+'</div></div>'+
+    '<span class="badge ok">hypothesis</span></div>'+
+    '<div class="cbody"><p class="summary">'+esc(c.summary)+'</p>'+
+    metricsOf(c.assay)+gatesOf(c.gates)+
+    (c.reviewer_note?'<p class="rationale">'+esc(c.reviewer_note)+'</p>':"")+
+    '</div></div>';
+}
+
+function reviewedCard(c){
+  const ap=c.status==="approved";
+  return '<div class="card '+(ap?"ok":"bad")+'"><div class="chead">'+
+    '<div><div class="cname">'+esc(c.candidate_name)+'</div>'+
+    '<div class="meta">'+esc(when(c.reviewed_at||c.created_at))+'</div></div>'+
+    '<span class="badge '+(ap?"ok":"bad")+'">'+esc(c.status)+'</span></div>'+
+    '<div class="cbody"><p class="summary">'+esc(c.summary)+'</p>'+
+    (c.reviewer_note?'<p class="rationale">'+esc(c.reviewer_note)+'</p>':"")+
+    '</div></div>';
+}
+
+function render(){
+  document.querySelectorAll(".tab").forEach(t=>
+    t.classList.toggle("on",t.dataset.tab===tab));
+  if(tab==="pending"){
+    const q=pending.filter(c=>c.status==="pending");
+    view.innerHTML='<h2>'+q.length+' awaiting review</h2>'+
+      (q.length?q.map(pendingCard).join(""):
+        '<div class="empty">Nothing awaiting review. Candidates appear here when a '+
+        'design run queues one.</div>');
+  }else if(tab==="reviewed"){
+    const q=pending.filter(c=>c.status!=="pending");
+    view.innerHTML='<h2>'+q.length+' reviewed</h2>'+
+      (q.length?q.map(reviewedCard).join(""):'<div class="empty">No decisions yet.</div>');
+  }else{
+    view.innerHTML='<h2>'+library.length+' in the validated library</h2>'+
+      (library.length?library.map(libCard).join(""):
+        '<div class="empty">The library is empty. Approve a gate-passing candidate '+
+        'to add the first entry.</div>');
+  }
+}
+
+document.addEventListener("click",async e=>{
+  const t=e.target.closest(".tab");
+  if(t){tab=t.dataset.tab;render();return;}
+
+  const ap=e.target.closest("[data-approve]");
+  if(ap){
+    const id=ap.dataset.approve;
+    const note=document.querySelector('[data-note="'+id+'"]');
+    ap.disabled=true;
+    try{
+      await api("/api/admin/pending-candidates/"+id+"/approve",{
+        method:"PUT",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({reviewer_note:note?note.value:null})});
+      toast("Promoted to the validated library.");
+      await load();
+    }catch(err){ap.disabled=false;toast("Not approved: "+err.message,true);}
+    return;
+  }
+
+  const rj=e.target.closest("[data-reject]");
+  if(rj){
+    const id=rj.dataset.reject;
+    const note=document.querySelector('[data-note="'+id+'"]');
+    try{
+      await api("/api/admin/pending-candidates/"+id+"/reject",{
+        method:"PUT",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({reviewer_note:note?note.value:null})});
+      toast("Rejected.");
+      await load();
+    }catch(err){toast("Not rejected: "+err.message,true);}
+    return;
+  }
+});
+
+document.getElementById("refresh").onclick=load;
+document.getElementById("theme").onclick=()=>{
+  const light=document.documentElement.classList.toggle("light");
+  try{localStorage.setItem("shrapmind-theme",light?"light":"dark");}catch(e){}
+};
+load();
+</script>
+</body>
+</html>

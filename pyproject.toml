@@ -1,0 +1,43 @@
+[project]
+name = "shrapmind"
+version = "0.1.0"
+description = "Fragment-to-Catalyst engine: enzyme candidate search for retained material fragments, in simulation"
+requires-python = ">=3.10"
+
+# Real dependency management lives in the four per-component
+# requirements.txt files, because the four components deploy separately:
+#   server/app/requirements.txt     backend
+#   server/agent/requirements.txt   agent loop
+#   server/db/requirements.txt      database + embeddings
+#   client/worker/requirements.txt  simulation worker
+# Code runs from the repo root via PYTHONPATH; there is no build step.
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = [
+  "E501",    # long lines are handled by the formatter, not the linter
+  "S101",    # assert is fine in tests
+  "S603",    # subprocess calls here are literal, not user input
+  "S311",    # no cryptographic randomness in the simulator
+  "B008",    # Depends(...) in a default is the FastAPI idiom
+  "S104",    # binding 0.0.0.0 is correct inside a container
+  # Deliberate silent-continue sites. This codebase treats one malformed
+  # database row, one unparseable stream fragment or one dead socket as a
+  # thing to skip, not a thing to crash on - dashboards and design runs must
+  # survive bad data. Where it matters the handler logs; where it is pure
+  # teardown it does not.
+  "S110",    # try/except/pass
+  "S112",    # try/except/continue
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "E402"]
+"server/db/seed.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "client/worker"]

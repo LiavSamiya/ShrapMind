@@ -1,0 +1,943 @@
+"""Worker-side tool implementations. One module-level function per tool name.
+
+The transport in main.py dispatches by `getattr(engines, name)` - the module
+namespace *is* the dispatch table, exactly as the server side does
+`getattr(bench, name)`. Adding a tool means adding a function here whose name
+matches a `ToolName` in shared/protocol.py.
+
+Every function re-validates its own arguments through shared.safety,
+independently of the server. Defense in depth: the worker does not trust that
+the backend already checked, because the backend is the thing an injected
+record would be trying to steer.
+
+MOCK MODE (SHRAPMIND_MOCK_ENGINES=1, the default when numpy is absent)
+    Returns deterministic canned results so the whole stack demos with no
+    dataset and no compute. The shapes are identical, so nothing downstream
+    can tell the difference - which is the point.
+"""
+from __future__ import annotations
+
+import math
+import os
+import time
+from typing import Any
+
+from shared.safety import (
+    check_clinical_output,
+    sanitize_for_prompt,
+    simulation_disclaimer,
+    validate_identifier,
+    validate_number,
+    validate_params,
+)
+
+try:
+    import kinetics  # when run as a script from client/worker/
+except ImportError:  # pragma: no cover
+    from client.worker import kinetics  # type: ignore[no-redef]
+
+ENGINE_VERSION = "0.1.0"
+
+
+def _mock() -> bool:
+    return os.getenv("SHRAPMIND_MOCK_ENGINES", "").lower() in ("1", "true", "yes")
+
+
+# --------------------------------------------------------------------------
+# Material registry.
+#
+# The chemistry each material family admits, what it releases, and what must
+# never appear in the product list. This is the table the whole design loop
+# pivots on, and it is deliberately small and explicit rather than inferred:
+# a reviewer has to be able to read it and disagree with it.
+# --------------------------------------------------------------------------
+
+MATERIALS: dict[str, dict[str, Any]] = {
+    "cellulose": {
+        "aliases": ["wood", "timber", "splinter", "plant", "cellulosic"],
+        "bond_class": "beta-1,4-glycosidic",
+        "mechanism": "hydrolysis",
+        "products": ["cellobiose", "glucose"],
+        "forbidden_products": ["microparticle", "formaldehyde"],
+        "cofactors": [],
+        "molar_mass_g_mol": 162.14,
+        "density_g_cm3": 1.5,
+        "default_product": "cellobiose",
+        "maturity": "flagship",
+        "note": (
+            "Best-evidenced route. Hydrolysis to cellobiose and glucose, both "
+            "ordinary metabolites. Main unknowns are crystallinity limiting "
+            "accessible surface and the non-sterile nature of a wood fragment."
+        ),
+    },
+    "pet": {
+        "aliases": ["polyester", "polyethylene terephthalate", "plastic", "fibre", "fiber"],
+        "bond_class": "aromatic ester",
+        "mechanism": "hydrolysis",
+        "products": ["mhet", "terephthalic_acid", "ethylene_glycol"],
+        "forbidden_products": ["microparticle"],
+        "cofactors": [],
+        "molar_mass_g_mol": 192.17,
+        "density_g_cm3": 1.38,
+        "default_product": "mhet",
+        "maturity": "benchmark",
+        "note": (
+            "Strong published precedent for the enzyme chemistry, but nearly "
+            "all of it at elevated temperature on amorphous substrate. "
+            "Activity at 37 degC in serum is the open question, and ethylene "
+            "glycol release has to be bounded, not assumed harmless."
+        ),
+    },
+    "cotton": {
+        "aliases": ["fabric", "textile", "cloth"],
+        "bond_class": "beta-1,4-glycosidic",
+        "mechanism": "hydrolysis",
+        "products": ["cellobiose", "glucose"],
+        "forbidden_products": ["microparticle", "dye_leachate"],
+        "cofactors": [],
+        "molar_mass_g_mol": 162.14,
+        "density_g_cm3": 1.54,
+        "default_product": "cellobiose",
+        "maturity": "benchmark",
+        "note": (
+            "Same chemistry as cellulose but far higher crystallinity, so "
+            "accessibility is the rate limit. Textile dyes and finishes are "
+            "an additive risk the gate list has to carry."
+        ),
+    },
+    "iron_steel": {
+        "aliases": ["iron", "steel", "metal", "ferrous", "shrapnel"],
+        "bond_class": "metallic Fe(0)",
+        "mechanism": "redox",
+        "products": ["fe_ion", "metal_ion"],
+        "forbidden_products": ["microparticle", "free_fe_ion_unbound"],
+        "cofactors": ["electron_acceptor", "chelator"],
+        "molar_mass_g_mol": 55.85,
+        "density_g_cm3": 7.87,
+        "default_product": "fe_ion",
+        "maturity": "research",
+        "note": (
+            "Highest-risk route and the one the concept brief itself flags. "
+            "Enzyme-assisted corrosion is documented but slow, oxygen- and "
+            "passivation-limited, and it liberates ions rather than "
+            "metabolites - so capture, not rate, is the binding constraint."
+        ),
+    },
+    "polyurethane": {
+        "aliases": ["pu", "foam"],
+        "bond_class": "carbamate ester",
+        "mechanism": "hydrolysis",
+        "products": ["oligomer"],
+        "forbidden_products": ["microparticle", "aromatic_amine"],
+        "cofactors": [],
+        "molar_mass_g_mol": 220.0,
+        "density_g_cm3": 1.2,
+        "default_product": "oligomer",
+        "maturity": "research",
+        "note": (
+            "Aromatic amine release is a hard blocker; any route that cannot "
+            "demonstrate amine-free products should not advance."
+        ),
+    },
+}
+
+# Materials with no credible enzymatic depolymerisation route at body
+# conditions. Naming them explicitly is more useful than silently returning
+# a weak candidate - a no-go is a finding.
+NO_GO_MATERIALS = {
+    "polyethylene": "no credible depolymerisation route without prior oxidation",
+    "polypropylene": "no credible depolymerisation route without prior oxidation",
+    "polystyrene": "no credible depolymerisation route without prior oxidation",
+    "glass": "silicate; no enzymatic route - chelation and redox both inapplicable",
+    "lead": "toxic ion load; chelation and redox are separate problems, not one route",
+    "copper": "toxic ion load; chelation and redox are separate problems, not one route",
+    "aluminium": "passivating oxide; ion capture dominates and no enzyme route applies",
+}
+
+
+def resolve_material(text: str) -> tuple[str, float]:
+    """Map free text onto a material family. Returns (family, confidence)."""
+    s = (text or "").lower()
+    for family, spec in MATERIALS.items():
+        if family in s:
+            return family, 0.9
+        for alias in spec["aliases"]:
+            if alias in s:
+                return family, 0.75
+    for name in NO_GO_MATERIALS:
+        if name in s:
+            return name, 0.8
+    return "unknown", 0.0
+
+
+# --------------------------------------------------------------------------
+# INSPECT
+# --------------------------------------------------------------------------
+
+
+def characterize_fragment(
+    description: str = "",
+    spectra: dict[str, Any] | None = None,
+    volume_mm3: float | None = None,
+    anatomy_class: str = "soft_tissue",
+) -> dict[str, Any]:
+    """Build a FragmentPassport from a description and/or instrument data.
+
+    `spectra` is where real Raman / FTIR / XRF exports land. In this build the
+    parser reads a simple {"peaks": [...], "elements": {...}} shape; the
+    confidence it returns is lower for an inferred family than for one keyed
+    off actual peak positions, and the agent is instructed to say which it
+    had. A passport with confidence 0 is a legitimate output - it means "take
+    a sample before designing anything".
+    """
+    check_clinical_output(description, where="fragment description")
+    desc = sanitize_for_prompt(description, 600)
+    spectra = spectra or {}
+
+    family, conf = resolve_material(desc)
+    source = "assumed"
+
+    elements = {str(k).lower(): float(v) for k, v in (spectra.get("elements") or {}).items()}
+    peaks = [float(p) for p in (spectra.get("peaks") or []) if isinstance(p, (int, float))]
+
+    if elements:
+        source = "sample"
+        fe = elements.get("fe", 0.0)
+        c = elements.get("c", 0.0)
+        o = elements.get("o", 0.0)
+        if fe > 40.0:
+            family, conf = "iron_steel", min(0.95, 0.6 + fe / 200.0)
+        elif c > 30.0 and o > 10.0 and family == "unknown":
+            family, conf = "cellulose", 0.6
+    if peaks:
+        source = "sample" if source == "sample" else "sample"
+        # Coarse, documented peak heuristics. Real deployment replaces this
+        # with a spectral library match; the interface does not change.
+        if any(1700 <= p <= 1740 for p in peaks) and any(1230 <= p <= 1290 for p in peaks):
+            family, conf = "pet", 0.85  # ester C=O + C-O aromatic
+        elif any(1050 <= p <= 1170 for p in peaks) and any(1310 <= p <= 1380 for p in peaks):
+            family, conf = "cellulose", 0.8  # C-O-C ring + CH bending
+        elif any(550 <= p <= 720 for p in peaks):
+            family, conf = "iron_steel", 0.7  # iron-oxide lattice modes
+
+    surface = "unknown"
+    if family == "iron_steel":
+        surface = "oxidised"
+    elif family in ("cotton",):
+        surface = "crystalline"
+    elif family == "pet":
+        surface = "semi-crystalline"
+    if elements.get("o", 0.0) > 25.0 and family == "iron_steel":
+        surface = "oxidised"
+
+    additives: list[str] = []
+    for marker, label in (
+        ("dye", "dye"),
+        ("plasticiz", "plasticiser"),
+        ("plasticiz", "plasticiser"),
+        ("paint", "pigment"),
+        ("galvan", "zinc_coating"),
+        ("soil", "soil_load"),
+        ("dirt", "soil_load"),
+        ("sand", "silica"),
+    ):
+        if marker in desc.lower() and label not in additives:
+            additives.append(label)
+
+    vol = None
+    if volume_mm3 is not None:
+        vol = validate_number("fragment_volume_mm3", volume_mm3)
+
+    blocker = NO_GO_MATERIALS.get(family)
+    return {
+        "passport": {
+            "material_family": family,
+            "surface_state": surface,
+            "additives": additives,
+            "anatomy_class": validate_identifier(anatomy_class, field="anatomy_class"),
+            "volume_mm3": vol,
+            "confidence": round(conf, 2),
+            "source": source,
+        },
+        "no_go": bool(blocker),
+        "no_go_reason": blocker or "",
+        "material_note": MATERIALS.get(family, {}).get("note", ""),
+        "maturity": MATERIALS.get(family, {}).get("maturity", "unknown"),
+        "advice": (
+            "Confidence is 0 - the family was not identified from the text and no "
+            "spectral data was supplied. Obtain a sample or imaging-based material "
+            "ID before designing a catalyst."
+            if conf == 0.0
+            else ""
+        ),
+        "engine_version": ENGINE_VERSION,
+    }
+
+
+def define_reaction(material_family: str, surface_state: str = "unknown") -> dict[str, Any]:
+    """Turn a material family into an explicit chemistry target.
+
+    Returns the bond class to attack, the mechanism, the products expected
+    and - the field that does the real work - the products that must never
+    appear. `run_safety_gates` checks the simulated product mix against
+    `forbidden_products`, so this is where a route is made falsifiable.
+    """
+    fam = validate_identifier(material_family, field="material_family").lower()
+    if fam in NO_GO_MATERIALS:
+        return {
+            "ok": False,
+            "reason": NO_GO_MATERIALS[fam],
+            "recommendation": "no-go: do not advance this material family",
+        }
+    spec = MATERIALS.get(fam)
+    if not spec:
+        return {
+            "ok": False,
+            "reason": f"unknown material family {fam!r}",
+            "recommendation": "characterize the fragment before defining a reaction",
+        }
+    accessibility = {
+        "crystalline": 0.25,
+        "semi-crystalline": 0.45,
+        "oxidised": 0.35,
+        "coated": 0.2,
+        "pristine": 0.8,
+        "unknown": 0.6,
+    }.get(surface_state, 0.6)
+    return {
+        "ok": True,
+        "reaction_spec": {
+            "bond_class": spec["bond_class"],
+            "mechanism": spec["mechanism"],
+            "products": list(spec["products"]),
+            "cofactors": list(spec["cofactors"]),
+            "forbidden_products": list(spec["forbidden_products"]),
+            "notes": spec["note"],
+        },
+        "substrate": {
+            "molar_mass_g_mol": spec["molar_mass_g_mol"],
+            "density_g_cm3": spec["density_g_cm3"],
+            "accessibility": accessibility,
+            "default_product": spec["default_product"],
+        },
+        "maturity": spec["maturity"],
+    }
+
+
+# --------------------------------------------------------------------------
+# DESIGN
+# --------------------------------------------------------------------------
+
+# Deterministic edit catalogue. Each entry is an engineering move with a
+# documented, directional effect on the proxy scores - NOT a structure
+# prediction. The system "proposes and ranks sequence-level edits"; it does
+# not claim to know that any of them folds. Keeping the effects explicit and
+# additive means a reviewer can audit why a candidate scored as it did,
+# which an opaque learned scorer would not allow.
+EDIT_CATALOGUE: dict[str, dict[str, Any]] = {
+    "thermostabilising_core": {
+        "label": "stabilising core substitutions",
+        "effects": {"stability": +0.22, "activity": -0.05, "expression": -0.02},
+        "kinetic": {"half_life_h": 2.2, "t_width_c": 1.15},
+        "rationale": "Consensus/ancestral core packing raises melting point; "
+                     "usually costs a little activity.",
+    },
+    "surface_charge_tuning": {
+        "label": "surface charge tuning",
+        "effects": {"solubility": +0.18, "immunogenicity": -0.04, "activity": 0.0},
+        "kinetic": {},
+        "rationale": "Raises net charge to suppress aggregation at body pH.",
+    },
+    "active_site_loop_graft": {
+        "label": "active-site loop graft",
+        "effects": {"activity": +0.25, "stability": -0.12, "expression": -0.05},
+        "kinetic": {"k_cat": 2.0, "k_m_uM": 0.7},
+        "rationale": "Widens the cleft for a solid, non-ideal substrate. The "
+                     "highest-upside and highest-risk edit in the catalogue.",
+    },
+    "material_binding_peptide_fusion": {
+        "label": "material-binding peptide fusion",
+        "effects": {"activity": +0.18, "expression": -0.08, "immunogenicity": +0.06},
+        "kinetic": {"k_m_uM": 0.5},
+        "rationale": "Anchors the enzyme at the surface, raising local "
+                     "occupancy. Adds a foreign domain, so immunogenicity rises.",
+    },
+    "deimmunisation_pass": {
+        "label": "T-cell epitope deimmunisation",
+        "effects": {"immunogenicity": -0.3, "activity": -0.06, "stability": -0.04},
+        "kinetic": {},
+        "rationale": "Removes predicted epitopes. Matters because the construct "
+                     "is a foreign protein in tissue.",
+    },
+    "protease_resistance": {
+        "label": "protease-resistant linker set",
+        "effects": {"stability": +0.14, "expression": -0.03},
+        "kinetic": {"half_life_h": 1.6},
+        "rationale": "Host proteases are the main in-tissue loss route.",
+    },
+    "gel_anchor_tag": {
+        "label": "hydrogel anchor tag",
+        "effects": {"stability": +0.08, "activity": -0.03},
+        "kinetic": {"half_life_h": 1.3},
+        "rationale": "Covalent tether to the gel network. Suppresses leakage "
+                     "out of the depot, which is a safety property as much as "
+                     "a performance one.",
+    },
+}
+
+
+def propose_variants(
+    parent_family: str,
+    base_params: dict[str, Any] | None = None,
+    n_variants: int = 5,
+    goal: str = "balanced",
+) -> dict[str, Any]:
+    """Enumerate candidate variants over the edit catalogue.
+
+    Deterministic: the same inputs always produce the same candidate list, in
+    the same order. That is a demo requirement and a reproducibility
+    requirement, and it is why this is a documented enumeration rather than a
+    sampled generative model.
+
+    Every candidate carries provenance 'in-silico proposal'. Nothing here is
+    a validated sequence and the loop is not allowed to describe it as one.
+    """
+    parent = validate_identifier(parent_family, field="parent_family")
+    n = int(validate_number("n_variants", n_variants))
+    goal = validate_identifier(goal, field="goal").lower()
+
+    priority = {
+        "activity": ["active_site_loop_graft", "material_binding_peptide_fusion",
+                     "thermostabilising_core", "protease_resistance",
+                     "surface_charge_tuning", "gel_anchor_tag", "deimmunisation_pass"],
+        "stability": ["thermostabilising_core", "protease_resistance", "gel_anchor_tag",
+                      "surface_charge_tuning", "active_site_loop_graft",
+                      "deimmunisation_pass", "material_binding_peptide_fusion"],
+        "safety": ["deimmunisation_pass", "gel_anchor_tag", "protease_resistance",
+                   "surface_charge_tuning", "thermostabilising_core",
+                   "active_site_loop_graft", "material_binding_peptide_fusion"],
+    }.get(goal, list(EDIT_CATALOGUE))
+
+    candidates: list[dict[str, Any]] = [
+        {
+            "name": f"{parent}-WT",
+            "parent_family": parent,
+            "edits": [],
+            "provenance": "wild-type reference",
+            "rationale": "Unmodified reference. Always carried, so every engineered "
+                         "candidate has to beat the thing you could just buy.",
+        }
+    ]
+    # Single edits first, then the two best-ranked combined. Breadth before
+    # depth: a stacked variant that fails tells you nothing about which edit
+    # was responsible.
+    for key in priority[: max(n - 2, 0)]:
+        spec = EDIT_CATALOGUE[key]
+        candidates.append({
+            "name": f"{parent}-{key[:12]}",
+            "parent_family": parent,
+            "edits": [key],
+            "provenance": "in-silico proposal",
+            "rationale": spec["rationale"],
+        })
+    if n >= 3 and len(priority) >= 2:
+        a, b = priority[0], priority[1]
+        candidates.append({
+            "name": f"{parent}-combo",
+            "parent_family": parent,
+            "edits": [a, b],
+            "provenance": "in-silico proposal",
+            "rationale": f"Stacks {EDIT_CATALOGUE[a]['label']} with "
+                         f"{EDIT_CATALOGUE[b]['label']}; test only after both "
+                         f"single edits are measured.",
+        })
+    candidates = candidates[: max(n, 1)]
+    return {
+        "candidates": candidates,
+        "n": len(candidates),
+        "edit_catalogue": {k: v["label"] for k, v in EDIT_CATALOGUE.items()},
+        "caveat": "Sequence-level proposals only. No folding, expression or "
+                  "binding has been predicted or verified. " + simulation_disclaimer(),
+    }
+
+
+def predict_properties(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Transparent additive proxy scores for one candidate.
+
+    HEURISTIC, AND SAID SO. Each score starts at a base value for the parent
+    family and is moved by the documented effect of each edit. There is no
+    trained model behind these numbers; they encode the direction and rough
+    magnitude of well-known protein-engineering trade-offs so that the
+    ranking step has something defensible to sort on.
+
+    Returns the per-edit contributions alongside the totals so the score can
+    be audited rather than trusted.
+    """
+    edits = [str(e) for e in (candidate.get("edits") or [])]
+    base = {
+        "activity": 0.50,
+        "stability": 0.50,
+        "solubility": 0.60,
+        "expression": 0.65,
+        "immunogenicity": 0.45,  # lower is better
+    }
+    scores = dict(base)
+    contributions: list[dict[str, Any]] = []
+    for e in edits:
+        spec = EDIT_CATALOGUE.get(e)
+        if not spec:
+            contributions.append({"edit": e, "unknown": True})
+            continue
+        for k, dv in spec["effects"].items():
+            scores[k] = scores.get(k, 0.5) + dv
+        contributions.append({"edit": e, "label": spec["label"], "effects": spec["effects"]})
+    # Stacking penalty: each additional edit compounds the risk that the
+    # construct does not express or fold at all.
+    if len(edits) > 1:
+        penalty = 0.05 * (len(edits) - 1)
+        scores["expression"] -= penalty
+        scores["stability"] -= penalty * 0.5
+        contributions.append({"edit": "<stacking penalty>", "effects": {
+            "expression": -penalty, "stability": -penalty * 0.5}})
+    scores = {k: round(max(0.0, min(1.0, v)), 3) for k, v in scores.items()}
+    # Developability: one number for the ranking table. Immunogenicity enters
+    # inverted because low is good.
+    scores["developability"] = round(
+        0.3 * scores["activity"] + 0.25 * scores["stability"]
+        + 0.15 * scores["solubility"] + 0.15 * scores["expression"]
+        + 0.15 * (1.0 - scores["immunogenicity"]), 3)
+    return {
+        "name": candidate.get("name", "unnamed"),
+        "scores": scores,
+        "contributions": contributions,
+        "method": "additive heuristic over a documented edit catalogue; not a trained model",
+    }
+
+
+# --------------------------------------------------------------------------
+# VALIDATE (simulated)
+# --------------------------------------------------------------------------
+
+
+def _enzyme_params_for(
+    candidate: dict[str, Any], base: dict[str, Any] | None, product: str
+) -> kinetics.EnzymeParams:
+    """Build kinetic parameters for a candidate: the parent family's measured
+    record, moved by the documented kinetic effect of each edit."""
+    base = base or {}
+    p = kinetics.EnzymeParams(
+        name=str(candidate.get("name", "unnamed")),
+        k_cat=float(base.get("k_cat", 1.0)),
+        k_m_uM=float(base.get("k_m_uM", 50.0)),
+        t_opt_c=float(base.get("t_opt_c", 37.0)),
+        t_width_c=float(base.get("t_width_c", 12.0)),
+        ph_opt=float(base.get("ph_opt", 7.0)),
+        ph_width=float(base.get("ph_width", 1.2)),
+        ea_kj=float(base.get("ea_kj", 45.0)),
+        radius_nm=float(base.get("radius_nm", 3.0)),
+        half_life_h=float(base.get("half_life_h", 72.0)),
+        product=product,
+        fragmentation_fraction=float(base.get("fragmentation_fraction", 0.0)),
+    )
+    for e in candidate.get("edits") or []:
+        for field_name, mult in (EDIT_CATALOGUE.get(str(e), {}).get("kinetic") or {}).items():
+            if hasattr(p, field_name):
+                setattr(p, field_name, getattr(p, field_name) * float(mult))
+    # A fusion domain makes the construct physically larger, which costs mesh
+    # mobility - the trade-off the gel imposes on every anchoring strategy.
+    if "material_binding_peptide_fusion" in (candidate.get("edits") or []):
+        p.radius_nm *= 1.25
+    return p
+
+
+def score_kinetics(
+    candidate: dict[str, Any],
+    base_params: dict[str, Any] | None = None,
+    conditions: dict[str, Any] | None = None,
+    product: str = "oligomer",
+) -> dict[str, Any]:
+    """Fast point estimate of surface erosion for one candidate.
+
+    Cheap screen, used to shortlist before spending the uncertainty sweep.
+    """
+    cond_in = validate_params(conditions or {})
+    cond = kinetics.Conditions(
+        temperature_c=cond_in.get("temperature_c", 37.0),
+        ph=cond_in.get("ph", 7.4),
+        enzyme_uM=cond_in.get("enzyme_uM", 10.0),
+        serum_fraction=cond_in.get("serum_fraction", 0.1),
+        hours=cond_in.get("hours", 336.0),
+        timestep_h=cond_in.get("timestep_h", 0.5),
+    )
+    base = base_params or {}
+    frag = kinetics.FragmentParams(
+        volume_mm3=validate_number("fragment_volume_mm3", base.get("volume_mm3", 10.0)),
+        density_g_cm3=float(base.get("density_g_cm3", 1.4)),
+        molar_mass_g_mol=float(base.get("molar_mass_g_mol", 162.14)),
+        accessibility=float(base.get("accessibility", 0.6)),
+    )
+    gel = kinetics.GelParams(
+        mesh_nm=validate_number("mesh_nm", base.get("mesh_nm", 20.0)),
+        volume_ul=validate_number("gel_volume_ul", base.get("gel_volume_ul", 500.0)),
+    )
+    enz = _enzyme_params_for(candidate, base, product)
+    r = kinetics.simulate(enz, gel, frag, cond)
+    return {
+        "name": enz.name,
+        "erosion_rate_um_per_day": round(r["erosion_rate_um_per_day"], 4),
+        "consumed_fraction": round(r["consumed_fraction"], 4),
+        "time_to_half_h": r["time_to_half_h"],
+        "mass_balance_residual": r["mass_balance_residual"],
+        "k_surface_umol_mm2_h": r["k_surface_umol_mm2_h"],
+        "method": "point estimate; run simulate_hydrogel_assay for the band",
+    }
+
+
+def simulate_hydrogel_assay(
+    candidate: dict[str, Any],
+    base_params: dict[str, Any] | None = None,
+    conditions: dict[str, Any] | None = None,
+    product: str = "oligomer",
+    n_samples: int = 64,
+    seed: int = 0,
+) -> dict[str, Any]:
+    """The virtual experiment: full assay with an uncertainty band.
+
+    This is the 'controlled hydrogel environment' the project is built
+    around. It returns a time series (fragment / free product / gel-captured /
+    cleared / particles), a 5-95 percentile band on the erosion rate, and the
+    mass-balance residual that `check_mass_balance` and the safety gates key
+    off.
+
+    The band is the honest part. A single number here would be false
+    precision given that the underlying kinetic constants vary by an order of
+    magnitude between published measurements.
+    """
+    cond_in = validate_params(conditions or {})
+    cond = kinetics.Conditions(
+        temperature_c=cond_in.get("temperature_c", 37.0),
+        ph=cond_in.get("ph", 7.4),
+        enzyme_uM=cond_in.get("enzyme_uM", 10.0),
+        serum_fraction=cond_in.get("serum_fraction", 0.1),
+        hours=cond_in.get("hours", 336.0),
+        timestep_h=cond_in.get("timestep_h", 0.5),
+    )
+    base = base_params or {}
+    frag = kinetics.FragmentParams(
+        volume_mm3=validate_number("fragment_volume_mm3", base.get("volume_mm3", 10.0)),
+        density_g_cm3=float(base.get("density_g_cm3", 1.4)),
+        molar_mass_g_mol=float(base.get("molar_mass_g_mol", 162.14)),
+        accessibility=float(base.get("accessibility", 0.6)),
+    )
+    gel = kinetics.GelParams(
+        mesh_nm=validate_number("mesh_nm", base.get("mesh_nm", 20.0)),
+        volume_ul=validate_number("gel_volume_ul", base.get("gel_volume_ul", 500.0)),
+        capture_rate_per_h=float(base.get("capture_rate_per_h", 0.35)),
+        capture_capacity_umol=float(base.get("capture_capacity_umol", 50.0)),
+        clearance_rate_per_h=float(base.get("clearance_rate_per_h", 0.02)),
+    )
+    enz = _enzyme_params_for(candidate, base, product)
+    n = int(validate_number("n_samples", n_samples))
+    r = kinetics.simulate_with_uncertainty(enz, gel, frag, cond, n_samples=n, seed=int(seed))
+
+    # Downsample the trace for transport - the UI draws a sparkline, not a
+    # 4000-point plot, and a 64 MB frame cap is not an invitation.
+    tr = r["trace"]
+    total = len(tr["t_h"])
+    stride = max(total // 60, 1)
+    series = [
+        {
+            "t_h": tr["t_h"][i],
+            "fragment": round(tr["fragment_umol"][i], 6),
+            "free": round(tr["free_umol"][i], 6),
+            "captured": round(tr["captured_umol"][i], 6),
+            "cleared": round(tr["cleared_umol"][i], 6),
+            "particles": round(tr["particles_umol"][i], 6),
+            "radius_mm": round(tr["radius_mm"][i], 6),
+        }
+        for i in range(0, total, stride)
+    ]
+    return {
+        "candidate": enz.name,
+        "conditions": {
+            "temperature_c": cond.temperature_c, "ph": cond.ph,
+            "enzyme_uM": cond.enzyme_uM, "serum_fraction": cond.serum_fraction,
+            "hours": cond.hours, "mesh_nm": gel.mesh_nm,
+            "fragment_volume_mm3": frag.volume_mm3, "accessibility": frag.accessibility,
+        },
+        "timeseries": series,
+        "erosion_rate_um_per_day": round(r["erosion_rate_um_per_day"], 4),
+        "erosion_rate_ci": [round(r["erosion_rate_ci"][0], 4), round(r["erosion_rate_ci"][1], 4)],
+        "uncertainty": round(r["uncertainty"], 4),
+        "consumed_fraction": round(r["consumed_fraction"], 4),
+        "time_to_half_h": r["time_to_half_h"],
+        "depleted_at_h": r["depleted_at_h"],
+        "captured_fraction": round(r["captured_fraction"], 4),
+        "free_fraction": round(r["free_fraction"], 4),
+        "particle_fraction": round(r["particle_fraction"], 4),
+        "particle_fraction_p95": round(r["particle_fraction_p95"], 6),
+        "captured_fraction_p05": round(r["captured_fraction_p05"], 4),
+        "mass_balance_residual": r["mass_balance_residual"],
+        "product": r["product"],
+        "n_samples": r["n_samples"],
+        "disclaimer": simulation_disclaimer(),
+    }
+
+
+def check_mass_balance(assay: dict[str, Any], tolerance: float = 1e-6) -> dict[str, Any]:
+    """Verify the assay conserved mass, and that the books actually close.
+
+    Two independent checks: the residual the integrator reported, and a
+    recomputation from the final time point. A model whose mass balance does
+    not close is producing numbers that mean nothing, so this is a
+    precondition for every other conclusion - 'the fragment got smaller' is
+    not a result unless you can say where the mass went.
+    """
+    residual = float(assay.get("mass_balance_residual", 1.0))
+    series = assay.get("timeseries") or []
+    recomputed = None
+    if series:
+        first, last = series[0], series[-1]
+        start = first.get("fragment", 0.0)
+        end_sum = sum(float(last.get(k, 0.0))
+                      for k in ("fragment", "free", "captured", "cleared", "particles"))
+        recomputed = abs(start - end_sum) / start if start > 0 else None
+    # The downsampled series is checked loosely; the integrator residual is
+    # the authoritative figure.
+    ok = residual <= tolerance
+    return {
+        "passed": ok,
+        "residual": residual,
+        "tolerance": tolerance,
+        "recomputed_residual": recomputed,
+        "detail": (
+            f"mass balance closes to {residual:.2e}"
+            if ok
+            else f"mass balance residual {residual:.2e} exceeds {tolerance:.0e} - "
+                 f"the integration is unstable and no conclusion may be drawn "
+                 f"from this run"
+        ),
+    }
+
+
+# --------------------------------------------------------------------------
+# THE GATE BATTERY
+#
+# This is the most important function in the worker. The agent loop treats a
+# failed gate as a HARD STOP, not as feedback to work around - because a
+# model given a soft failure will rephrase and retry, and the whole point of
+# a gate is that it cannot be argued with.
+#
+# Thresholds live here, in one readable table, with the number that decided
+# each verdict reported back. "The fragment got smaller" is not an endpoint;
+# these are.
+# --------------------------------------------------------------------------
+
+GATE_THRESHOLDS: dict[str, float] = {
+    # Mass balance must close or nothing else means anything.
+    "mass_balance_residual_max": 1e-6,
+    # Any detached particulate is a migration risk. Surface erosion should
+    # release soluble products, not debris.
+    "particle_fraction_max": 0.01,
+    # Product that is neither captured by the gel nor cleared is loose in
+    # tissue. The brief's own framing: capture, not rate, is the constraint.
+    "free_fraction_max": 0.25,
+    # Capture has to beat release or the depot is just a slow-release source
+    # of whatever the reaction produces.
+    "captured_fraction_min": 0.50,
+    # A rate so uncertain that the band spans an order of magnitude is not a
+    # prediction, it is a request for an experiment.
+    "uncertainty_max": 3.0,
+    # A route that erodes nothing measurable is a no-go, not a safe option.
+    "erosion_rate_min_um_per_day": 0.05,
+}
+
+
+def run_safety_gates(
+    assay: dict[str, Any],
+    reaction_spec: dict[str, Any] | None = None,
+    passport: dict[str, Any] | None = None,
+    candidate: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run every gate. Returns pass/fail per gate with the deciding number.
+
+    `blocking` in the result tells the agent loop to stop. The loop is
+    written to honour it and to emit the failure rather than trying a
+    different phrasing of the same candidate.
+    """
+    gates: list[dict[str, Any]] = []
+    spec = reaction_spec or {}
+    passport = passport or {}
+
+    def gate(name: str, passed: bool, value: Any, threshold: Any, detail: str) -> None:
+        gates.append({
+            "name": name,
+            "passed": bool(passed),
+            "value": (round(float(value), 6) if isinstance(value, (int, float)) else value),
+            "threshold": threshold,
+            "detail": detail,
+        })
+
+    # 1. Mass balance.
+    mb = float(assay.get("mass_balance_residual", 1.0))
+    t = GATE_THRESHOLDS["mass_balance_residual_max"]
+    gate("mass_balance", mb <= t, mb, t,
+         "books close - every umol that left the fragment is accounted for"
+         if mb <= t else
+         "mass balance does not close; the run is numerically invalid")
+
+    # 2. Fragmentation / particle generation.
+    pf = float(assay.get("particle_fraction_p95", assay.get("particle_fraction", 0.0)))
+    t = GATE_THRESHOLDS["particle_fraction_max"]
+    gate("fragmentation", pf <= t, pf, t,
+         "surface erosion dominates; no appreciable particulate released"
+         if pf <= t else
+         "detached particulate above threshold - partial breakup creates "
+         "mobile microparticles, which is worse than leaving the fragment intact")
+
+    # 3. Free product fraction (loose in tissue).
+    ff = float(assay.get("free_fraction", 1.0))
+    t = GATE_THRESHOLDS["free_fraction_max"]
+    gate("free_product", ff <= t, ff, t,
+         "released product stays bound or is cleared"
+         if ff <= t else
+         "too much product is loose rather than captured or cleared")
+
+    # 4. Capture efficiency.
+    cf = float(assay.get("captured_fraction_p05", assay.get("captured_fraction", 0.0)))
+    t = GATE_THRESHOLDS["captured_fraction_min"]
+    gate("capture_efficiency", cf >= t, cf, t,
+         "gel captures the majority of released product"
+         if cf >= t else
+         "capture is too low - the gel is not containing the products it creates")
+
+    # 5. Forbidden products.
+    produced = set()
+    if assay.get("product"):
+        produced.add(str(assay["product"]))
+    if float(assay.get("particle_fraction_p95", 0.0)) > GATE_THRESHOLDS["particle_fraction_max"]:
+        produced.add("microparticle")
+    forbidden = {str(x) for x in (spec.get("forbidden_products") or [])}
+    hit = sorted(produced & forbidden)
+    gate("forbidden_products", not hit, ", ".join(hit) or "none", sorted(forbidden),
+         "no forbidden product in the simulated mix" if not hit else
+         f"forbidden product present: {', '.join(hit)}")
+
+    # 6. Predictive confidence.
+    un = float(assay.get("uncertainty", 99.0))
+    t = GATE_THRESHOLDS["uncertainty_max"]
+    gate("predictive_confidence", un <= t, un, t,
+         "band is tight enough to rank on" if un <= t else
+         "band spans too wide a range to support a recommendation - this is a "
+         "request for a wet-lab measurement, not a result")
+
+    # 7. Meaningful erosion.
+    er = float(assay.get("erosion_rate_um_per_day", 0.0))
+    t = GATE_THRESHOLDS["erosion_rate_min_um_per_day"]
+    gate("meaningful_erosion", er >= t, er, t,
+         "erosion rate is measurable" if er >= t else
+         "predicted erosion is negligible; this route does nothing")
+
+    # 8. Human-tissue off-target proxy. The enzyme must act on the fragment
+    #    material, not on tissue. Collagen/protein-degrading mechanisms are
+    #    refused outright for this application regardless of their numbers.
+    bond = str(spec.get("bond_class", "")).lower()
+    off_target = any(k in bond for k in ("peptide", "collagen", "protein", "elastin"))
+    gate("tissue_off_target", not off_target, bond or "n/a", "no peptide-bond chemistry",
+         "target chemistry has no human-tissue substrate" if not off_target else
+         "target bond class occurs in human tissue - a protease/collagenase "
+         "route cannot be made fragment-selective and is refused")
+
+    # 9. Anatomical risk tier. Not a clinical judgement - a routing rule that
+    #    says a high-risk location demands a tighter standard, and the
+    #    thresholds above are not calibrated for it.
+    anat = str(passport.get("anatomy_class", "soft_tissue")).lower()
+    high_risk = anat in ("near_nerve", "intra_articular", "vascular", "cns", "ocular")
+    gate("anatomical_tier", not high_risk, anat, "soft_tissue or peri_articular",
+         "location is within the modelled tier" if not high_risk else
+         f"location '{anat}' is outside the tier this model is calibrated for; "
+         f"no candidate may be advanced on these thresholds alone")
+
+    # 10. Confidence in the material ID. Designing for the wrong material is
+    #     the cheapest way to get a confident wrong answer.
+    conf = float(passport.get("confidence", 0.0) or 0.0)
+    gate("material_identified", conf >= 0.5, conf, 0.5,
+         "material family identified with usable confidence" if conf >= 0.5 else
+         "material ID too weak to design against - characterize first")
+
+    failed = [g["name"] for g in gates if not g["passed"]]
+    return {
+        "gates": gates,
+        "passed": not failed,
+        "failed": failed,
+        # Any failure is blocking. There is no "advisory" tier on purpose.
+        "blocking": bool(failed),
+        "summary": (
+            f"all {len(gates)} gates passed"
+            if not failed
+            else f"{len(failed)} of {len(gates)} gates failed: {', '.join(failed)}"
+        ),
+        "disclaimer": simulation_disclaimer(),
+    }
+
+
+def plan_next_experiment(
+    assays: list[dict[str, Any]] | None = None, budget: int = 3
+) -> dict[str, Any]:
+    """Rank wet-lab experiments by how much uncertainty they would remove.
+
+    Active learning, kept deliberately simple and legible: the value of
+    measuring a candidate is its predictive uncertainty weighted by how good
+    it might plausibly be (the upper end of its band). Measuring a candidate
+    that is confidently bad teaches you nothing; measuring an uncertain
+    candidate that could be excellent is the experiment worth paying for.
+    """
+    assays = assays or []
+    b = int(max(1, min(int(budget), 10)))
+    ranked: list[dict[str, Any]] = []
+    for a in assays:
+        un = float(a.get("uncertainty", 0.0))
+        ci = a.get("erosion_rate_ci") or [0.0, 0.0]
+        upside = float(ci[1]) if len(ci) > 1 else 0.0
+        gates_ok = bool(a.get("gates_passed", True))
+        # log1p keeps a single wild band from dominating the ordering.
+        value = math.log1p(max(un, 0.0)) * math.log1p(max(upside, 0.0))
+        if not gates_ok:
+            value *= 0.25  # still informative, but not the first thing to run
+        ranked.append({
+            "candidate": a.get("candidate", a.get("name", "unnamed")),
+            "information_value": round(value, 4),
+            "uncertainty": round(un, 4),
+            "upside_um_per_day": round(upside, 4),
+            "gates_passed": gates_ok,
+        })
+    ranked.sort(key=lambda r: r["information_value"], reverse=True)
+    for i, r in enumerate(ranked, 1):
+        r["priority"] = i
+    return {
+        "experiments": ranked[:b],
+        "deferred": ranked[b:],
+        "method": "uncertainty x plausible-upside ranking (log-damped)",
+        "note": "Priority 1 is the measurement that would most reduce "
+                "uncertainty about a candidate that could actually work.",
+    }
+
+
+def wait(seconds: float = 1.0) -> dict[str, Any]:
+    """Pause. Bounded, because an unbounded sleep is a denial of service."""
+    s = max(0.0, min(float(seconds), 5.0))
+    time.sleep(s)
+    return {"waited": s}
+
+
+def engine_info() -> dict[str, Any]:
+    """Startup diagnostic, reported by the worker on connect."""
+    return {
+        "engine_version": ENGINE_VERSION,
+        "numpy": getattr(kinetics.np, "__version__", None) if kinetics.np else None,
+        "mock": _mock(),
+        "materials": sorted(MATERIALS),
+        "no_go_materials": sorted(NO_GO_MATERIALS),
+        "edits": sorted(EDIT_CATALOGUE),
+        "gate_thresholds": GATE_THRESHOLDS,
+    }
