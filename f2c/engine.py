@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from . import substrate
+from . import goals, substrate
 from .formulate import accessibility_gaps, capture_requirement, geometry
 from .rank import rank
 from .retrieve import retrieve
@@ -91,6 +91,14 @@ def decide(
         ),
         capture=capture_requirement(result.material_key, material.mass_mg),
         generated_at=now,
+    )
+    geo = geometry(result.material_key, material.mass_mg, material.particle_size_mm)
+    decision.goal = goals.assess(
+        material.goal,
+        material.crystallinity_pct,
+        material.particle_size_mm,
+        material.debulk_target_pct,
+        geo.get("specific_area_mm2_per_mg"),
     )
     decision.fragment = {
         "geometry": geometry(

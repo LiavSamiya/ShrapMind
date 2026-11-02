@@ -109,6 +109,18 @@ class MaterialSpec:
     surface_treatment: str | None = None
     site: str = "deep_muscle"
     protein_corona: bool = True
+    # What success means for this fragment. The clinical goal is removal that
+    # beats surgery, and surgery is not always beaten by dissolving the whole
+    # thing -- so the bar moves with the goal, and the engine must be told
+    # which one it is being asked about rather than assuming the hardest.
+    #
+    #   full      consume the fragment entirely
+    #   debulk    remove a fraction, to relieve pressure on a nerve or vessel
+    #             and turn an urgent approach into an elective one
+    #   micro     many fragments too small and too numerous to find surgically
+    goal: str = "full"
+    # For goal='debulk': the fraction to remove, as a percentage of mass.
+    debulk_target_pct: float = 20.0
 
     def is_polymeric(self) -> bool:
         return self.form != "oligomer"
@@ -150,6 +162,8 @@ class Decision:
     alternatives: list[ScoredCandidate]
     rationale: str
     capture: dict[str, Any] | None = None
+    # What the asker meant by success, and how far the evidence reaches for it.
+    goal: dict[str, Any] | None = None
     # Barriers and derived quantities belonging to the fragment itself, which
     # choosing a different catalyst would not change.
     fragment: dict[str, Any] | None = None

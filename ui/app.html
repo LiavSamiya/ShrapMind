@@ -1,0 +1,676 @@
+<title>ShrapMind</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
+<style>
+/* Layout: a clinical report. One column, generous measure, the finding stated
+   before it is substantiated, and every depth behind a disclosure so the first
+   screen stays calm. Radiology and pathology reports read this way because a
+   clinician needs the conclusion before the basis. */
+:root{
+  --paper:#fbfbfc; --raised:#ffffff; --sunk:#f4f5f7;
+  --ink:#1a1c22; --ink-2:#4a4e59; --ink-3:#848997;
+  --rule:#e4e6eb; --rule-2:#eef0f3;
+  --accent:#3a5a8c;            /* clinical slate blue */
+  --ok:#2f6b4f; --watch:#8a6218; --stop:#8f3a34; --unknown:#6d7183;
+  --font-display:"Source Serif 4",Georgia,serif;
+  --font-ui:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#15171c; --raised:#1c1f26; --sunk:#111318;
+  --ink:#e8e9ed; --ink-2:#aeb2bd; --ink-3:#7c818f;
+  --rule:#2b2f38; --rule-2:#21242b;
+  --accent:#8fb0e0;
+  --ok:#6fb98f; --watch:#d6a850; --stop:#dd8880; --unknown:#9498a8;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#15171c; --raised:#1c1f26; --sunk:#111318;
+  --ink:#e8e9ed; --ink-2:#aeb2bd; --ink-3:#7c818f;
+  --rule:#2b2f38; --rule-2:#21242b;
+  --accent:#8fb0e0;
+  --ok:#6fb98f; --watch:#d6a850; --stop:#dd8880; --unknown:#9498a8;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:400 16.5px/1.65 var(--font-ui);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;z-index:10;
+  height:env(safe-area-inset-top,0px);background:var(--raised)}
+.wrap{max-width:46rem;margin-inline:auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{margin:0;font-family:var(--font-display);font-weight:600;
+  text-wrap:balance;line-height:1.25}
+p{margin:0}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+/* ---- the fragment, stated like a request form ---- */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;
+  background:var(--raised);border-bottom:1px solid var(--rule)}
+.masthead{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;
+  padding-block:.8rem .55rem}
+.masthead h1{font-size:1.1rem;letter-spacing:-.005em}
+.masthead .tag{font-size:.84rem;color:var(--ink-3)}
+.inputs{display:grid;gap:.7rem 1rem;padding-bottom:.9rem;
+  grid-template-columns:repeat(auto-fit,minmax(8rem,1fr))}
+.field{display:flex;flex-direction:column;gap:.22rem;min-width:0}
+.field label{font-size:.76rem;color:var(--ink-3);letter-spacing:.02em}
+.field select,.field input{font:inherit;font-size:.93rem;padding:.4rem .5rem;
+  border:1px solid var(--rule);border-radius:4px;background:var(--paper);
+  color:var(--ink);width:100%;min-width:0}
+.field input{font-family:var(--font-data)}
+.field select:disabled{color:var(--ink-3);background:var(--sunk)}
+
+main{padding-block:2rem 4rem}
+section{margin-bottom:2.6rem}
+h2{font-size:1.28rem;margin-bottom:.5rem}
+h3{font-size:1.02rem;font-family:var(--font-ui);font-weight:600}
+.lede{color:var(--ink-2);margin-top:.35rem}
+
+/* ---- the finding: the one thing that gets display type ---- */
+.finding{padding-block:.4rem 1.2rem;border-bottom:1px solid var(--rule)}
+.finding .eyebrow{font-size:.78rem;color:var(--ink-3);letter-spacing:.06em;
+  text-transform:uppercase;margin-bottom:.5rem}
+.finding .name{font-family:var(--font-display);font-size:2.6rem;font-weight:600;
+  line-height:1.05;letter-spacing:-.015em}
+.finding .org{font-style:italic;color:var(--ink-2);font-size:1.05rem;margin-top:.15rem}
+.finding .verdict{margin-top:.9rem;color:var(--ink-2)}
+.ids{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.9rem}
+.id{font-family:var(--font-data);font-size:.78rem;padding:.16rem .45rem;
+  border:1px solid var(--rule);border-radius:3px;color:var(--ink-2);
+  text-decoration:none;background:var(--raised)}
+a.id:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---- goal: what success means here ---- */
+.goal{background:var(--raised);border:1px solid var(--rule);border-radius:6px;
+  padding:1.1rem 1.2rem;margin-top:1.4rem}
+.goal .means{font-size:1.05rem;font-weight:500}
+.ceiling{margin-top:.8rem;padding-top:.75rem;border-top:1px solid var(--rule-2)}
+.bar{height:9px;border-radius:5px;background:var(--sunk);overflow:hidden;
+  display:flex;margin-top:.5rem;border:1px solid var(--rule-2)}
+.bar i{display:block;height:100%}
+.bar .reach{background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.bar .need{background:var(--accent)}
+.bar .locked{background:repeating-linear-gradient(135deg,
+  var(--rule) 0 4px,transparent 4px 8px)}
+.barkey{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.45rem;
+  font-size:.82rem;color:var(--ink-3)}
+.barkey b{font-weight:500;color:var(--ink-2)}
+.note{font-size:.93rem;color:var(--ink-2);margin-top:.7rem}
+
+/* ---- the one thing that should alarm, when it applies ---- */
+.alert{border-left:3px solid var(--stop);padding:.1rem 0 .1rem .85rem;
+  margin-top:.9rem}
+.alert .t{font-weight:600;font-size:.96rem;color:var(--stop)}
+.alert .d{font-size:.93rem;color:var(--ink-2);margin-top:.2rem}
+.caution{border-left:3px solid var(--watch);padding:.1rem 0 .1rem .85rem;margin-top:.9rem}
+.caution .t{font-weight:600;font-size:.96rem;color:var(--watch)}
+.caution .d{font-size:.93rem;color:var(--ink-2);margin-top:.2rem}
+
+/* ---- disclosures: the whole depth of the page lives behind these ---- */
+details{border-top:1px solid var(--rule-2)}
+details:last-of-type{border-bottom:1px solid var(--rule-2)}
+summary{cursor:pointer;padding-block:.75rem;font-weight:500;
+  display:flex;align-items:baseline;gap:.5rem;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";width:.42rem;height:.42rem;flex:none;
+  border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);
+  transform:rotate(-45deg);transition:transform .18s}
+details[open] summary::before{transform:rotate(45deg)}
+summary .count{margin-inline-start:auto;font-size:.84rem;color:var(--ink-3);
+  font-family:var(--font-data)}
+.body{padding-bottom:1.3rem}
+
+/* ---- measurement scale ---- */
+.sig{padding-block:.8rem;border-bottom:1px solid var(--rule-2)}
+.sig:last-child{border-bottom:0}
+.sighead{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+  align-items:baseline}
+.sighead .lab{font-weight:500;font-size:.96rem}
+.sighead .val{font-family:var(--font-data);font-size:.85rem;color:var(--ink-2)}
+.scale{position:relative;height:46px;margin-top:.7rem}
+.axis{position:absolute;left:0;right:0;top:18px;height:1px;background:var(--rule)}
+.tick{position:absolute;top:13px;width:1px;height:6px;background:var(--rule)}
+.ticklab{position:absolute;top:23px;transform:translateX(-50%);
+  font-family:var(--font-data);font-size:.66rem;color:var(--ink-3)}
+.target{position:absolute;top:7px;width:2px;height:24px;background:var(--accent)}
+.targetlab{position:absolute;top:-3px;transform:translateX(-50%);
+  font-family:var(--font-data);font-size:.66rem;color:var(--accent);white-space:nowrap}
+.pt{position:absolute;width:10px;height:10px;border-radius:50%;
+  background:var(--raised);border:2px solid var(--ink-2);transform:translateX(-50%)}
+.med{position:absolute;top:10px;transform:translateX(-50%);width:0;height:0;
+  border-left:4px solid transparent;border-right:4px solid transparent;
+  border-top:6px solid var(--watch)}
+.unknown-sig{color:var(--unknown);font-size:.93rem}
+
+/* ---- structure viewer ---- */
+#viewer{position:relative;width:100%;aspect-ratio:4/3;max-width:100%;
+  border:1px solid var(--rule);border-radius:6px;overflow:hidden;
+  background:var(--sunk)}
+.vbar{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.6rem}
+.vbar button{font:inherit;font-size:.86rem;padding:.3rem .7rem;cursor:pointer;
+  border:1px solid var(--rule);border-radius:4px;background:var(--raised);
+  color:var(--ink-2)}
+.vbar button:hover{border-color:var(--accent);color:var(--accent)}
+.triad{display:flex;gap:1.1rem;flex-wrap:wrap;margin-top:.7rem;font-size:.9rem}
+.triad span{display:flex;align-items:center;gap:.35rem}
+.triad i{width:.7rem;height:.7rem;border-radius:2px;display:block}
+
+/* ---- generic blocks ---- */
+.gap{border-left:3px solid var(--watch);padding-left:.85rem;margin-bottom:1rem}
+.gap .g1{font-weight:600;font-size:.98rem}
+.gap .g2{font-size:.93rem;color:var(--ink-2);margin-top:.1rem}
+.gap .act{font-size:.93rem;margin-top:.35rem}
+.gap .act b{font-weight:600;color:var(--accent)}
+.stage{padding-block:.7rem;border-bottom:1px solid var(--rule-2)}
+.stage:last-child{border-bottom:0}
+.stage .rowhead{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+.stage .t{font-weight:500;font-size:.97rem}
+.stage .why{font-size:.93rem;color:var(--ink-2);margin-top:.15rem}
+.ev{font-family:var(--font-data);font-size:.63rem;letter-spacing:.06em;
+  text-transform:uppercase;padding:.08rem .35rem;border-radius:3px;
+  border:1px solid currentColor;white-space:nowrap;flex:none}
+.ev-measured{color:var(--ok)} .ev-derived{color:var(--accent)}
+.ev-literature{color:var(--unknown)} .ev-specified{color:var(--watch)}
+.ref{font-size:.87rem;margin-top:.4rem;color:var(--ink-2)}
+.ref .says{display:block;margin-top:.15rem;color:var(--ink-3)}
+.correction{border-left:3px solid var(--stop);padding-left:.85rem;margin-bottom:1.2rem}
+.correction .c1{font-weight:600;font-size:.98rem}
+.correction .c2{font-size:.93rem;color:var(--ink-2);margin-top:.2rem}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:.3rem .9rem;
+  font-size:.94rem;margin:0}
+dl.kv dt{color:var(--ink-3)}
+dl.kv dd{margin:0}
+.tablewrap{overflow-x:auto}
+footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
+  font-size:.86rem;color:var(--ink-3)}
+.copy{font:inherit;font-size:.88rem;padding:.35rem .8rem;cursor:pointer;
+  border:1px solid var(--rule);border-radius:4px;background:var(--raised);
+  color:var(--ink-2)}
+.copy:hover{border-color:var(--accent);color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header><div class="wrap">
+  <div class="masthead">
+    <h1>ShrapMind</h1>
+    <span class="tag">Which enzyme acts on this fragment, and how far that is from working in tissue</span>
+  </div>
+  <div class="inputs">
+    <div class="field">
+      <label for="material">Material</label>
+      <select id="material"></select>
+    </div>
+    <div class="field">
+      <label for="goal">What success means</label>
+      <select id="goal">
+        <option value="full">Consume entirely</option>
+        <option value="debulk">Remove part</option>
+        <option value="micro">Clear tiny pieces</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="mass">Mass (mg)</label>
+      <input id="mass" type="number" min="0.1" step="0.1" value="50">
+    </div>
+    <div class="field">
+      <label for="cryst">Crystallinity (%)</label>
+      <input id="cryst" type="number" min="0" max="100" step="1" value="55">
+    </div>
+    <div class="field">
+      <label for="psize">Particle size (mm)</label>
+      <input id="psize" type="number" min="0.01" step="0.05" value="0.8">
+    </div>
+    <div class="field">
+      <label for="site">Site</label>
+      <select id="site" disabled title="Deep skeletal muscle is the only site this engine covers">
+        <option>Deep muscle</option>
+      </select>
+    </div>
+  </div>
+</div></header>
+
+<main class="wrap" id="main"></main>
+
+<footer class="wrap" id="meta"></footer>
+
+<script>
+const DATA = window.__DATA__;
+const PDB = window.__PDB__;
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = n => {
+  if (n === null || n === undefined || !isFinite(n)) return "—";
+  const s = Number(n).toFixed(2);
+  return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
+};
+const EV = { measured: "measured", derived: "derived",
+             specified: "design spec", literature: "published" };
+const badge = ev => `<span class="ev ev-${ev}">${EV[ev] || ev}</span>`;
+const refLine = r => !r ? "" : `<div class="ref">
+  <a href="https://doi.org/${esc(r.doi)}" target="_blank" rel="noopener">${esc(r.title)}</a>
+  (${esc(r.year)}) · <a href="https://pubmed.ncbi.nlm.nih.gov/${esc(r.pmid)}/"
+    target="_blank" rel="noopener">PMID ${esc(r.pmid)}</a>
+  <span class="says">${esc(r.says)}</span></div>`;
+const refLines = (r, also) => refLine(r) + (also || []).map(refLine).join("");
+
+/* The goal is assessed here rather than server-side so that changing it
+   changes the answer immediately. The thresholds and wording come from the
+   exported goal_rules, which are read straight out of f2c/goals.py, so this
+   cannot drift from the engine by paraphrasing it. */
+function assessGoal(goal, cryst, psize) {
+  const R = DATA.goal_rules;
+  const target = goal === "debulk" ? R.default_debulk_pct : 100;
+  const known = cryst !== null && !Number.isNaN(cryst);
+  const amorphous = known ? 100 - cryst : null;
+  return {
+    goal, target, known, amorphous,
+    means: R.labels[goal],
+    blocks: known ? amorphous < target : null,
+    headroom: known ? amorphous - target : null,
+    microThreshold: R.micro_size_mm,
+    notMicro: goal === "micro" && psize > R.micro_size_mm,
+  };
+}
+
+function goalBlock(g, geo) {
+  const rows = [];
+  rows.push(`<div class="means">${esc(g.means)}</div>`);
+
+  if (g.known) {
+    // Three bands: what the target needs, what else is reachable, and what the
+    // crystalline fraction locks away. Drawn to one scale across 100% of mass.
+    const need = Math.min(g.target, g.amorphous);
+    const spare = Math.max(0, g.amorphous - g.target);
+    const locked = 100 - g.amorphous;
+    rows.push(`<div class="ceiling">
+      <div class="bar" role="img" aria-label="${fmt(g.amorphous)} percent amorphous,
+        target ${fmt(g.target)} percent">
+        <i class="need" style="width:${need}%"></i>
+        <i class="reach" style="width:${spare}%"></i>
+        <i class="locked" style="width:${locked}%"></i>
+      </div>
+      <div class="barkey">
+        <span><b>${fmt(g.target)}%</b> asked for</span>
+        <span><b>${fmt(g.amorphous)}%</b> amorphous, so reachable</span>
+        <span><b>${fmt(locked)}%</b> crystalline, so not</span>
+      </div></div>`);
+
+    rows.push(g.blocks
+      ? `<div class="alert"><div class="t">The ceiling blocks this target</div>
+         <div class="d">Only ${fmt(g.amorphous)}% of the fragment is amorphous, which is
+         less than the ${fmt(g.target)}% asked for. Enzymes act on amorphous regions, so
+         the target cannot be met by surface erosion however long the enzyme is given.</div></div>`
+      : `<p class="note">${fmt(g.amorphous)}% of this fragment is amorphous and therefore
+         reachable, which leaves ${fmt(g.headroom)} points of headroom over the
+         ${fmt(g.target)}% asked for.</p>`);
+  } else {
+    rows.push(`<p class="note">Crystallinity is not characterised, so the ceiling cannot
+      be checked. It is the first thing to measure on a real fragment.</p>`);
+  }
+
+  if (g.goal === "debulk") {
+    rows.push(`<p class="note">The benefit here does not require the fragment to be gone.
+      Relieving pressure turns an urgent approach through tissue the surgeon would rather
+      not cross into an elective one, and a smaller fragment needs a narrower corridor.</p>`);
+    const m = DATA.decisions[$("#material").value]?.downstream?.migration;
+    rows.push(`<div class="alert">
+      <div class="t">Do not plan around the fragment moving away</div>
+      <div class="d">Fragment migration is real and the documented mechanism is
+      embolisation through the vasculature — in one report a cranial fragment reached the
+      right ventricle within 18 minutes. A fragment beside a vessel that is made smaller
+      and lighter is a candidate for exactly that. Plan the benefit around the material
+      removed, not around the fragment drifting clear.</div>
+      ${(m?.refs || []).map(refLine).join("")}</div>`);
+  }
+
+  if (g.goal === "micro") {
+    rows.push(`<p class="note">Surgery scales badly with fragment count: each piece has to
+      be found. Surface erosion does not care how many pieces the mass is divided into, and
+      prefers it divided, because it scales with area.</p>`);
+    if (geo?.computable && geo.specific_area_mm2_per_mg) {
+      rows.push(`<dl class="kv" style="margin-top:.7rem">
+        <dt>Specific surface area</dt>
+        <dd class="mono">${fmt(geo.specific_area_mm2_per_mg)} mm²/mg</dd>
+        <dt>Total surface</dt><dd class="mono">${fmt(geo.surface_area_mm2)} mm²</dd></dl>
+        <p class="note">This is the one place the fragment's own geometry works in favour
+        of the approach. Clearing them still means clearing them, so the crystalline
+        ceiling above applies unchanged — what changes is the rate.</p>`);
+    }
+    if (g.notMicro) {
+      rows.push(`<div class="caution"><div class="t">These fragments are not small</div>
+        <div class="d">${fmt($("#psize").value)} mm is above the ${fmt(g.microThreshold)} mm
+        threshold this mode assumes. At that size individual retrieval is still practical,
+        so the comparison against surgery is not the one this mode makes.</div></div>`);
+    }
+  }
+
+  rows.push(`<p class="note">What the arithmetic settles is how much can be removed, not
+    how fast. No interfacial rate has been measured on a solid at 37&nbsp;°C, so none of
+    these modes carries a duration.</p>`);
+  return `<div class="goal">${rows.join("")}</div>`;
+}
+
+/* A measurement scale. Every point a lab actually reported is drawn; the
+   median is a separate mark, because a median of disagreeing measurements is
+   not a measurement. */
+function scale(sig) {
+  if (!sig.measurements.length) {
+    return `<div class="unknown-sig">No lab has reported this for this enzyme.</div>`;
+  }
+  const vals = sig.measurements.map(m => m.value).concat([sig.target]);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const pad = (hi - lo) * 0.18 || 1;
+  lo -= pad; hi += pad;
+  const x = v => ((v - lo) / (hi - lo)) * 100;
+
+  const ticks = [lo + (hi - lo) * 0.08, (lo + hi) / 2, hi - (hi - lo) * 0.08]
+    .map(v => `<span class="tick" style="left:${x(v)}%"></span>
+      <span class="ticklab" style="left:${x(v)}%">${fmt(v)}</span>`).join("");
+
+  // Stack duplicates so two labs reporting the same value read as two.
+  const seen = {};
+  const pts = sig.measurements.map(m => {
+    const k = fmt(m.value);
+    const tier = seen[k] = (seen[k] || 0) + 1;
+    return `<span class="pt" title="${esc(m.value)} ${esc(m.unit || "")}${
+      m.pmid ? " · PMID " + esc(m.pmid) : ""}"
+      style="left:${x(m.value)}%;top:${14 - (tier - 1) * 9}px"></span>`;
+  }).join("");
+
+  const med = sig.n > 1
+    ? `<span class="med" style="left:${x(sig.median)}%" title="median"></span>` : "";
+
+  return `<div class="scale">
+    <span class="axis"></span>${ticks}
+    <span class="target" style="left:${x(sig.target)}%"></span>
+    <span class="targetlab" style="left:${x(sig.target)}%">body ${fmt(sig.target)}</span>
+    ${pts}${med}</div>`;
+}
+
+function signals(c) {
+  return Object.entries(c.signals).map(([, sig]) => {
+    const spread = sig.n > 1 && sig.spread > 0;
+    return `<div class="sig">
+      <div class="sighead"><span class="lab">${esc(sig.label)}</span>
+        <span class="val">${sig.n
+          ? `${sig.n} measurement${sig.n > 1 ? "s" : ""}${
+              spread ? ` · spread ${fmt(sig.spread)}` : ""}`
+          : "not measured"}</span></div>
+      ${scale(sig)}
+      ${spread ? `<p class="note">The labs disagree across ${fmt(sig.spread)}
+        ${esc(sig.unit || "units")}, so the median marker is the midpoint of a
+        disagreement rather than an established value.</p>` : ""}
+    </div>`;
+  }).join("");
+}
+
+/* The engine keys gaps as 'ph', 'temperature spread', 'catalytic evidence'.
+   Those keys are right; they are not titles. Capitalise for display only so
+   the data stays canonical and the page stays readable. */
+const GAP_LABEL = { ph: "pH", "temperature spread": "Temperature spread",
+  temperature: "Temperature", "catalytic evidence": "Catalytic evidence",
+  structure: "Structure" };
+const gapLabel = k => GAP_LABEL[k] || (k.charAt(0).toUpperCase() + k.slice(1));
+
+function gapsHtml(gaps) {
+  return (gaps || []).map(g => `<div class="gap">
+    <div class="g1">${esc(gapLabel(g.kind))}</div>
+    <div class="g2">${esc(g.detail)}</div>
+    <div class="g2 mono" style="font-size:.86rem">measured: ${esc(g.measured || "not measured")}
+      · needed: ${esc(g.target)}</div>
+    ${g.action ? `<div class="act"><b>Next:</b> ${esc(g.action)}</div>` : ""}
+  </div>`).join("");
+}
+
+function structure(c) {
+  const t = DATA.structure || {};
+  if (!PDB || !c.pdb || !c.pdb.length) return "";
+  return `<details id="structDetails"><summary>Crystal structure
+    <span class="count">${esc(c.pdb[0])}</span></summary>
+    <div class="body">
+      <div id="viewer"></div>
+      <div class="vbar">
+        <button type="button" data-v="site">Zoom to active site</button>
+        <button type="button" data-v="reset">Whole protein</button>
+        <button type="button" data-v="surface">Surface</button>
+        <button type="button" data-v="spin">Spin</button>
+      </div>
+      <div class="triad">
+        <span><i style="background:#c0563a"></i> Ser130 nucleophile</span>
+        <span><i style="background:#5b4a9e"></i> His208 general base</span>
+        <span><i style="background:#2f6b4f"></i> Asp176 charge relay</span>
+      </div>
+      <p class="note">${esc(t.note || "")}</p>
+    </div></details>`;
+}
+
+let viewer = null, spinning = false;
+function mountViewer(c) {
+  const host = $("#viewer");
+  if (!host || viewer || !window.$3Dmol || !PDB) return;
+  viewer = $3Dmol.createViewer(host, { backgroundColor: "rgba(0,0,0,0)" });
+  viewer.addModel(PDB, "pdb");
+  viewer.setStyle({}, { cartoon: { colorscheme: "ssJmol", opacity: .9 } });
+  const triad = { 130: "#c0563a", 176: "#2f6b4f", 208: "#5b4a9e" };
+  for (const [resi, color] of Object.entries(triad)) {
+    viewer.setStyle({ resi: Number(resi) },
+      { cartoon: { color }, stick: { color, radius: .22 } });
+    viewer.addLabel(({ 130: "Ser130", 176: "Asp176", 208: "His208" })[resi],
+      { fontSize: 11, backgroundOpacity: .65, backgroundColor: color,
+        fontColor: "white" }, { resi: Number(resi) });
+  }
+  viewer.setStyle({ resi: [241, 259] }, { stick: { color: "#b8860b", radius: .22 } });
+  viewer.zoomTo();
+  viewer.render();
+
+  for (const b of document.querySelectorAll(".vbar button")) {
+    b.addEventListener("click", () => {
+      const v = b.dataset.v;
+      if (v === "site") { viewer.zoomTo({ resi: [130, 176, 208] }); }
+      else if (v === "reset") { viewer.zoomTo(); }
+      else if (v === "surface") {
+        viewer.addSurface($3Dmol.SurfaceType.VDW,
+          { opacity: .55, color: "#8fa8c8" });
+      } else if (v === "spin") {
+        spinning = !spinning; viewer.spin(spinning ? "y" : false);
+      }
+      viewer.render();
+    });
+  }
+}
+
+function downstream(ds) {
+  const out = [];
+  const stage = s => `<div class="stage">
+    <div class="rowhead"><span class="t">${esc(s.role || s.property || s.phase)}</span>
+      ${badge(s.evidence)}</div>
+    <div class="why">${esc(s.what || s.spec || s.event || "")}</div>
+    ${s.why ? `<div class="why">${esc(s.why)}</div>` : ""}
+    ${s.intervention ? `<div class="why">${esc(s.intervention)}</div>` : ""}
+    ${s.note ? `<div class="why" style="color:var(--ink-3)">${esc(s.note)}</div>` : ""}
+    ${refLine(s.ref)}</div>`;
+
+  if (ds.indication) {
+    const i = ds.indication;
+    out.push(`<details><summary>Why intervene at all</summary><div class="body">
+      <p>${esc(i.problem)}</p>
+      <ul style="color:var(--ink-2);font-size:.94rem;margin:.6rem 0 0;padding-inline-start:1.1rem">
+        ${(i.risk_factors || []).map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+      <p class="note">${esc(i.why_a_gap_exists)}</p>
+      ${refLine(i.ref)}
+      <p class="note"><strong>What this does not cover:</strong> ${esc(i.honest_limit)}</p>
+    </div></details>`);
+  }
+
+  if (ds.missing_experiment) {
+    const m = ds.missing_experiment;
+    out.push(`<details open><summary>The experiment that decides this
+      <span class="count">stage 0</span></summary><div class="body">
+      <h3>${esc(m.question)}</h3>
+      <p class="note">${esc(m.why_it_is_a_gate)}</p>
+      <div class="caution"><div class="t">Do not ask for k<sub>cat</sub> and K<sub>m</sub></div>
+        <div class="d">${esc(m.what_not_to_ask_for)}</div></div>
+      <div class="stage"><div class="rowhead"><span class="t">The method already exists</span>
+        ${badge("literature")}</div>
+        <div class="why">${esc(m.method_exists.what)}</div>
+        ${refLine(m.method_exists.ref)}</div>
+      <h3 style="margin-top:1rem">Why nobody has measured it</h3>
+      <ul style="color:var(--ink-2);font-size:.94rem;margin:.4rem 0 0;padding-inline-start:1.1rem">
+        ${(m.why_unstudied || []).map(r => `<li style="margin-bottom:.35rem">${esc(r)}</li>`).join("")}
+      </ul>
+      <div class="stage" style="margin-top:.8rem">
+        <div class="rowhead"><span class="t">And one reason it may still work</span>
+        ${badge("literature")}</div>
+        <div class="why">${esc(m.reason_for_optimism.what)}</div>
+        ${refLine(m.reason_for_optimism.ref)}</div>
+    </div></details>`);
+  }
+
+  out.push(`<details><summary>Treatment route
+    <span class="count">${ds.cocktail.length + ds.carrier.length} items</span></summary>
+    <div class="body">
+      <h3>What the carrier delivers</h3>${ds.cocktail.map(stage).join("")}
+      <h3 style="margin-top:1.2rem">What the carrier must be</h3>${ds.carrier.map(stage).join("")}
+      <h3 style="margin-top:1.2rem">How the body answers</h3>${ds.host_response.map(stage).join("")}
+    </div></details>`);
+
+  const r = ds.residue;
+  out.push(`<details><summary>What is left over</summary><div class="body">
+    <p>${esc(r.summary)}</p>
+    <div class="stage"><div class="rowhead"><span class="t">Risk</span>${badge("literature")}</div>
+      <div class="why">${esc(r.risk.what)}</div>${refLine(r.risk.ref)}</div>
+    <div class="stage"><div class="rowhead"><span class="t">Open question</span>
+      ${badge("specified")}</div>
+      <div class="why">${esc(r.open)}</div>${refLines(r.ref, r.also)}</div>
+  </div></details>`);
+
+  if (ds.caveats?.length) {
+    out.push(`<details><summary>Where the brief and its sources part company
+      <span class="count">${ds.caveats.length}</span></summary><div class="body">
+      ${ds.caveats.map(c => `<div class="correction">
+        <div class="c1">${esc(c.claim)}</div>
+        <div class="c2"><strong>${esc(c.status)}.</strong> ${esc(c.detail)}</div>
+        ${refLines(c.evidence, c.also)}</div>`).join("")}
+      <p class="note">Written down because a reviewer with an immunology background
+      reaches the same papers. Better to correct the claim than defend it.</p>
+    </div></details>`);
+  }
+
+  const refs = Object.values(ds.refs || {});
+  if (refs.length) {
+    out.push(`<details><summary>Sources
+      <span class="count">${refs.length}</span></summary><div class="body">
+      <p class="note">Each resolved against NCBI, each DOI cross-checked against Crossref.
+      The line under every source is what it actually shows.</p>
+      ${refs.map(refLine).join("")}</div></details>`);
+  }
+  return out.join("");
+}
+
+function render() {
+  const key = $("#material").value;
+  const d = DATA.decisions[key];
+  const goal = $("#goal").value;
+  const mass = parseFloat($("#mass").value);
+  const cryst = $("#cryst").value === "" ? null : parseFloat($("#cryst").value);
+  const psize = parseFloat($("#psize").value);
+  const out = [];
+
+  if (!d || d.verdict !== "enzyme_selected") {
+    out.push(`<section class="finding">
+      <div class="eyebrow">No catalyst</div>
+      <div class="name" style="font-size:1.9rem">${esc(key)}</div>
+      <p class="verdict">${esc(d ? d.rationale : "Unknown material.")}</p>
+    </section>`);
+    $("#main").innerHTML = out.join("");
+    return;
+  }
+
+  const c = d.selected;
+  out.push(`<section class="finding">
+    <div class="eyebrow">Selected catalyst</div>
+    <div class="name">${esc(c.name)}</div>
+    <div class="org">${esc(c.organism)}</div>
+    <p class="verdict">${esc(d.rationale)}</p>
+    <div class="ids">
+      ${c.uniprot ? `<a class="id" href="https://www.uniprot.org/uniprotkb/${esc(c.uniprot)}"
+        target="_blank" rel="noopener">UniProt ${esc(c.uniprot)}</a>` : ""}
+      ${(c.ec || []).map(e => `<span class="id">EC ${esc(e)}</span>`).join("")}
+      <span class="id">score ${fmt(c.score)}</span>
+      <span class="id">${fmt(c.uncertainty * 100)}% unmeasured</span>
+      ${c.alphafold ? `<a class="id" href="${esc(c.alphafold)}" target="_blank"
+        rel="noopener">AlphaFold</a>` : ""}
+    </div>
+  </section>`);
+
+  // Geometry scales with the inputs, so recompute rather than read the export.
+  const rules = DATA.accessibility_rules || {};
+  const density = (rules.density_g_cm3 || {})[key];
+  let geo = { computable: false };
+  if (density && mass > 0 && psize > 0) {
+    const volume = (mass / 1000) / density * 1000;      // mm³
+    const n = volume / Math.pow(psize, 3);
+    const area = n * 6 * Math.pow(psize, 2);
+    geo = { computable: true, surface_area_mm2: area,
+            specific_area_mm2_per_mg: area / mass };
+  }
+
+  out.push(`<section>${goalBlock(assessGoal(goal, cryst, psize), geo)}</section>`);
+
+  out.push(`<section>
+    <h2>What stands between this enzyme and tissue</h2>
+    <p class="lede">Each one is a measurement that does not exist yet, not an opinion.</p>
+    <div style="margin-top:1.1rem">${gapsHtml(c.gaps)}</div>
+  </section>`);
+
+  out.push(`<section>
+    <details><summary>Evidence behind the choice
+      <span class="count">${c.publications} publications</span></summary>
+      <div class="body">
+        <p class="note">Every value a lab reported is a dot. The amber marker is the
+        median, drawn separately because a median of disagreeing measurements is not
+        itself a measurement.</p>
+        <div style="margin-top:.8rem">${signals(c)}</div>
+      </div></details>
+    ${structure(c)}
+    ${downstream(d.downstream)}
+  </section>`);
+
+  $("#main").innerHTML = out.join("");
+
+  const det = $("#structDetails");
+  if (det) det.addEventListener("toggle", () => det.open && mountViewer(c), { once: true });
+}
+
+function boot() {
+  const sel = $("#material");
+  const keys = Object.keys(DATA.decisions).sort((a, b) => {
+    const av = DATA.decisions[a].verdict === "enzyme_selected";
+    const bv = DATA.decisions[b].verdict === "enzyme_selected";
+    return av === bv ? a.localeCompare(b) : (av ? -1 : 1);
+  });
+  sel.innerHTML = keys.map(k => `<option value="${esc(k)}"${k === "PET" ? " selected" : ""}>${
+    esc(k)}${DATA.decisions[k].verdict === "enzyme_selected" ? "" : " — no pathway"}</option>`).join("");
+
+  for (const id of ["#material", "#goal", "#mass", "#cryst", "#psize"]) {
+    $(id).addEventListener("input", render);
+  }
+
+  const w = DATA.warehouse;
+  $("#meta").innerHTML = `${w.proteins} enzymes with demonstrated activity,
+    ${w.reviewed} Swiss-Prot reviewed, ${w.with_temperature} with a temperature optimum.
+    Of ${DATA.kinetics_total || 289} catalytic constants, none was measured on a solid
+    polymer. Built ${esc((DATA.generated_at || "").slice(0, 10))}.`;
+  render();
+}
+
+boot();
+</script>

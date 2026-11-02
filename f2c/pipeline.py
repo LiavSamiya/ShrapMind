@@ -125,6 +125,24 @@ REFS = {
         "mobility near the glass transition while the bulk rate keeps rising "
         "-- the physics that makes 37 C hard, and the method for measuring it.",
     ),
+    "fragment_migration": _ref(
+        "34754541", "10.25259/SNI_221_2021",
+        "Craniocerebral gunshot injury bullet migration to the cardiac right "
+        "ventricle",
+        2021,
+        "A cranial fragment entered the venous sinus system and was imaged in "
+        "the right ventricle 18 minutes later. Fragments do move, and the "
+        "documented mechanism is embolisation through the vasculature -- not "
+        "a slow drift away from whatever they were pressing on.",
+    ),
+    "bullet_embolism": _ref(
+        "37645668", "10.7759/cureus.44261",
+        "Bullet embolization after a penetrating gunshot wound: a case report",
+        2023,
+        "Two cases of venous bullet embolisation, with a review of arterial "
+        "and venous types. Confirms migration as a recognised complication to "
+        "be suspected rather than a process to plan around.",
+    ),
     "conformational_selection": _ref(
         "39036936", "10.1002/cbic.202400456",
         "Conformational selection in enzyme-catalyzed depolymerization of "
@@ -440,6 +458,17 @@ def build(material_key: str, products: list[str]) -> dict[str, Any]:
     return {
         "indication": indication(),
         "missing_experiment": missing_experiment(),
+        "migration": {
+            "summary": (
+                "Fragments do migrate, and the documented mechanism is "
+                "embolisation through the vasculature rather than a drift away "
+                "from the structure they were pressing on. Any plan that "
+                "depends on a fragment moving to safety is depending on the "
+                "dangerous version of a real phenomenon."
+            ),
+            "evidence": LITERATURE,
+            "refs": [REFS["fragment_migration"], REFS["bullet_embolism"]],
+        },
         "cocktail": cocktail(material_key, products),
         "carrier": carrier(),
         "host_response": host_response(),

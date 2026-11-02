@@ -32,3 +32,6 @@ data/raw/structures/
 # Local secrets and per-component envs
 .env
 .venv-*/
+
+# Built page: regenerate with `python -m tools.build_app`
+ui/shrapmind.html

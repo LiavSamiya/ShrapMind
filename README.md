@@ -52,9 +52,21 @@ daily rather than read the source:
 
 ```bash
 python -m f2c.cli export-ui             # Decisions for all 23 materials → JSON
-python tools/build_ui.py                # → ui/fragment-to-catalyst.html
-python tools/build_structure.py         # → ui/structure-built.html
+python tools/build_structure.py         # fetches 4CG1, verifies the triad
+python -m tools.build_app               # → ui/shrapmind.html, the whole thing
 ```
+
+One page now. The decision, the structure viewer and the full treatment route
+were three separate surfaces, and a clinician looking at a fragment should not
+have to know which one answers their question. `tools/build_ui.py` still
+builds the earlier decision-only page if you want it.
+
+The page opens with the finding and keeps every depth behind a disclosure, so
+the first screen is a short answer rather than a wall of instrument panels.
+`What success means` is the control that matters: consuming a fragment,
+removing part of it, and clearing many tiny pieces are different questions
+with different ceilings, and the page recomputes the arithmetic as you change
+it.
 
 Then open either file in a browser. There is no server and no build step beyond
 those commands: each page carries its own data, so it works from a file:// URL

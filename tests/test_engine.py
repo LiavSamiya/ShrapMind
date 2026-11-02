@@ -451,3 +451,78 @@ def test_the_indication_states_what_its_evidence_does_not_cover():
     assert ind["ref"]["pmid"] == "36074021"
     assert "honest_limit" in ind
     assert "lead" in ind["honest_limit"].lower()
+
+
+# --- what success means ------------------------------------------------------
+# The clinical problem is removal that beats surgery, and surgery loses on
+# grounds other than completeness. These tests hold the line between a goal
+# that genuinely lowers the bar and one that only looks like it does.
+
+def test_debulking_is_not_blocked_by_a_ceiling_that_blocks_full_degradation():
+    from f2c import goals
+
+    full = goals.assess("full", crystallinity_pct=55.0, particle_size_mm=0.8)
+    part = goals.assess("debulk", crystallinity_pct=55.0, particle_size_mm=0.8)
+    assert full["ceiling"]["blocks"] is True
+    assert part["ceiling"]["blocks"] is False
+    assert part["ceiling"]["headroom_pct"] > 0
+
+
+def test_the_ceiling_still_binds_when_the_amorphous_fraction_is_too_small():
+    from f2c import goals
+
+    tight = goals.assess("debulk", crystallinity_pct=85.0, particle_size_mm=0.8)
+    assert tight["ceiling"]["blocks"] is True
+    assert "regardless of how long" in tight["ceiling"]["note"]
+
+
+def test_clearing_micro_fragments_does_not_lower_the_completeness_bar():
+    """Micro mode improves the rate, through surface area. Letting it also
+    inherit the partial target would hand it a feasibility it has not got."""
+    from f2c import goals
+
+    micro = goals.assess("micro", crystallinity_pct=55.0, particle_size_mm=0.1,
+                         specific_area_mm2_per_mg=43.5)
+    assert micro["target_pct"] == 100.0
+    assert micro["ceiling"]["blocks"] is True
+    assert micro["surface_advantage"]["specific_area_mm2_per_mg"] == 43.5
+
+
+def test_debulking_carries_the_migration_warning():
+    """The appealing version of this goal is that the fragment drifts clear.
+    The literature documents migration as embolisation, so the warning travels
+    with the mode rather than waiting to be remembered."""
+    from f2c import goals
+
+    part = goals.assess("debulk", crystallinity_pct=40.0, particle_size_mm=0.8)
+    warnings = [w for w in part["warnings"]
+                if "migration" in w["status"] or "migration" in w["detail"]]
+    assert warnings, "debulk must warn that migration means embolisation"
+    assert "embolisation" in warnings[0]["detail"]
+
+
+def test_micro_mode_objects_when_the_fragments_are_not_small():
+    from f2c import goals
+
+    wrong = goals.assess("micro", crystallinity_pct=40.0, particle_size_mm=3.0)
+    assert any("does not match the input" in w["status"] for w in wrong["warnings"])
+
+
+def test_no_goal_claims_a_duration():
+    """Every mode settles how much, never how fast. The interfacial rate is
+    unmeasured, and a mode that implied a timeline would be the one place this
+    engine overstated its evidence."""
+    from f2c import goals
+
+    for g in ("full", "debulk", "micro"):
+        assessed = goals.assess(g, crystallinity_pct=40.0, particle_size_mm=0.3)
+        assert "how fast" in assessed["rate_unknown"]
+
+
+def test_smaller_fragments_present_more_surface_for_the_same_mass():
+    """The arithmetic behind micro mode being the favourable case."""
+    from f2c.formulate import geometry
+
+    coarse = geometry("PET", 50.0, 2.0)["specific_area_mm2_per_mg"]
+    fine = geometry("PET", 50.0, 0.1)["specific_area_mm2_per_mg"]
+    assert fine > coarse * 10

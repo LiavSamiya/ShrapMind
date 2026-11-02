@@ -23,6 +23,11 @@ def _add_material_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--mass-mg", type=float, default=None)
     p.add_argument("--crystallinity", type=float, default=None, help="percent")
     p.add_argument("--particle-size-mm", type=float, default=None)
+    p.add_argument("--goal", choices=("full", "debulk", "micro"), default="full",
+                   help="what counts as success: consume it, take part of it "
+                        "to relieve pressure, or clear many tiny pieces")
+    p.add_argument("--debulk-pct", type=float, default=20.0,
+                   help="percent of mass to remove when --goal debulk")
     p.add_argument("--site", default="deep_muscle")
     p.add_argument("--store", type=Path, default=warehouse.DEFAULT_STORE)
 
@@ -79,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
         form=args.form,
         mass_mg=args.mass_mg,
         crystallinity_pct=args.crystallinity,
+        goal=args.goal,
+        debulk_target_pct=args.debulk_pct,
         particle_size_mm=args.particle_size_mm,
         site=args.site,
     )

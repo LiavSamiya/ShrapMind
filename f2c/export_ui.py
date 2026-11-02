@@ -17,9 +17,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from . import pipeline, substrate
+from . import formulate, goals, pipeline, substrate
 from .engine import decide
-from . import formulate
 from .formulate import REPEAT_UNIT_G_PER_MOL, capture_requirement
 from .rank import BODY_PH, BODY_TEMPERATURE_C, WEIGHTS, _summarise
 from .retrieve import ALIASES, NON_ENZYMATIC
@@ -208,6 +207,32 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
         # Crystallinity and particle size are free inputs, so the page applies
         # these rules itself. Exporting the thresholds and the wording keeps
         # one source of truth instead of a second copy written in JavaScript.
+        # The goal modes are computed in the browser, because changing the
+        # goal must change the answer without a round trip. Exporting the
+        # thresholds and the wording keeps one source of truth: the page
+        # cannot drift from f2c/goals.py by paraphrasing it.
+        # The structure page used to live separately; the unified page needs
+        # to say what the viewer is actually showing, which is a near-identical
+        # crystal structure rather than the selected protein itself.
+        "structure": {
+            "pdb_id": "4CG1",
+            "note": "4CG1 is an experimental crystal structure, not a prediction. "
+                    "It is 259 of 261 residues identical to Q6A0I4, the selected "
+                    "enzyme, differing at S18R and T136S -- so it is that close, "
+                    "not that enzyme. AlphaFold does model Q6A0I4, but its file "
+                    "server refused the download from this network and nothing "
+                    "was substituted for it.",
+        },
+        "kinetics_total": sum(
+            1 for p in proteins for o in p.observations
+            if o.metric in substrate.KINETIC_METRICS and o.value is not None
+        ),
+        "goal_rules": {
+            "max_useful_crystallinity_pct": goals.MAX_USEFUL_CRYSTALLINITY_PCT,
+            "micro_size_mm": goals.MICRO_SIZE_MM,
+            "labels": dict(goals.LABEL),
+            "default_debulk_pct": 20.0,
+        },
         "accessibility_rules": {
             "crystallinity_barrier_pct": formulate.CRYSTALLINITY_BARRIER_PCT,
             "crystallinity_high_pct": 45.0,

@@ -86,6 +86,28 @@ def render(decision: Decision) -> str:
             lines.append(f"      action   : {g.engineering_target}")
         lines.append("")
 
+    go = decision.goal or {}
+    if go:
+        lines += ["GOAL", ""]
+        lines.append(f"  asked for     : {go['means']}")
+        c = go.get("ceiling") or {}
+        if c.get("known"):
+            lines.append(f"  ceiling       : {c['note']}")
+        else:
+            lines.append(f"  ceiling       : {c.get('note', 'unknown')}")
+        sa = go.get("surface_advantage")
+        if sa:
+            lines.append(f"  surface area  : {sa['specific_area_mm2_per_mg']} mm2/mg")
+            lines.append(f"                  {sa['note']}")
+        for n in go.get("notes") or []:
+            lines.append(f"  note          : {n}")
+        for w in go.get("warnings") or []:
+            lines.append(f"  ! {w['claim']}")
+            lines.append(f"      status  : {w['status']}")
+            lines.append(f"      {w['detail']}")
+        lines.append(f"  rate          : {go['rate_unknown']}")
+        lines.append("")
+
     frag = decision.fragment or {}
     if frag:
         lines += ["FRAGMENT BARRIERS  (not fixed by choosing another catalyst)", ""]
