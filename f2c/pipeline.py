@@ -352,10 +352,12 @@ def missing_experiment() -> dict[str, Any]:
             "finds out in its third."
         ),
         "what_not_to_ask_for": (
-            "kcat and Km. They assume a dissolved substrate at a known molar "
-            "concentration, and a fragment has a surface rather than a [S]. "
-            "The quantity that exists is interfacial: rate per unit area, "
-            "adsorbed enzyme density, and bonds cut per adsorption event."
+            "They assume a dissolved substrate at a known molar concentration, "
+            "and a fragment has a surface rather than a [S]. Asking for them on "
+            "a solid sends someone to a bench to produce a number that cannot "
+            "be defined, which is worse than asking for nothing. The quantity "
+            "that does exist is interfacial: rate per unit area, adsorbed "
+            "enzyme density, and bonds cut per adsorption event."
         ),
         "method_exists": {
             "what": (

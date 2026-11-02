@@ -414,6 +414,34 @@ const refLines = (r, also) =>
 function downstreamSections(ds) {
   const out = [];
 
+  /* The gate. It sits immediately after the indication because the order of
+     the page is the order of the argument: the problem is worth solving, and
+     this is the one measurement that decides whether this route solves it. */
+  if (ds.missing_experiment) {
+    const me = ds.missing_experiment;
+    out.push(`<section><h2>The experiment that decides this</h2>
+      <div class="card stage s-specified">
+        <div class="rowhead"><span class="t">${esc(me.question)}</span>${badge("specified")}</div>
+        <div class="why">${esc(me.why_it_is_a_gate)}</div>
+        <div class="gap" style="margin-top:.7rem">
+          <div class="g1">Do not ask for kcat and Km</div>
+          <div class="g2">${esc(me.what_not_to_ask_for)}</div>
+        </div>
+        <div class="rowhead" style="margin-top:.8rem">
+          <span class="t">The method already exists</span>${badge("literature")}</div>
+        <div class="why">${esc(me.method_exists.what)}</div>
+        ${refLine(me.method_exists.ref)}
+        <h3 style="font-size:1rem;margin-top:1rem">Why nobody has measured it</h3>
+        <ul class="subtle" style="margin:.3rem 0 0;padding-inline-start:1.1rem">
+          ${(me.why_unstudied || []).map(r => `<li style="margin-bottom:.35rem">${esc(r)}</li>`).join("")}
+        </ul>
+        <div class="rowhead" style="margin-top:.9rem">
+          <span class="t">And one reason it may still work</span>${badge("literature")}</div>
+        <div class="why">${esc(me.reason_for_optimism.what)}</div>
+        ${refLine(me.reason_for_optimism.ref)}
+      </div></section>`);
+  }
+
   if (ds.indication) {
     const ind = ds.indication;
     out.push(`<section><h2>Why intervene at all</h2>
