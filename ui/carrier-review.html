@@ -1,0 +1,546 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>ביקורת ארכיטקטורת ההידרוג'ל</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+/* Layout: a verification ledger read right-to-left. One measured column; each
+   reference carries its own verdict, because the verdict is the finding. */
+:root{
+  --paper:#f7f8f7;            /* neutrals biased faintly green, toward the accent */
+  --raised:#ffffff;
+  --sunk:#eef1f0;
+  --ink:#171c1b;
+  --ink-2:#4b5452;
+  --ink-3:#7e8886;
+  --rule:#dfe4e3;
+  --rule-2:#ebeeed;
+  --accent:#1c5752;           /* verification teal */
+  --fail:#9e3b2e;             /* does not resolve to the cited work */
+  --shift:#8a6324;            /* resolves, different setting */
+  --ok:#2c6b4a;               /* resolves, correctly used */
+  --font-display:"Frank Ruhl Libre",Georgia,serif;
+  --font-ui:"Assistant",ui-sans-serif,system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#131716; --raised:#1a1f1e; --sunk:#202625;
+    --ink:#e7ebea; --ink-2:#a6b0ae; --ink-3:#7b8584;
+    --rule:#2b3231; --rule-2:#222827;
+    --accent:#6fb9b0; --fail:#e08273; --shift:#d7a450; --ok:#5cbd90;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131716; --raised:#1a1f1e; --sunk:#202625;
+  --ink:#e7ebea; --ink-2:#a6b0ae; --ink-3:#7b8584;
+  --rule:#2b3231; --rule-2:#222827;
+  --accent:#6fb9b0; --fail:#e08273; --shift:#d7a450; --ok:#5cbd90;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-ui);font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:48rem;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 76px;
+}
+[dir="rtl"]{text-align:right}
+h1,h2,h3,h4{font-family:var(--font-display);text-wrap:balance}
+
+header{padding-block:44px 26px;border-bottom:2px solid var(--ink)}
+.eyebrow{
+  font-family:var(--font-data);font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;
+}
+h1{font-size:clamp(1.85rem,5.2vw,2.6rem);font-weight:700;line-height:1.2;
+   margin:0 0 14px;letter-spacing:-.01em}
+.standfirst{font-size:1.12rem;color:var(--ink-2);margin:0;max-width:38rem}
+.meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:22px;
+      font-family:var(--font-data);font-size:11.5px;color:var(--ink-3)}
+
+section{padding-block:40px 0}
+h2{font-size:1.5rem;font-weight:700;margin:0 0 6px;
+   padding-bottom:8px;border-bottom:1px solid var(--rule)}
+.sec-sub{color:var(--ink-3);font-size:.92rem;margin:0 0 22px;
+         font-family:var(--font-data)}
+h3{font-size:1.14rem;font-weight:600;margin:30px 0 8px}
+p{margin:0 0 15px}
+strong{font-weight:700}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+.mono,code{font-family:var(--font-data);font-size:.87em}
+code{background:var(--rule-2);padding:1px 5px;border-radius:3px}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+
+/* the finding */
+.finding{background:var(--raised);border:1px solid var(--rule);
+  border-right:4px solid var(--fail);padding:24px;margin:26px 0}
+.finding .big{font-family:var(--font-display);
+  font-size:clamp(1.35rem,4vw,1.9rem);font-weight:700;line-height:1.3;
+  margin:0 0 12px}
+.finding p:last-child{margin-bottom:0}
+
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);margin:24px 0}
+.fig{background:var(--raised);padding:14px 16px;min-width:0}
+.fig .n{font-family:var(--font-data);font-size:1.5rem;font-weight:500;
+  font-variant-numeric:tabular-nums;display:block;line-height:1.1}
+.fig .l{font-size:11.5px;color:var(--ink-3);line-height:1.4;display:block;
+  margin-top:5px}
+.fig.bad .n{color:var(--fail)}
+.fig.warn .n{color:var(--shift)}
+.fig.good .n{color:var(--ok)}
+
+.scroll{overflow-x:auto;min-width:0;max-width:100%;margin:22px 0;
+  border:1px solid var(--rule)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:34rem}
+caption{text-align:right;font-size:12px;color:var(--ink-3);padding:10px 12px;
+  border-bottom:1px solid var(--rule);background:var(--rule-2)}
+th{text-align:right;font-family:var(--font-data);font-size:10.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:500;padding:9px 12px;border-bottom:1px solid var(--rule);
+  white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-family:var(--font-data);font-variant-numeric:tabular-nums;
+  white-space:nowrap;text-align:left;direction:ltr}
+td.name{font-weight:600}
+
+.pill{display:inline-block;font-family:var(--font-data);font-size:10.5px;
+  letter-spacing:.03em;text-transform:uppercase;padding:2px 7px;
+  border-radius:2px;border:1px solid currentColor;white-space:nowrap}
+.pill.f{color:var(--fail)}
+.pill.s{color:var(--shift)}
+.pill.o{color:var(--ok)}
+.pill.n{color:var(--ink-3)}
+
+.case{background:var(--raised);border:1px solid var(--rule);
+  border-right:3px solid var(--ink-3);padding:18px 20px;margin:20px 0}
+.case.fail{border-right-color:var(--fail)}
+.case.shift{border-right-color:var(--shift)}
+.case.good{border-right-color:var(--ok)}
+.case h4{margin:0 0 4px;font-size:1.02rem;font-weight:600}
+.case .tag{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:10px}
+.case p{margin:0 0 11px;font-size:15px}
+.case p:last-child{margin-bottom:0}
+.vs{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
+  margin:12px 0;font-size:14.5px}
+.vs>div{background:var(--raised);padding:11px 13px;min-width:0}
+.vs .k{font-family:var(--font-data);font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:3px}
+.req{font-size:14.5px;padding-top:11px;margin-top:12px;
+  border-top:1px dashed var(--rule);color:var(--ink-2)}
+.req b{color:var(--ink);font-weight:700}
+
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:20px 0}
+ol.steps li{counter-increment:s;position:relative;
+  padding:0 46px 20px 0;border-right:1px solid var(--rule);margin-right:13px}
+ol.steps li:last-child{border-right-color:transparent;padding-bottom:0}
+ol.steps li::before{content:counter(s);position:absolute;right:-13px;top:0;
+  width:26px;height:26px;border-radius:50%;background:var(--raised);
+  border:1px solid var(--rule);color:var(--ink-2);
+  font-family:var(--font-data);font-size:12px;display:grid;place-items:center}
+ol.steps h4{margin:2px 0 5px;font-size:1.02rem;font-weight:600}
+ol.steps p{margin:0;font-size:15px;color:var(--ink-2)}
+ol.steps .who{font-family:var(--font-data);font-size:11px;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.06em;display:block}
+
+ul.plain{padding-right:20px;padding-left:0;margin:0 0 15px}
+ul.plain li{margin-bottom:9px}
+
+.note{font-size:14.5px;color:var(--ink-2);background:var(--sunk);
+  padding:15px 17px;margin:22px 0;border-radius:3px}
+.note b{color:var(--ink)}
+
+footer{margin-top:52px;padding-top:22px;border-top:2px solid var(--ink);
+  font-size:13.5px;color:var(--ink-3)}
+footer p{margin:0 0 9px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap" dir="rtl">
+
+<header>
+  <p class="eyebrow">ShrapMind · ביקורת עמיתים</p>
+  <h1>ביקורת ארכיטקטורת ההידרוג'ל</h1>
+  <p class="standfirst">
+    המסמך הזה סוגר את הפער שסימנתי: הוא מספק את הנשא שהזרוע שלי רק דרשה
+    כתכונה. בדקתי את שנים-עשר המקורות שלו אחד-אחד מול NCBI, והרצתי את שני
+    המספרים שהוא לא מכפיל זה בזה.
+  </p>
+  <div class="meta">
+    <span>נבדק 2026-11-02</span>
+    <span>12 מקורות · NCBI E-utilities</span>
+    <span>מול מנוע F2C, גרסת 2026-11-02</span>
+  </div>
+</header>
+
+<section>
+  <h2>קודם כל: זו עבודה טובה</h2>
+  <p class="sec-sub">מה המסמך מספק שלא היה קיים</p>
+
+  <p>שאלתי בעבר אם מישהו מטפל בהידרוג'ל, כי הזרוע המתכתית שלי ידעה לנסח
+    <em>דרישות</em> לנשא ולא ידעה לנסח נשא. המסמך הזה מנסח אותו: שלד
+    <span class="ltr">CMCS/OHA</span> על בסיס Schiff, רכיב אנטי-נפיחות
+    תרמו-מתכווץ, DFO קשור קוולנטית לכיטוזן כמכלב, ומאגר אנזים. ארבעה רכיבים
+    עם תפקיד מוגדר לכל אחד — וזה בדיוק מה שהיה חסר.</p>
+
+  <p>יותר מזה: <strong>בשתי נקודות הארכיטקטורה הזו עדיפה על שלי.</strong>
+    בניתי את הזרוע סביב פריטין אנושי, כי שאילתה על
+    <span class="ltr">EC 1.16.3</span> החזירה אותו והוא מאחד חמצון ואחסון
+    במולקולה אחת. אבל DFO הוא תרופה מאושרת עם מסלול פינוי כלייתי מתועד, ופריטין
+    הוא חלבון ציטוזולי שאיש לא הזריק לרקמה. מבחינת מסלול רגולטורי, DFO מנצח.
+    ושנית — הבחירה ב-DFO נכונה מכנית יותר ממה שהמסמך עצמו טוען, מסיבה שמופיעה
+    בהמשך.</p>
+
+  <div class="note">
+    <b>התכנסות עצמאית בשלוש נקודות.</b> המסמך הגיע לקינטיקה בין-פאזית במקום
+    Michaelis-Menten, לכך שכימיית Fenton היא הסכנה החוסמת ושכליבה היא התשובה
+    לה, ולכך שתחמוצת הברזל אינה מפסיבת — שלושתן מסקנות שהמנוע הגיע אליהן בנפרד.
+    כששני מקורות בלתי-תלויים מגיעים לאותו מקום, זה הדבר הכי קרוב לאימות שיש לנו
+    בלי מעבדה.
+  </div>
+</section>
+
+<section>
+  <h2>הממצא שצריך טיפול לפני ההגשה</h2>
+  <p class="sec-sub">אימות שנים-עשר המקורות מול NCBI</p>
+
+  <div class="finding">
+    <p class="big">ארבעה מתוך שנים-עשר המקורות אינם נפתרים למאמר המצוטט.</p>
+    <p>שניים מהם נושאים מזהה שמוביל למאמר אחר לגמרי, ושניים אינם נושאים מזהה
+      בכלל ואינם קיימים ב-PubMed. מקור חמישי נפתר כראוי אבל נמדד בסביבה אחרת
+      מזו שהוא מצוטט עבורה. מקור שישי מצוטט כתמיכה בצעד שהתווית שלו עצמו
+      מזהירה מפניו, באנטומיה שהיא בדיוק שלנו.</p>
+    <p>אני כותב את זה בלי שום הנאה: <strong>שלחתי שבעה DOI מפוברקים משלי
+      בזרוע המתכות לפני שבועיים</strong>, כולל ציטוט צרולופלסמין שהצביע על
+      מאמר מבנה של פריטין. הכלי שבניתי בעקבות זה —
+      <code>tools/verify_refs.py</code> — הוא מה שהרצתי כאן. זו אותה תקלה, לא
+      ממצא על מישהו.</p>
+  </div>
+
+  <div class="figs">
+    <div class="fig good"><span class="n">5</span><span class="l">נפתרים ומצוטטים נכון</span></div>
+    <div class="fig bad"><span class="n">2</span><span class="l">מזהה מוביל למאמר אחר</span></div>
+    <div class="fig bad"><span class="n">2</span><span class="l">ללא מזהה, לא קיימים ב-PubMed</span></div>
+    <div class="fig warn"><span class="n">1</span><span class="l">נפתר, סביבת מדידה אחרת</span></div>
+    <div class="fig warn"><span class="n">2</span><span class="l">הסקה מעבר למה שנמדד</span></div>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <caption>כל מקור, מה המסמך מייחס לו, ומה המזהה שלו מחזיר בפועל.</caption>
+      <thead><tr>
+        <th>#</th><th>כפי שמצוטט</th><th>מה שהמזהה מחזיר</th><th>מסקנה</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="num">1</td>
+            <td class="name">Schiff-Base Chitosan/OHA &amp; Polydopamine<br>
+              <span class="mono ltr">PMC11847550 · Gels 11(3):190</span></td>
+            <td>סקירה בשם <em>Designing hydrogel for application in spinal
+              surgery</em>, ‎<span class="ltr">Mater Today Bio</span> 2025 —
+              לא MDPI Gels, ולא על Schiff base</td>
+            <td><span class="pill f">לא נפתר</span></td></tr>
+        <tr><td class="num">2</td>
+            <td class="name">Liu 2022, Anti-Swelling Hydrogel<br>
+              <span class="mono ltr">10.1002/adfm.202207741</span></td>
+            <td>לא נבדק — DOI של Wiley שאינו מאונדקס ב-PubMed</td>
+            <td><span class="pill n">לא נבדק</span></td></tr>
+        <tr><td class="num">3</td>
+            <td class="name">Baek, Stiles, Choi 2022<br>
+              <span class="mono ltr">PMID 35343104</span></td>
+            <td>נפתר. השם האמיתי <em>Injectable Thermosensitive Hydrogels for
+              a Sustained Release of Iron Nanochelators</em>, מחבר ראשון
+              <span class="ltr">Park SH</span>. התוכן נכון</td>
+            <td><span class="pill s">שם ומחבר שגויים</span></td></tr>
+        <tr><td class="num">4</td>
+            <td class="name">DFO Covalently Grafted to Chitosan<br>
+              <span class="mono">ללא מזהה</span></td>
+            <td>אפס תוצאות ב-PubMed</td>
+            <td><span class="pill f">לא נפתר</span></td></tr>
+        <tr><td class="num">5</td>
+            <td class="name">Chai, Lei 2025, DFO microspheres in rats<br>
+              <span class="mono ltr">PMC12597318</span></td>
+            <td>מאמר סיני על <em>ג'ל חומצה היאלורונית בריפוי כוויות מזוהמות
+              בעכברים</em>. בלי DFO, בלי פרופטוזיס, בלי מיקרוספרות</td>
+            <td><span class="pill f">לא נפתר</span></td></tr>
+        <tr><td class="num">6</td>
+            <td class="name">Fraile-Gutiérrez, הגנת אנזים<br>
+              <span class="mono ltr">PMID 37935291</span></td>
+            <td>נפתר — אבל זהו ‎<span class="ltr">β-galactosidase</span> בג'ל
+              כיטוזן <em>פומי</em> לאי-סבילות ללקטוז. ה-75% נמדדו מול חומצת
+              קיבה</td>
+            <td><span class="pill s">סביבה אחרת</span></td></tr>
+        <tr><td class="num">7</td>
+            <td class="name">Lipase@ZIF-8 in Polymer Implant 2026<br>
+              <span class="mono">ללא מזהה</span></td>
+            <td>אפס תוצאות ב-PubMed</td>
+            <td><span class="pill f">לא נפתר</span></td></tr>
+        <tr><td class="num">8</td>
+            <td class="name">Ultrasound-Guided Nerve Hydrodissection<br>
+              <span class="mono ltr">PMID 37620404</span></td>
+            <td>נפתר ומצוטט נכון. קוהורט רטרוספקטיבי, 74 מטופלים, שורשי עצב
+              צוואריים</td>
+            <td><span class="pill o">תקין</span></td></tr>
+        <tr><td class="num">9</td>
+            <td class="name">Veiseh 2015, גאומטריה ו-FBR<br>
+              <span class="mono ltr">PMID 25985456</span></td>
+            <td>נפתר ומצוטט נכון. כדורים מעל 1.5 מ"מ מפחיתים פיברוזיס במכרסמים
+              ובפרימטים</td>
+            <td><span class="pill o">תקין</span></td></tr>
+        <tr><td class="num">10</td>
+            <td class="name">זיהוי חד-מולקולרי, מרחק 2 ננומטר<br>
+              <span class="mono ltr">PMID 42706806</span></td>
+            <td>נפתר. המספר נכון — אבל נמדד על ננו-חלקיקי PET עם קוטינאז,
+              כלומר על פולימר</td>
+            <td><span class="pill s">הסקה למתכת</span></td></tr>
+        <tr><td class="num">11</td>
+            <td class="name">Hornung 2008, NALP3<br>
+              <span class="mono ltr">PMID 18604214</span></td>
+            <td>נפתר ומצוטט נכון. גבישי סיליקה ומלחי אלומיניום, דרך ערעור
+              הפגוזום</td>
+            <td><span class="pill s">הסקה לתחמוצת ברזל</span></td></tr>
+        <tr><td class="num">12</td>
+            <td class="name">XIAFLEX ו-NexoBrid, תווית FDA</td>
+            <td>קיימת. אבל סעיף 5.1 בתווית אוסר מפורשות הזרקה לתוך גידים,
+              עצבים וכלי דם</td>
+            <td><span class="pill f">סותר את עצמו</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>שלושת המקרים ששווה לפתוח</h3>
+
+  <div class="case fail">
+    <h4>מקור 5 — המזהה מצביע על מאמר אחר לחלוטין</h4>
+    <span class="tag">נושא את טענת הפרופטוזיס וה-in-vivo</span>
+    <div class="vs">
+      <div><span class="k">המסמך אומר</span>
+        Chai, Lei ואחרים, 2025, <em>Injectable DFO-Loaded Microsphere Hydrogel
+        in Rats</em>, ‎<span class="ltr">Materials Today Bio</span>. ההידרוג'ל
+        מונע מוות תאי מעודד-ברזל ב-in-vivo ומגן מתגובת פנטון.</div>
+      <div><span class="k">‏PMC12597318 מחזיר</span>
+        <span class="ltr" dir="ltr">[Performance of hyaluronic acid biogel and
+        its effect on healing of infected burn wounds in mice]</span>, כתב העת
+        <span class="ltr">Zhonghua Shao Shang</span>, אוקטובר 2025, בסינית.
+        עכברים ולא חולדות, כוויות מזוהמות ולא רסיסים, ואין בו DFO כלל.</div>
+    </div>
+    <p class="req"><b>מה זה אומר:</b> הטענה היחידה במסמך שמבוססת על ניסוי חי
+      באורגניזם שלם נשענת על מזהה ששייך למאמר אחר. אם שופט יקליק על הקישור הזה
+      בזמן ה-Q&amp;A, הוא יגיע למאמר על כוויות. <b>צריך או למצוא את המאמר
+      הנכון, או להוריד את הטענה.</b></p>
+  </div>
+
+  <div class="case shift">
+    <h4>מקור 6 — המספר אמיתי, הסביבה לא שלנו</h4>
+    <span class="tag">זו בדיוק השגיאה שהמנוע קיים כדי לתפוס</span>
+    <div class="vs">
+      <div><span class="k">המסמך אומר</span>
+        הג'ל שומר על 75% מפעילות האנזים ב-37°C בסרום, מול פרוטאזות מאכסן
+        בשטח ההזרקה.</div>
+      <div><span class="k">‏PMID 37935291 אומר</span>
+        ‏<span class="ltr">β-galactosidase</span> שקובע קוולנטית בג'ל כיטוזן
+        <em>פומי</em>, כתוסף לאי-סבילות ללקטוז. ה-75% הם הפעילות ששרדה מעבר
+        בקיבה ב-pH 2.5 ואז בתנאי מעי — הגנה מחומצת קיבה, לא מרקמה דלקתית.</div>
+    </div>
+    <p>המספר קיים והמאמר אמיתי. מה שלא קיים הוא הקשר בין הסביבה שבה הוא נמדד
+      לסביבה שבה אנחנו צריכים אותו. זה בדיוק אותו דפוס שהמנוע מדווח עליו
+      בזרוע הפולימרים: <strong>Proteinase K נושא את ה-<span class="ltr">k<sub>cat</sub></span>
+      הגבוה ביותר במחסן, 3509 לשנייה — שנמדד על קזאין, חלבון חלב.</strong>
+      מספר אמיתי, סובסטרט לא נכון, והזנה שלו למודל שחיקה מנבאת פירוק מרהיב של
+      פוליאקטיד.</p>
+    <p class="req"><b>מה לעשות:</b> לא למחוק. לצטט את זה כמו שהוא — "75% נשמרו
+      בג'ל כיטוזן מול חומצת קיבה" — ולהוסיף במפורש שהגנה ב-37°C בסרום היא
+      <em>הניסוי שעוד לא נעשה</em>. זה הופך חולשה לרשימת מטלות, וזה חזק יותר
+      בהצגה מאשר מספר שנשבר תחת שאלה.</p>
+  </div>
+
+  <div class="case fail">
+    <h4>מקור 12 — התווית אוסרת את מה שהיא מצוטטת כדי לאשר</h4>
+    <span class="tag">הסיכון החמור ביותר במסמך</span>
+    <p>הרעיון עצמו טוב: קורונת החלבון והקפסולה הפיברוטית חוסמות את פני השטח
+      שהאנזים אמור להגיע אליו, ולכן צריך שלב 0 שמנקה אותן. הוספתי שלב כזה
+      לגאנט בדיוק מהסיבה הזו.</p>
+    <p>אבל <strong>קולגנאז מ-<span class="ltr">Clostridium histolyticum</span>
+      הוא <span class="ltr">EC 3.4.24.3</span></strong> — פפטידאז. סקר
+      הבטיחות שלנו פוסל חמישה אנזימים מהמחסן, כולם ‎<span class="ltr">EC
+      3.4.x</span>, מהסיבה שהם מעכלים חלבון מבני של האכסן. והאפינאוריום, המעטפת
+      שמחזיקה עצב במקומו, עשוי קולגן.</p>
+    <p>התווית עצמה אומרת את זה. סעיף 5.1 של
+      <a href="https://www.accessdata.fda.gov/drugsatfda_docs/label/2021/125338s117lbl.pdf"
+         target="_blank" rel="noopener">XIAFLEX</a> מזהיר מפורשות נגד הזרקה
+      לתוך גידים, עצבים, כלי דם או מבנים אחרים מכילי-קולגן, ומדווח על קרעי גיד
+      כופף, קרע גלגלת, פגיעת רצועה, <span class="ltr">CRPS</span> והפרעת תחושה
+      בניסויים. הכותרת הממוסגרת שלו עוסקת בקרע גופי בפירוני.</p>
+    <p class="req"><b>הבעיה המדויקת:</b> המוצר כולו מוגדר כטיפול ברסיסים
+      <em>במיקומים אנטומיים בסיכון גבוה</em> — כלומר צמודים לעצב ולכלי דם. זו
+      בדיוק האנטומיה שהתווית אוסרת. <b>אי אפשר להשאיר את זה כ"שלב 0 עם
+      הערה".</b> או שמגבילים את שלב 0 לרסיסים שאינם צמודים לעצב, או שמחליפים
+      את ניקוי הקורונה במנגנון שאינו פרוטאוליטי. שופט רפואי אחד ישאל את זה,
+      והתשובה צריכה להיות מוכנה.</p>
+  </div>
+</section>
+
+<section>
+  <h2>שני מספרים שנובעים מהמסמך ואינם בתוכו</h2>
+  <p class="sec-sub">שניהם אריתמטיקה על נתונים שהוא כבר מספק</p>
+
+  <p>אלה לא ביקורת אלא השלמה. המסמך נוקב בשני מספרים בשני סעיפים שונים ולא
+    מכפיל אותם זה בזה, ומהמכפלה יוצא מה שהמוצר באמת מציע קלינית.</p>
+
+  <div class="case">
+    <h4>א. תקרת הסטויכיומטריה של DFO</h4>
+    <span class="tag">נוסף למנוע · <span class="ltr">chelator_demand()</span></span>
+    <p>דפרוקסאמין הוא ליגנד הקסאדנטטי וקושר ‎<span class="ltr">Fe(III)</span>
+      ביחס 1:1. במשקל מולקולרי 560.68 מול 55.845 של ברזל, זה
+      <strong>עשרה מיליגרם DFO לכל מיליגרם ברזל</strong> — המכלב שוקל פי עשרה
+      מהמטען שלו. להורדת 20% מרסיס פלדה של 50 מ"ג צריך 9.8 מ"ג ברזל, כלומר
+      <strong>כ-98 מ"ג DFO בבסיס החופשי</strong> (115 מ"ג כמלח מסילט).</p>
+    <p>זו תקרה על <em>הכמות</em>, לא על הקצב, ושום שיפור אנזימטי לא מזיז אותה.
+      מאגר שנושא פחות מזה לא יגיע להורדה שהוצהרה, ולא משנה כמה הקטליזה טובה.</p>
+    <p class="req"><b>ולמה זו בעצם בשורה טובה:</b> אותה מולקולה היא גם המאיץ.
+      מקדם קצב ההמסה עוקב אחרי קבוע היציבות של קומפלקס
+      <span class="ltr">Fe(III)</span>–ליגנד
+      (<a href="https://doi.org/10.1021/acs.est.5b01191" target="_blank"
+          rel="noopener">PMID 25965980</a>), כך שהמולקולה שמניעה את התגובה היא
+      המולקולה שנצרכת בה. <b>הלכידה לא יכולה לפגר אחרי השחרור</b> — סכנת פנטון
+      חסומה מבנית ולא על ידי מרווח ביטחון שמישהו צריך להחזיק. זה הטיעון
+      הבטיחותי החזק ביותר שיש לזרוע הזו, והוא נובע ישירות מהתקרה. המסמך מתייחס
+      ל-DFO כרכיב בטיחות בלבד ומפספס שהוא גם קובע הקצב.</p>
+  </div>
+
+  <div class="case shift">
+    <h4>ב. אורך חיי הג'ל מול לוח הזמנים של הרסיס</h4>
+    <span class="tag">נוסף למנוע · <span class="ltr">carrier_placements()</span></span>
+    <p>המסמך אומר שהרשת מתפרקת תוך 6–8 שבועות ושהננו-כלטורים משתחררים לאורך
+      2–8 שבועות. הזרוע המתכתית אומרת כמה זמן לוקח למתכת. חלוקה של האחד בשני
+      היא לוח ההזרקות, ואף אחד מהשניים לא אומר אותו לבדו.</p>
+    <div class="scroll">
+      <table>
+        <caption>מספר הזרקות רצופות להורדת 20%, בהנחה נדיבה של 8 שבועות לג'ל.
+          קצבי הקורוזיה מספרות השתלים המתכלים.</caption>
+        <thead><tr><th>קצב קורוזיה</th><th>מ"מ/שנה</th>
+          <th>0.8 מ"מ</th><th>1.5 מ"מ</th><th>3.0 מ"מ</th></tr></thead>
+        <tbody>
+          <tr><td>ברזל טהור, שמרני</td><td class="num">0.005</td>
+              <td class="num">38</td><td class="num">71</td><td class="num">141</td></tr>
+          <tr><td>ברזל טהור, אופטימי</td><td class="num">0.020</td>
+              <td class="num">10</td><td class="num">18</td><td class="num">35</td></tr>
+          <tr><td>פי 4 — מודגם</td><td class="num">0.090</td>
+              <td class="num">3</td><td class="num">4</td><td class="num">8</td></tr>
+          <tr><td>פי 9 — הגבוה שדווח</td><td class="num">0.180</td>
+              <td class="num">1</td><td class="num">2</td><td class="num">4</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>הזרקה אחת מספיקה במשבצת אחת בלבד מתוך שתים-עשרה: רסיס של 0.8 מ"מ בקצב
+      המהיר ביותר שדווח אי פעם. בכל שאר הטווח הטיפול הוא <strong>הזרקה חוזרת
+      ליד עצב</strong>, וזו הצעה קלינית אחרת מהזרקה אחת.</p>
+    <p class="req"><b>מה זה לא אומר:</b> שהמוצר לא עובד. הגאומטריה היא מה
+      שמציל אותו — נפח הולך כחזקה שלישית של המידה, ולכן הורדת חמישית מהנפח
+      עולה רק 3.6% מהמקצוע, לעומת 50% לכילוי מלא. פי ארבעה-עשר הבדל, וזה ההבדל
+      בין עשורים לחודשים. <b>מה שצריך זה לנקוב במספר ההזרקות במפורש בקנבס
+      ובפיץ', לפני שמישהו יחשב אותו בעצמו.</b></p>
+  </div>
+</section>
+
+<section>
+  <h2>שני סיכונים שלא מסומנים</h2>
+  <p class="sec-sub">מעבר למקור 12</p>
+
+  <div class="case shift">
+    <h4>נוגדני אנטי-PEG מול רכיב ב'</h4>
+    <span class="tag">רלוונטי לכל גרסה של הנשא</span>
+    <p>‏<span class="ltr">Pluronic F127</span> הוא קופולימר
+      <span class="ltr">PEG–PPG–PEG</span>, והוא מופיע גם ברכיב ב' וגם במקור 3
+      שעליו מבוסס רכיב ג'. לפי PubMed, בדיקה כמותית באוכלוסייה הכללית מצאה
+      נוגדני אנטי-PEG ברמה ניתנת לגילוי ב-<strong>כ-72% מהנבדקים</strong>, מהם
+      כ-7% עם ‎<span class="ltr">IgG</span> מעל
+      <span class="ltr">500 ng/mL</span>, והתופעה קיימת גם בדגימות מ-1970–1999
+      — כלומר אינה תוצאה של תרופות PEGיליות בלבד
+      (<a href="https://doi.org/10.1021/acs.analchem.6b03437" target="_blank"
+          rel="noopener">PMID 27804292</a>). הנוגדנים קושרו לתגובות רגישות-יתר
+      ולפינוי מואץ.</p>
+    <p class="req"><b>מה חסר:</b> האם נוגדני אנטי-PEG מגיבים-צולבות עם
+      פולוקסאמרים לא ברור מהספרות שסרקתי, ולכן זו <em>שאלה פתוחה ולא
+      פסילה</em>. אבל הזרקה לפצע דלקתי במטופל טראומה, אולי אחרי חשיפה קודמת
+      למוצרים PEGיליים, מחייבת שהשאלה תופיע במסמך. <b>היא לא מופיעה.</b></p>
+  </div>
+
+  <div class="case shift">
+    <h4>ראיית NLRP3 היא על סיליקה</h4>
+    <span class="tag">הסקה סבירה שצריך לנסח כהסקה</span>
+    <p>מקור 11 אמיתי ומצוטט כראוי, אבל הוא על גבישי סיליקה ומלחי אלומיניום,
+      והמנגנון הוא ערעור הפגוזום וקרע ליזוזומלי. הרחבה לחלקיקי תחמוצת ברזל
+      היא סבירה מכנית — כל גביש שנבלע ומקרע ליזוזום אמור לעשות את זה — אבל
+      היא הרחבה. ההבדל חשוב כי זו הראיה היחידה שמצדיקה את מנגנון הלכידה כהגנה
+      דלקתית, ולא רק כהגנה רדוקסית.</p>
+    <p class="req"><b>תיקון ניסוח:</b> "סיליקה מפעילה
+      <span class="ltr">NLRP3</span> דרך קרע ליזוזומלי, ולכן יש להניח שגם
+      חלקיקי תחמוצת ברזל יעשו זאת" — במקום לייחס את הממצא לברזל. גם
+      ‎<span class="ltr">NALP3</span> הוא השם הישן; היום
+      <span class="ltr">NLRP3</span>.</p>
+  </div>
+</section>
+
+<section>
+  <h2>מה לעשות, לפי סדר</h2>
+  <p class="sec-sub">ההגשה ב-4.11 בעשר בבוקר</p>
+
+  <ol class="steps">
+    <li><span class="who">דחוף · לפני ההגשה</span>
+      <h4>לתקן או להסיר את ארבעת המקורות שלא נפתרים</h4>
+      <p>מקורות 1, 4, 5 ו-7. השניים בלי מזהה נושאים טענות מרכזיות — קבוע
+        הבררנות של DFO, וההוכחה ש-ZIF-8 עובד in-vivo — ולכן אי אפשר פשוט
+        למחוק אותם בלי לשנות את הטקסט שנשען עליהם. מקור 5 הוא הדחוף ביותר, כי
+        הקישור שלו פעיל ומוביל למאמר על כוויות.</p></li>
+    <li><span class="who">דחוף · שאלת שופט</span>
+      <h4>להכריע מה קורה עם שלב 0 ליד עצב</h4>
+      <p>או להגביל את ניקוי הקורונה לרסיסים שאינם צמודים לעצב, או למצוא
+        מנגנון לא-פרוטאוליטי. התשובה צריכה להיות בעל פה בפיץ', לא רק
+        במסמך.</p></li>
+    <li><span class="who">לפני ההגשה</span>
+      <h4>לנקוב במספר ההזרקות</h4>
+      <p>המספר כבר מחושב ומוצג בדף המוצר. עדיף שהוא יופיע בקנבס מרצוננו מאשר
+        שיחושב בחדר.</p></li>
+    <li><span class="who">אחרי ההגשה</span>
+      <h4>לנסח מחדש את מקור 6 כפער ולא כתמיכה</h4>
+      <p>"75% מול חומצת קיבה" הוא ציטוט נכון; "הגנה ב-37°C בסרום" הוא הניסוי
+        שחסר. זה מצטרף לאותו פער שהמנוע כבר מדווח עליו בזרוע הפולימרים, ושתי
+        הזרועות מצביעות על אותה מעבדה.</p></li>
+    <li><span class="who">אחרי ההגשה</span>
+      <h4>להוסיף את שאלת האנטי-PEG ואת ניסוח ה-NLRP3</h4>
+      <p>שתיהן תיקוני ניסוח ולא תיקוני מהות, ושתיהן מחזקות את המסמך מול
+        קורא ביקורתי.</p></li>
+  </ol>
+
+  <div class="note">
+    <b>מה שלא צריך לשנות.</b> ארבעת הרכיבים, ההיגיון שמחבר ביניהם, בחירת DFO,
+    נתיב הגישה דרך הידרודיסקציה מונחית-אולטרסאונד, והטיעון הגאומטרי של
+    ‎1.5 מ"מ. כל אלה עומדים, חלקם טוב משלי, ושלושה מהם מתכנסים עם מסקנות
+    שהמנוע הגיע אליהן בנפרד. הבעיה כאן היא מקורות ואנטומיה, לא תכנון.
+  </div>
+</section>
+
+<footer>
+  <p><strong>איך נבדק.</strong> כל מזהה נפתר מול
+    <span class="ltr">NCBI E-utilities</span>, והכותרת השמורה הושוותה לכותרת
+    שחזרה. זו אותה בדיקה ש-<code>tools/verify_refs.py</code> מריץ על המקורות
+    המוקלדים במנוע, אחרי שאלה נמצאו מפוברקים. מקור 2 אינו מאונדקס ב-PubMed
+    ולכן לא נבדק כאן; מקור 12 נבדק מול תווית ה-FDA.</p>
+  <p>אבטיפוס מחקרי. לא מכשיר רפואי, לא כלי להחלטה קלינית, ולא מאומת לשימוש
+    באדם. כל מספר כאן הוא פלט סימולציה או ערך מהספרות, מסומן במקורו.</p>
+  <p><a href="https://claude.ai/artifact/XQgkTkYvMmCjTXCqcXUr9H">ShrapMind</a>
+    — המנוע שממנו באים חישובי הסטויכיומטריה ולוח ההזרקות, ואינדקס כל הדפים
+    בפרויקט.</p>
+</footer>
+
+</div>

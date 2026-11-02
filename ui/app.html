@@ -186,7 +186,7 @@ dl.kv{display:grid;grid-template-columns:auto 1fr;gap:.3rem .9rem;
   font-size:.94rem;margin:0}
 dl.kv dt{color:var(--ink-3)}
 dl.kv dd{margin:0}
-.tablewrap{overflow-x:auto}
+.tablewrap{overflow-x:auto;min-width:0;max-width:100%}
 footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
   font-size:.86rem;color:var(--ink-3)}
 .copy{font:inherit;font-size:.88rem;padding:.35rem .8rem;cursor:pointer;
@@ -202,7 +202,7 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
   border-color:var(--accent);color:var(--accent);font-weight:500}
 /* The staged metal route. Numbered because the order is the content: capture
    has to be in place before dissolution is allowed to run. */
-.stage-n{display:grid;grid-template-columns:auto 1fr;gap:0 1rem;
+.stage-n{display:grid;grid-template-columns:auto minmax(0,1fr);gap:0 1rem;
   padding-block:1rem;border-bottom:1px solid var(--rule-2)}
 .stage-n:last-child{border-bottom:0}
 .stage-n .num{font-family:var(--font-display);font-size:1.7rem;font-weight:600;
@@ -310,12 +310,12 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
 
 <section class="wrap" id="index">
   <h2>Every page in this project</h2>
-  <p class="lede">Seven pages were published over three weeks and nothing
+  <p class="lede">Eight pages were published over three weeks and nothing
     linked them, so each was reachable only by whoever held its URL. This is
     the entry point. Nothing was deleted: the earlier direction is listed
     with the current one, marked as what it is.</p>
 
-  <p class="grp">Current &mdash; the three live pages</p>
+  <p class="grp">Current &mdash; the four live pages</p>
   <ul>
     <li class="here">
       <span class="t plain">ShrapMind</span><span class="pin live">you are here</span>
@@ -330,6 +330,16 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
         works, but what else it does. 505 enzymes screened against ten
         materials, five refused for digesting host protein, and the
         mechanism behind every hazard verdict this engine reports.</div>
+    </li>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/7vSe3aYcf4KM8KQKTzbfD5" target="_blank"
+         rel="noopener" dir="rtl">ביקורת ארכיטקטורת ההידרוג'ל</a><span class="pin live">live</span>
+      <div class="d">A review of the team's hydrogel architecture, which
+        supplies the carrier this engine had only specified as a requirement.
+        Each of its twelve references resolved against NCBI, plus the two
+        numbers its own figures imply and it does not state: what the chelator
+        costs stoichiometrically, and how many carrier placements the metal's
+        timeline actually needs. In Hebrew.</div>
     </li>
     <li>
       <a class="t" href="https://claude.ai/artifact/R8WfMNJXNCrfk7jiMiAYMj" target="_blank"
@@ -923,6 +933,37 @@ function renderMetal() {
       </div></section>`);
   }
 
+  const chel = r.route === "two_stage"
+    ? metalChelator(key, parseFloat($("#metalMass").value), 0.20) : null;
+  if (chel) {
+    out.push(`<section><h2>What the chelator costs</h2>
+      <p class="lede">The carrier specified for this arm is built on
+      deferoxamine, which binds Fe(III) one ion per molecule. So the depot's
+      payload sets a ceiling on the iron it can remove, whatever the enzyme
+      does.</p>
+      <div class="goal" style="margin-top:1rem">
+        <dl class="kv">
+          <dt>Iron in a 20% debulk</dt><dd class="mono">${fmt(chel.feMg)} mg</dd>
+          <dt>DFO needed (free base)</dt><dd class="mono">${fmt(chel.freeBaseMg)} mg</dd>
+          <dt>As the mesylate salt</dt><dd class="mono">${fmt(chel.mesylateMg)} mg</dd>
+          <dt>Chelator per unit iron</dt><dd class="mono">${fmt(chel.perMg)}× by mass</dd>
+        </dl>
+        <p class="note">The chelator outweighs its cargo tenfold, and nothing in
+        the design changes that — it is stoichiometry, not efficiency. A depot
+        carrying less than this cannot reach the stated removal however good the
+        catalysis is.</p>
+        <div class="goal" style="margin-top:1rem">
+          <div class="means">Why this is also the good news</div>
+          <p class="note">The same molecule drives the dissolution it captures:
+          the rate coefficient tracks the Fe(III)–ligand stability constant. So
+          capture cannot fall behind release — the Fenton hazard is bounded by
+          construction rather than by a safety margin someone has to hold. It is
+          the strongest argument this arm has, and it is the direct consequence
+          of the ceiling above.</p>
+        </div>
+      </div></section>`);
+  }
+
   const size = parseFloat($("#metalSize").value);
   const tl = r.route === "two_stage" ? metalTimeline(size, 1.0) : null;
   const tlPart = r.route === "two_stage" ? metalTimeline(size, 0.20) : null;
@@ -939,13 +980,26 @@ function renderMetal() {
       geometry; the rates come from the biodegradable-implant literature.</p>
       <div class="tablewrap"><table style="margin-top:1rem">
         <thead><tr><th>Corrosion rate</th><th>mm/year</th>
-          <th>Remove 20%</th><th>Consume it all</th></tr></thead>
+          <th>Remove 20%</th><th>Carrier placements</th>
+          <th>Consume it all</th></tr></thead>
         <tbody>${tl.rows.map((row, i) => `<tr>
           <td>${esc(RL[row.label] || row.label)}</td>
           <td class="num">${row.rate.toFixed(3)}</td>
           <td class="num">${span(tlPart.rows[i].years)}</td>
+          <td class="num">${(() => {
+            const n = tlPart.rows[i].months * WK_PER_MO / CARRIER_WK;
+            return n <= 1.25 ? "1" : `${Math.ceil(n)}`;
+          })()}</td>
           <td class="num">${span(row.years)}</td>
         </tr>`).join("")}</tbody></table></div>
+      <p class="note">The placement column is the dosing schedule, and it is the
+      one number the carrier design and this timeline only produce together. A
+      Schiff-base network that degrades in
+      ${fmt(CARRIER_WK)}&nbsp;weeks is not a delivery detail once the removal it
+      has to cover takes longer than that: the treatment becomes repeat
+      injection beside a nerve, which is a different clinical proposition from
+      one. It reads as one placement only at the fastest corrosion rate in the
+      range, and that rate is the top figure anyone has reported.</p>
       <div class="goal" style="margin-top:1.2rem">
         <div class="means">Which goals survive this</div>
         <p class="note">A cube eroding from every face is consumed when
@@ -1022,6 +1076,24 @@ function renderMetal() {
 /* Mass balance for a metal fragment, recomputed as the reader changes the mass.
    Only iron: a jacketed or alloyed fragment's metal fraction depends on the
    round, and guessing it would be the one invented number here. */
+/* The chelator arm of the same mass balance. metalCapacity counts ferritin
+   shells; this counts deferoxamine molecules, because the carrier the team
+   specified is built on DFO and the two answer different questions: what
+   stores the iron, versus what can dissolve it in the first place.
+   Deferoxamine is hexadentate and binds Fe(III) 1:1, so this is arithmetic. */
+function metalChelator(key, massMg, volumeFraction) {
+  const C = DATA.metals.capacity_constants;
+  const frac = (C.metal_fraction || {})[key];
+  if (!(massMg > 0) || frac === undefined || !C.dfo_g_per_mol) return null;
+  const feMg = massMg * frac * volumeFraction;
+  return {
+    feMg,
+    perMg: C.dfo_g_per_mol / C.fe_g_per_mol,
+    freeBaseMg: feMg * C.dfo_g_per_mol / C.fe_g_per_mol,
+    mesylateMg: feMg * (C.dfo_mesylate_g_per_mol || C.dfo_g_per_mol) / C.fe_g_per_mol,
+  };
+}
+
 function metalCapacity(key, massMg) {
   const C = DATA.metals.capacity_constants;
   const fraction = C.metal_fraction[key];
@@ -1044,6 +1116,13 @@ function metalCapacity(key, massMg) {
    dimension, so a cube loses a fifth of itself for 3.6% of its edge and all of
    itself for 50% — a factor of fourteen, and the difference between decades
    and months. */
+/* The carrier's working life, from the architecture document the team wrote:
+   six to eight weeks for the Schiff-base network. Eight is its generous
+   reading, so an optimistic denominator keeps the placement count a lower
+   bound rather than a scare figure. */
+const CARRIER_WK = DATA.metals.carrier_lifetime_weeks || 8;
+const WK_PER_MO = 365.25 / 7 / 12;
+
 function metalTimeline(sizeMm, volumeFraction) {
   const rates = DATA.metals.corrosion_rates;
   if (!(sizeMm > 0) || !rates) return null;

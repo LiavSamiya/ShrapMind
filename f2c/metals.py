@@ -151,20 +151,6 @@ REFS = {
         "makes is reoxidised immediately. Measured on goethite at pH 6, not on "
         "metallic iron.",
     ),
-    "ligand_dissolution": _ref(
-        "25965980", "10.1021/acs.est.5b01191",
-        "Synergistic effect of reductive and ligand-promoted dissolution of "
-        "goethite",
-        2015,
-        "The mechanism stage 1 was missing. Dissolution of an iron oxide is "
-        "driven by taking the product away: the rate coefficient tracks the "
-        "stability constant of the Fe(III)-ligand complex, so the chelator sets "
-        "the rate. Desferrioxamine B and ascorbate together dissolve faster "
-        "than the sum of either alone, and the synergy is strongest under "
-        "oxygen. Ascorbate by itself does nothing in air, because the Fe(II) it "
-        "makes is reoxidised immediately. Measured on goethite at pH 6, not on "
-        "metallic iron.",
-    ),
     "mic_electron_transfer": _ref(
         "27134022", "10.1016/bs.ampbs.2016.02.002",
         "Mechanisms of bacterial extracellular electron exchange",
@@ -1039,3 +1025,160 @@ def engineering_targets(material: str) -> list[dict[str, Any]]:
                   "first task is finding the protein, not modifying one.",
         "basis": SPECIFIED,
     }]
+
+
+# ---------------------------------------------------------------------------
+# The chelator ceiling, and the carrier's working life.
+#
+# Both of these come from a teammate's hydrogel architecture document, which
+# specified the carrier this arm had only described as a requirement: a
+# CMCS/OHA Schiff-base backbone, a thermo-contracting anti-swelling component,
+# DFO grafted to chitosan as the chelator, and an enzyme depot. That document
+# is the carrier, and it is better grounded clinically than the ferritin route
+# above, because DFO is an approved drug with a renal clearance pathway and
+# ferritin is a cytosolic protein nobody has injected.
+#
+# What it does not do is put two of its own numbers next to each other, and
+# both are arithmetic:
+#
+# 1. Deferoxamine is a hexadentate siderophore. It binds Fe(III) one ion per
+#    molecule, so the iron a depot can remove is capped by the DFO it carries,
+#    whatever the enzyme does. At 560.68 g/mol against iron's 55.845 that is
+#    ten milligrams of DFO per milligram of iron -- the chelator outweighs its
+#    cargo tenfold. Nothing in the arm raises that; it is stoichiometry.
+#
+# 2. That same chelator is the accelerant. Dissolution rate tracks the
+#    stability constant of the Fe(III)-ligand complex (PMID 25965980), so the
+#    molecule driving the reaction is the molecule consumed by it. The capture
+#    cannot fall behind the release -- which bounds the Fenton hazard by
+#    construction, and is the strongest safety argument this arm has -- but it
+#    also means the depot slows as it works.
+#
+# So a carrier that degrades in six to eight weeks is not a delivery detail.
+# It is a dose interval, and the number of doses is the fragment's timeline
+# divided by it.
+# ---------------------------------------------------------------------------
+
+DFO_FREE_BASE_G_PER_MOL = 560.68
+DFO_MESYLATE_G_PER_MOL = 656.79
+DFO_FE_STOICHIOMETRY = 1  # hexadentate: one Fe(III) per molecule
+
+
+def chelator_demand(material: str, mass_mg: float | None,
+                    volume_fraction: float = 1.0) -> dict[str, Any]:
+    """How much deferoxamine the stated removal needs, by mass balance.
+
+    Separate from capacity() above, which counts ferritin shells. This counts
+    chelator molecules, because the carrier document builds on DFO and the two
+    answer different questions: capacity() asks what stores the iron,
+    chelator_demand() asks what can dissolve it in the first place.
+    """
+    key = resolve(material)
+    if key is None or mass_mg is None or mass_mg <= 0:
+        return {"computable": False,
+                "why": "Needs a known metal and a fragment mass."}
+    m = METALS[key]
+    if m["element"] != "Fe":
+        return {"computable": False,
+                "why": f"DFO is selective for Fe(III); {m['name']} is not iron. "
+                       "A chelator for this metal has not been chosen."}
+
+    fe_mg = mass_mg * METAL_FRACTION.get(key, 1.0) * volume_fraction
+    free_base = fe_mg * DFO_FREE_BASE_G_PER_MOL / FE_G_PER_MOL
+    mesylate = fe_mg * DFO_MESYLATE_G_PER_MOL / FE_G_PER_MOL
+    return {
+        "computable": True,
+        "volume_fraction": volume_fraction,
+        "iron_mg": fe_mg,
+        "dfo_free_base_mg": free_base,
+        "dfo_mesylate_mg": mesylate,
+        "mg_dfo_per_mg_iron": DFO_FREE_BASE_G_PER_MOL / FE_G_PER_MOL,
+        "basis": "Deferoxamine binds Fe(III) 1:1 as a hexadentate ligand, so "
+                 "the demand is the iron's moles times the chelator's molar "
+                 "mass. Arithmetic, not an estimate.",
+        "what_this_bounds": (
+            "The total iron one depot can remove, not the rate. A depot "
+            "carrying less DFO than this cannot reach the stated removal no "
+            "matter how good the enzyme is, because the chelator is consumed "
+            "stoichiometrically as it works."
+        ),
+        "why_it_is_also_the_accelerant": (
+            "The same molecule drives the dissolution it captures: the rate "
+            "coefficient tracks the Fe(III)-ligand stability constant. Capture "
+            "therefore cannot lag behind release, which bounds the Fenton "
+            "hazard by construction -- and is the reason to prefer this to a "
+            "faster route with separate capture."
+        ),
+        "evidence": DERIVED,
+        "ref": REFS["ligand_dissolution"],
+    }
+
+
+# Weeks. The carrier document states six to eight for the Schiff-base network,
+# and two to eight for nanochelator release. Eight is the generous reading of
+# its own figure, so it is the one used: an optimistic denominator makes the
+# placement count a lower bound.
+CARRIER_LIFETIME_WEEKS = 8.0
+_WEEKS_PER_MONTH = 365.25 / 7 / 12
+
+
+def carrier_placements(material: str, particle_size_mm: float | None,
+                       volume_fraction: float = 1.0,
+                       carrier_weeks: float = CARRIER_LIFETIME_WEEKS,
+                       ) -> dict[str, Any]:
+    """How many sequential carrier placements the timeline implies.
+
+    The question the architecture document leaves open. Its gel lives six to
+    eight weeks; this arm's timeline says how long the metal takes. Dividing
+    one by the other is the dosing schedule, and at most of the rate range it
+    is not one injection.
+    """
+    t = timeline(material, particle_size_mm, volume_fraction)
+    if not t.get("computable"):
+        return {"computable": False, "why": t.get("why", "No timeline.")}
+
+    rows = []
+    for r in t["rows"]:
+        weeks = r["months"] * _WEEKS_PER_MONTH
+        rows.append({
+            "label": r["label"],
+            "rate_mm_per_year": r["rate_mm_per_year"],
+            "weeks": weeks,
+            "placements": weeks / carrier_weeks,
+        })
+    # A rate that lands a few days past the carrier's life is one placement in
+    # practice, not two, and reporting it as "needs repeat dosing" would be
+    # arithmetic pretending to be a finding. So the margin is named rather
+    # than rounded away.
+    single = [r for r in rows if r["placements"] <= 1.0]
+    marginal = [r for r in rows if 1.0 < r["placements"] <= 1.25]
+    repeat = [r for r in rows if r["placements"] > 1.25]
+    covered = single + marginal
+    return {
+        "computable": True,
+        "carrier_lifetime_weeks": carrier_weeks,
+        "volume_fraction": volume_fraction,
+        "penetration_mm": t["penetration_mm"],
+        "rows": rows,
+        "single_dose_cases": [r["label"] for r in single],
+        "marginal_cases": [r["label"] for r in marginal],
+        "repeat_dose_cases": [r["label"] for r in repeat],
+        "finding": (
+            f"One placement covers the stated removal at {len(covered)} of the "
+            f"{len(rows)} corrosion rates in the range"
+            + (f", and only at the fastest ({', '.join(r['label'] for r in covered)})."
+               if covered and len(covered) < len(rows) else ".")
+            + (f" The other {len(repeat)} need between "
+               f"{min(r['placements'] for r in repeat):.0f} and "
+               f"{max(r['placements'] for r in repeat):.0f} sequential placements."
+               if repeat else "")
+        ),
+        "why_it_matters": (
+            "A carrier lifetime and a fragment timeline quoted in different "
+            "sections of the same document look compatible until they are "
+            "divided. Repeat placement next to a nerve is a different clinical "
+            "proposition from one injection, and it is the proposition the "
+            "numbers actually describe."
+        ),
+        "evidence": DERIVED,
+    }

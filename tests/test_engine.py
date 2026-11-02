@@ -846,3 +846,91 @@ def test_the_timeline_names_what_the_rates_do_not_include():
     tl = metals.timeline("steel", 0.8)
     assert "nobody has measured chelation against metallic" in tl["what_is_unmeasured"]
     assert "optimistic" in tl["caveat"]
+
+
+# --- the carrier arithmetic -------------------------------------------------
+# Both of these come from reviewing a teammate's hydrogel architecture, which
+# supplied the carrier this arm had only specified as a requirement. Neither
+# number was in that document; both are arithmetic over numbers that were.
+
+def test_chelator_demand_is_stoichiometric_not_an_estimate():
+    """DFO binds Fe(III) 1:1, so doubling the iron doubles the chelator."""
+    from f2c import metals
+    a = metals.chelator_demand("steel", 50.0, 0.20)
+    b = metals.chelator_demand("steel", 100.0, 0.20)
+    assert a["computable"] and b["computable"]
+    assert b["dfo_free_base_mg"] == pytest.approx(2 * a["dfo_free_base_mg"])
+    # The ratio is a property of the two molar masses, not of the fragment.
+    assert a["mg_dfo_per_mg_iron"] == pytest.approx(b["mg_dfo_per_mg_iron"])
+    assert a["mg_dfo_per_mg_iron"] > 1, (
+        "the chelator must outweigh the iron it carries; if this inverts, the "
+        "molar masses have been swapped"
+    )
+
+
+def test_chelator_demand_refuses_metals_dfo_does_not_bind():
+    """DFO is selective for Fe(III). Saying so is the point of the refusal."""
+    from f2c import metals
+    for metal in ("copper", "lead", "tungsten"):
+        out = metals.chelator_demand(metal, 50.0)
+        assert out["computable"] is False, f"{metal} must not get an iron answer"
+        assert "why" in out and out["why"]
+
+
+def test_carrier_placements_divides_timeline_by_carrier_life():
+    """The dosing schedule neither input states on its own."""
+    from f2c import metals
+    out = metals.carrier_placements("steel", 0.8, 0.20)
+    assert out["computable"]
+    # A longer-lived carrier can only need fewer placements.
+    longer = metals.carrier_placements("steel", 0.8, 0.20, carrier_weeks=16.0)
+    for slow, fast in zip(out["rows"], longer["rows"]):
+        assert fast["placements"] <= slow["placements"]
+    # Slower corrosion cannot need fewer placements than faster corrosion.
+    by_rate = sorted(out["rows"], key=lambda r: r["rate_mm_per_year"])
+    counts = [r["placements"] for r in by_rate]
+    assert counts == sorted(counts, reverse=True)
+
+
+def test_carrier_placements_names_the_marginal_case():
+    """A rate landing days past the carrier's life is one dose, not two.
+
+    Rounding it up would be arithmetic presented as a finding, which is the
+    failure this whole engine exists to avoid.
+    """
+    from f2c import metals
+    out = metals.carrier_placements("steel", 0.8, 0.20)
+    covered = set(out["single_dose_cases"]) | set(out["marginal_cases"])
+    assert covered & {"accelerated_9x"}, (
+        "the fastest demonstrated rate completes a 20% debulk within about one "
+        "carrier lifetime and must not be reported as needing repeat dosing"
+    )
+    assert "pure_iron_low" in out["repeat_dose_cases"]
+    # Every row lands in exactly one bucket.
+    buckets = (out["single_dose_cases"] + out["marginal_cases"]
+               + out["repeat_dose_cases"])
+    assert sorted(buckets) == sorted(r["label"] for r in out["rows"])
+
+
+def test_reference_keys_are_unique():
+    """A duplicated REFS key silently overwrites the first entry.
+
+    There were two identical `ligand_dissolution` entries in metals.py. They
+    happened to carry the same content, so nothing was lost -- but a table
+    where a repeated key is harmless is a table where a repeated key with
+    different content would be invisible.
+    """
+    import ast
+    import pathlib
+    for name in ("metals.py", "pipeline.py"):
+        src = pathlib.Path(__file__).resolve().parent.parent / "f2c" / name
+        tree = ast.parse(src.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            if not any(getattr(x, "id", None) == "REFS" for x in node.targets):
+                continue
+            keys = [k.value for k in node.value.keys
+                    if isinstance(k, ast.Constant)]
+            dupes = {k for k in keys if keys.count(k) > 1}
+            assert not dupes, f"{name} REFS has duplicate key(s): {dupes}"

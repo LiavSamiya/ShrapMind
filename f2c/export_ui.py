@@ -290,7 +290,13 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
                 "shell_kda": metals.FERRITIN_SHELL_KDA,
                 "metal_fraction": metals.METAL_FRACTION,
                 "avogadro": metals.AVOGADRO,
+                # The chelator arm of the same mass balance. Ferritin counts
+                # shells; DFO counts molecules, and the carrier the team
+                # specified is built on DFO.
+                "dfo_g_per_mol": metals.DFO_FREE_BASE_G_PER_MOL,
+                "dfo_mesylate_g_per_mol": metals.DFO_MESYLATE_G_PER_MOL,
             },
+            "carrier_lifetime_weeks": metals.CARRIER_LIFETIME_WEEKS,
         },
         "goal_rules": {
             "max_useful_crystallinity_pct": goals.MAX_USEFUL_CRYSTALLINITY_PCT,
