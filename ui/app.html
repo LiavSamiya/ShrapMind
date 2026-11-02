@@ -242,6 +242,10 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
       <label for="metalMass">Mass (mg)</label>
       <input id="metalMass" type="number" min="1" step="1" value="50">
     </div>
+    <div class="field">
+      <label for="metalSize">Particle size (mm)</label>
+      <input id="metalSize" type="number" min="0.05" step="0.1" value="0.8">
+    </div>
   </div>
   <div class="inputs" id="polymerInputs">
     <div class="field">
@@ -830,6 +834,57 @@ function renderMetal() {
       </div></section>`);
   }
 
+  const size = parseFloat($("#metalSize").value);
+  const tl = r.route === "two_stage" ? metalTimeline(size, 1.0) : null;
+  const tlPart = r.route === "two_stage" ? metalTimeline(size, 0.20) : null;
+  if (tl && tlPart) {
+    const RL = { pure_iron_low: "Pure iron, conservative",
+                 pure_iron_high: "Pure iron, optimistic",
+                 accelerated_4x: "4× — demonstrated (Fe-Au, sandblasting)",
+                 accelerated_9x: "9× — the top reported" };
+    const span = v => v >= 2 ? `${fmt(v)} years` : `${fmt(v * 12)} months`;
+    const full4 = tl.rows.find(x => x.label === "accelerated_4x").years;
+    const part4 = tlPart.rows.find(x => x.label === "accelerated_4x").months;
+    out.push(`<section><h2>How long</h2>
+      <p class="lede">Penetration depth divided by corrosion rate. The depth is
+      geometry; the rates come from the biodegradable-implant literature.</p>
+      <div class="tablewrap"><table style="margin-top:1rem">
+        <thead><tr><th>Corrosion rate</th><th>mm/year</th>
+          <th>Remove 20%</th><th>Consume it all</th></tr></thead>
+        <tbody>${tl.rows.map((row, i) => `<tr>
+          <td>${esc(RL[row.label] || row.label)}</td>
+          <td class="num">${row.rate.toFixed(3)}</td>
+          <td class="num">${span(tlPart.rows[i].years)}</td>
+          <td class="num">${span(row.years)}</td>
+        </tr>`).join("")}</tbody></table></div>
+      <div class="goal" style="margin-top:1.2rem">
+        <div class="means">Which goals survive this</div>
+        <p class="note">A cube eroding from every face is consumed when
+        penetration reaches half its edge, but volume goes as the cube of the
+        dimension — so removing a fifth of it costs
+        ${fmt(tlPart.fractionOfEdge * 100)}% of the edge where consuming all of
+        it costs 50%. A factor of fourteen, and the difference between decades
+        and months.</p>
+        <div class="alert"><div class="t">Dissolving the fragment away is not
+          the product</div>
+          <div class="d">At the rate already demonstrated, consuming this
+          fragment takes ${fmt(full4)} years. That is not a clinical
+          timescale, and no acceleration yet published closes the gap.</div></div>
+        <div class="caution" style="border-color:var(--ok)">
+          <div class="t" style="color:var(--ok)">Debulking is</div>
+          <div class="d">Taking 20% off the same fragment takes
+          ${fmt(part4)} months at the same rate — enough to relieve a nerve and
+          turn an urgent approach into an elective one. Clearing fragments small
+          enough that the geometry is already favourable is the other case that
+          survives. Both were asked about before this arm existed.</div></div>
+        <p class="note"><strong>What is unmeasured:</strong> what a chelator
+        adds. Every rate here is iron corroding on its own. And penetration is
+        linear in time only if the rate holds — an accumulating oxide slows it,
+        which is why the chelator is in the design, so a constant rate is the
+        optimistic reading of this table rather than the cautious one.</p>
+      </div></section>`);
+  }
+
   if (r.unrusted_metal) {
     const u = r.unrusted_metal;
     out.push(`<section><h2>${esc(u.question)}</h2>
@@ -896,6 +951,25 @@ function metalCapacity(key, massMg) {
   };
 }
 
+/* Time to remove a fraction of a fragment. Volume goes as the cube of the
+   dimension, so a cube loses a fifth of itself for 3.6% of its edge and all of
+   itself for 50% — a factor of fourteen, and the difference between decades
+   and months. */
+function metalTimeline(sizeMm, volumeFraction) {
+  const rates = DATA.metals.corrosion_rates;
+  if (!(sizeMm > 0) || !rates) return null;
+  const frac = volumeFraction >= 1
+    ? 0.5 : (1 - Math.pow(1 - volumeFraction, 1 / 3)) / 2;
+  const depth = sizeMm * frac;
+  return {
+    fractionOfEdge: frac,
+    depth,
+    rows: Object.entries(rates).map(([label, rate]) => ({
+      label, rate, years: depth / rate, months: depth / rate * 12,
+    })),
+  };
+}
+
 let VIEW = "polymer";
 function setView(v) {
   VIEW = v === "metal" ? "metal" : "polymer";
@@ -929,6 +1003,7 @@ function boot() {
   }).join("");
   ms.addEventListener("input", renderMetal);
   $("#metalMass").addEventListener("input", renderMetal);
+  $("#metalSize").addEventListener("input", renderMetal);
 
   for (const id of ["#material", "#goal", "#mass", "#cryst", "#psize"]) {
     $(id).addEventListener("input", render);

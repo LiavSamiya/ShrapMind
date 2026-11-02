@@ -281,6 +281,7 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
             "engineering": {k: metals.engineering_targets(k) for k in metals.METALS},
             "refs": metals.REFS,
             "carrier": metals.CARRIER_REQUIREMENTS,
+            "corrosion_rates": metals.CORROSION_RATES_MM_PER_YEAR,
             # Constants rather than a precomputed answer, because the mass is
             # an input the reader changes.
             "capacity_constants": {

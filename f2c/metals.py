@@ -579,6 +579,126 @@ CARRIER_REQUIREMENTS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# How long. The arm refused to say, and refusing was right while the only
+# honest answer was "unmeasured". It is not the only one any more.
+#
+# Corrosion rate in a physiological environment is measured in the
+# biodegradable-implant literature, in millimetres of penetration per year.
+# What is unmeasured is what a chelator adds to it. So the time is computed as
+# a function of the rate, and the published multiples bracket the range: gold
+# galvanic couples gave 4x and 9x over pure iron, sandblasting gave a
+# persistent increase. Those are the anchors, and they are multiples rather
+# than absolute rates because that is what the abstracts state.
+#
+# The geometry is what makes this worth computing. A cube eroding from every
+# face is consumed when penetration reaches half its edge, but volume goes as
+# the cube of the dimension -- so removing 20% of the volume costs only 3.6% of
+# the edge. Full consumption and partial debulking differ by a factor of
+# fourteen in penetration, which is the difference between decades and months.
+# ---------------------------------------------------------------------------
+
+# mm/year. Pure iron is bracketed because the abstracts say "too slow" without
+# a figure; the accelerated values follow the multiples that were reported.
+CORROSION_RATES_MM_PER_YEAR = {
+    "pure_iron_low": 0.005,
+    "pure_iron_high": 0.020,
+    "accelerated_4x": 0.090,
+    "accelerated_9x": 0.180,
+}
+
+
+def _penetration_fraction(volume_fraction: float) -> float:
+    """Depth per face, as a fraction of edge length, to remove this volume."""
+    if volume_fraction >= 1.0:
+        return 0.5                      # faces meet at the centre
+    return (1 - (1 - volume_fraction) ** (1 / 3)) / 2
+
+
+def timeline(material: str, particle_size_mm: float | None,
+             volume_fraction: float = 1.0) -> dict[str, Any]:
+    """Years to remove this fraction of a fragment, across the rate range."""
+    key = resolve(material)
+    if key is None or METALS[key]["route"] == "none":
+        return {"computable": False, "reason": "no dissolution route for this metal"}
+    if not particle_size_mm or particle_size_mm <= 0:
+        return {"computable": False, "reason": "needs a particle size"}
+
+    frac = _penetration_fraction(volume_fraction)
+    depth_mm = particle_size_mm * frac
+    rows = [
+        {"label": label, "rate_mm_per_year": rate,
+         "years": depth_mm / rate, "months": depth_mm / rate * 12}
+        for label, rate in CORROSION_RATES_MM_PER_YEAR.items()
+    ]
+    return {
+        "computable": True,
+        "volume_fraction": volume_fraction,
+        "penetration_fraction_of_edge": frac,
+        "penetration_mm": depth_mm,
+        "rows": rows,
+        "basis": (
+            "Penetration depth divided by corrosion rate. The depth is "
+            "geometry; the rates are from the biodegradable-implant "
+            "literature, where the accelerated values follow the 4x and 9x "
+            "multiples reported for gold galvanic couples over pure iron."
+        ),
+        "what_is_unmeasured": (
+            "What a chelator adds. Every rate here is for iron corroding on "
+            "its own, because nobody has measured chelation against metallic "
+            "iron. The chelator is expected to raise the rate by keeping the "
+            "oxide from accumulating, and that expectation is the gap."
+        ),
+        "caveat": (
+            "Penetration is linear in time only if the rate holds. An "
+            "accumulating oxide slows it, which is the reason the chelator is "
+            "in the design at all -- so a constant rate is the optimistic "
+            "reading of these numbers, not the cautious one."
+        ),
+    }
+
+
+def feasibility_by_goal(material: str, particle_size_mm: float | None) -> dict[str, Any]:
+    """The conclusion the timeline forces, stated rather than left to inference.
+
+    Full dissolution of anything but dust takes decades at every rate yet
+    demonstrated. Debulking the same fragment takes months. Those are not two
+    shades of the same answer, and the arm would be misleading if it reported
+    the timeline without saying which goals survive it.
+    """
+    full = timeline(material, particle_size_mm, 1.0)
+    part = timeline(material, particle_size_mm, 0.20)
+    if not full.get("computable"):
+        return full
+
+    def at(result, label):
+        return next(r["years"] for r in result["rows"] if r["label"] == label)
+
+    full_years = at(full, "accelerated_4x")
+    part_months = at(part, "accelerated_4x") * 12
+    return {
+        "computable": True,
+        "full": {"years_at_demonstrated_rate": full_years,
+                 "verdict": "not a clinical timescale" if full_years > 2
+                            else "within reach"},
+        "debulk_20pct": {"months_at_demonstrated_rate": part_months,
+                         "verdict": "clinically plausible" if part_months <= 18
+                                    else "slow but finite"},
+        "why_they_differ": (
+            "Volume goes as the cube of the dimension, so removing a fifth of "
+            "it costs 3.6% of the edge where consuming all of it costs 50%. A "
+            "factor of fourteen in penetration is the difference between "
+            "decades and months."
+        ),
+        "conclusion": (
+            "Dissolving a fragment away is not the product. Taking enough off "
+            "to relieve a nerve, and clearing fragments small enough that the "
+            "geometry is already favourable, are -- and those were the two "
+            "goals this engine was asked about before the metal arm existed."
+        ),
+    }
+
+
 def resolve(material: str) -> str | None:
     key = (material or "").strip().lower()
     key = ALIASES.get(key, key)

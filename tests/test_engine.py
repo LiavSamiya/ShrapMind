@@ -812,3 +812,37 @@ def test_passivating_metals_are_excluded_for_the_reason_iron_works():
     for key in ("aluminium", "titanium"):
         assert "passivating" in metals.METALS[key]["oxide"]
         assert metals.METALS[key]["route"] == "none"
+
+
+def test_debulking_and_consumption_differ_by_the_cube_of_the_dimension():
+    """The geometric fact that decides which goals survive. Volume goes as the
+    cube, so a fifth of it costs 3.6% of the edge where all of it costs 50% —
+    a factor of fourteen, and the difference between decades and months."""
+    from f2c.metals import _penetration_fraction
+
+    assert _penetration_fraction(1.0) == 0.5
+    part = _penetration_fraction(0.20)
+    assert 0.03 < part < 0.04
+    assert 13 < 0.5 / part < 15
+
+
+def test_the_timeline_says_which_goals_survive_it():
+    """Reporting the numbers without the conclusion would let a reader take
+    'we can dissolve shrapnel' from a table that says the opposite."""
+    from f2c import metals
+
+    f = metals.feasibility_by_goal("steel", 0.8)
+    assert f["full"]["verdict"] == "not a clinical timescale"
+    assert f["debulk_20pct"]["verdict"] == "clinically plausible"
+    assert f["full"]["years_at_demonstrated_rate"] > 2
+    assert f["debulk_20pct"]["months_at_demonstrated_rate"] < 18
+
+
+def test_the_timeline_names_what_the_rates_do_not_include():
+    """Every rate is iron corroding alone. What a chelator adds is the gap, and
+    a constant rate is the optimistic reading rather than the cautious one."""
+    from f2c import metals
+
+    tl = metals.timeline("steel", 0.8)
+    assert "nobody has measured chelation against metallic" in tl["what_is_unmeasured"]
+    assert "optimistic" in tl["caveat"]
