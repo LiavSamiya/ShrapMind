@@ -553,3 +553,87 @@ def test_material_names_prefer_the_source_database_over_the_local_table():
     # And the ones PAZy never carried, because nothing degrades them.
     assert names["steel"] == "Steel"
     assert names["PE"] == "Polyethylene"
+
+
+# --- the metal arm -----------------------------------------------------------
+# "No enzyme degrades metal" was too short an answer. Enzymes act on metals by
+# electron transfer; what none of them acts on is the metallic lattice. These
+# tests hold that distinction, because collapsing it in either direction is how
+# this arm would mislead.
+
+def test_no_metal_route_claims_to_act_on_the_lattice():
+    from f2c import metals
+
+    for key in metals.METALS:
+        route = metals.route(key)
+        for stage in route["stages"]:
+            for cand in stage.get("candidates") or []:
+                assert "not metallic" in cand["acts_on"] or "dissolved" in cand["acts_on"], (
+                    f"{cand['name']} must state that it acts on the ion, not the metal"
+                )
+
+
+def test_a_two_stage_metal_puts_capture_after_dissolution_and_says_why():
+    """Capture is stage 3 in the sequence and first in priority. The polymer
+    arm catches what degradation releases; here the released ion is the hazard,
+    so the route has to say that rather than imply a mirror image."""
+    from f2c import metals
+
+    steel = metals.route("steel")
+    assert [s["n"] for s in steel["stages"]] == [1, 2, 3]
+    assert steel["stages"][2]["stage"] == "Capture"
+    assert "hazard" in steel["stages"][2]["why"]
+    assert steel["warning"]["status"].startswith("inverts")
+
+
+def test_passivating_metals_have_no_route_and_name_the_reason():
+    from f2c import metals
+
+    for key in ("aluminium", "titanium", "tungsten"):
+        route = metals.route(key)
+        assert route["route"] == "none"
+        assert not route["stages"]
+        assert route["why_not"], f"{key} must say why, not just refuse"
+
+
+def test_lead_gets_capture_without_a_dissolution_stage():
+    """Lead has no biological redox couple, so there is nothing to catalyse.
+    Offering it an enzyme stage would be inventing one."""
+    from f2c import metals
+
+    lead = metals.route("lead")
+    assert lead["route"] == "capture_only"
+    assert len(lead["stages"]) == 1
+    assert not lead["stages"][0].get("candidates")
+
+
+def test_the_iron_enzyme_declares_its_five_unit_pH_gap():
+    """Cyc2 comes from an organism that lives at pH 2. That gap is the whole
+    engineering problem and must travel with the candidate."""
+    from f2c import metals
+
+    cyc2 = metals.ENZYMES["cyc2"]
+    ph = [m for m in cyc2["mismatch"] if m["kind"] == "pH"]
+    assert ph and "pH 2" in ph[0]["measured"]
+    assert ph[0]["target"] == "pH 7.4"
+
+
+def test_iron_engineering_includes_the_option_of_abandoning_the_enzyme():
+    """At pH 7.4 Fe(II) autoxidises in minutes. If the uncatalysed rate already
+    beats the enzyme, the enzyme is the wrong component — and a plan that
+    cannot reach that conclusion is advocacy, not engineering."""
+    from f2c import metals
+
+    targets = metals.engineering_targets("steel")
+    assert any("abiotic" in t["target"].lower() or "stop trying" in t["target"].lower()
+               for t in targets)
+
+
+def test_metal_aliases_resolve_the_words_a_clinician_would_write():
+    from f2c import metals
+
+    assert metals.resolve("Fe") == "iron"
+    assert metals.resolve("carbon steel") == "steel"
+    assert metals.resolve("brass") == "copper"
+    assert metals.resolve("aluminum") == "aluminium"
+    assert metals.resolve("PET") is None

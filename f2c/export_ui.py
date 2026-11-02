@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from . import formulate, goals, pipeline, substrate
+from . import formulate, goals, metals, pipeline, substrate
 from .engine import decide
 from .formulate import REPEAT_UNIT_G_PER_MOL, capture_requirement
 from .rank import BODY_PH, BODY_TEMPERATURE_C, WEIGHTS, _summarise
@@ -271,6 +271,16 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
             if o.metric in substrate.KINETIC_METRICS and o.value is not None
         ),
         "material_names": material_names(proteins),
+        # The metal arm. A second view rather than a replacement: the polymer
+        # arm answers a different question and both are real cases, so the
+        # page carries both and the reader picks.
+        "metals": {
+            "order": list(metals.METALS),
+            "names": {k: v["name"] for k, v in metals.METALS.items()},
+            "routes": {k: metals.route(k) for k in metals.METALS},
+            "engineering": {k: metals.engineering_targets(k) for k in metals.METALS},
+            "refs": metals.REFS,
+        },
         "goal_rules": {
             "max_useful_crystallinity_pct": goals.MAX_USEFUL_CRYSTALLINITY_PCT,
             "micro_size_mm": goals.MICRO_SIZE_MM,

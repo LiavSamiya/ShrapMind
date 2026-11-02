@@ -193,6 +193,34 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
   border:1px solid var(--rule);border-radius:4px;background:var(--raised);
   color:var(--ink-2)}
 .copy:hover{border-color:var(--accent);color:var(--accent)}
+
+.views{display:flex;gap:.3rem;padding-bottom:.7rem}
+.views button{font:inherit;font-size:.9rem;padding:.35rem .85rem;cursor:pointer;
+  border:1px solid var(--rule);border-radius:4px;background:transparent;
+  color:var(--ink-3)}
+.views button[aria-selected="true"]{background:var(--paper);
+  border-color:var(--accent);color:var(--accent);font-weight:500}
+/* The staged metal route. Numbered because the order is the content: capture
+   has to be in place before dissolution is allowed to run. */
+.stage-n{display:grid;grid-template-columns:auto 1fr;gap:0 1rem;
+  padding-block:1rem;border-bottom:1px solid var(--rule-2)}
+.stage-n:last-child{border-bottom:0}
+.stage-n .num{font-family:var(--font-display);font-size:1.7rem;font-weight:600;
+  color:var(--accent);line-height:1;grid-row:span 2}
+.stage-n .head{display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+.stage-n .st{font-weight:600;font-size:1.02rem}
+.stage-n .what{color:var(--ink-2);margin-top:.2rem}
+.stage-n .sub{font-size:.92rem;color:var(--ink-3);margin-top:.35rem}
+.cand{background:var(--sunk);border-radius:5px;padding:.8rem .9rem;margin-top:.7rem}
+.cand .cn{font-weight:600}
+.cand .co{font-style:italic;color:var(--ink-2);font-size:.92rem}
+.cand .rx{font-family:var(--font-data);font-size:.85rem;color:var(--ink-2);
+  margin-top:.3rem}
+.mis{border-left:2px solid var(--watch);padding-left:.7rem;margin-top:.6rem;
+  font-size:.92rem}
+.mis .mk{font-weight:600;color:var(--watch)}
+.mis .md{color:var(--ink-2)}
+.nope{background:var(--sunk);border-radius:5px;padding:1rem 1.1rem;color:var(--ink-2)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -201,7 +229,17 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
     <h1>ShrapMind</h1>
     <span class="tag">Which enzyme acts on this fragment, and how far that is from working in tissue</span>
   </div>
-  <div class="inputs">
+  <div class="views" role="tablist">
+    <button type="button" role="tab" data-view="polymer" aria-selected="true">Polymer fragments</button>
+    <button type="button" role="tab" data-view="metal" aria-selected="false">Metal fragments</button>
+  </div>
+  <div class="inputs" id="metalInputs" hidden>
+    <div class="field">
+      <label for="metal">Fragment metal</label>
+      <select id="metal"></select>
+    </div>
+  </div>
+  <div class="inputs" id="polymerInputs">
     <div class="field">
       <label for="material">Material</label>
       <select id="material"></select>
@@ -662,6 +700,113 @@ function render() {
   if (det) det.addEventListener("toggle", () => det.open && mountViewer(c), { once: true });
 }
 
+
+/* ---- the metal arm -------------------------------------------------------
+   A metal fragment needs two stages where a polymer needed one: nothing acts
+   on the lattice, so something has to release the ion before biology has a
+   handle. The stages are numbered because their order is the content —
+   capture must be in place before dissolution is allowed to run. */
+function renderMetal() {
+  const M = DATA.metals;
+  const key = $("#metal").value;
+  const r = M.routes[key];
+  const eng = M.engineering[key] || [];
+  const out = [];
+
+  out.push(`<section class="finding">
+    <div class="eyebrow">Metal fragment · ${esc(r.element)}</div>
+    <div class="name">${esc(r.name)}</div>
+    <p class="verdict">${esc(r.why_common)}</p>
+    <div class="ids">
+      <span class="id">${r.ferromagnetic ? "ferromagnetic — MRI excluded" : "non-ferromagnetic"}</span>
+      <span class="id">${esc(({ two_stage: "two-stage route",
+        capture_only: "capture only", none: "no route" })[r.route])}</span>
+    </div>
+  </section>`);
+
+  out.push(`<section><div class="goal">
+    <div class="means">Surface chemistry</div>
+    <p class="note">${esc(r.oxide)}</p>
+  </div></section>`);
+
+  if (r.route === "none") {
+    out.push(`<section><h2>There is no route for this metal</h2>
+      <div class="nope" style="margin-top:.8rem">${esc(r.why_not)}</div></section>`);
+  } else {
+    if (r.warning) {
+      out.push(`<section><div class="alert">
+        <div class="t">${esc(r.warning.claim)} — ${esc(r.warning.status)}</div>
+        <div class="d">${esc(r.warning.detail)}</div></div></section>`);
+    }
+    out.push(`<section><h2>The process</h2>
+      <p class="lede">Three stages for a metal, against one for a polymer.
+      Only the middle one has a characterised enzyme behind it.</p>
+      <div style="margin-top:1rem">${r.stages.map(s => `<div class="stage-n">
+        <div class="num">${s.n}</div>
+        <div>
+          <div class="head"><span class="st">${esc(s.stage)}</span>${badge(s.evidence)}</div>
+          <div class="what">${esc(s.what)}</div>
+          <div class="sub">${esc(s.why)}</div>
+          ${s.open ? `<div class="sub" style="color:var(--watch)">Unsolved: ${esc(s.open)}</div>` : ""}
+          ${(s.candidates || []).map(c => `<div class="cand">
+            <div class="cn">${esc(c.name)}</div>
+            <div class="co">${esc(c.organism)}</div>
+            <div class="rx">${esc(c.reaction)}</div>
+            <div class="sub">Acts on ${esc(c.acts_on)}.</div>
+            ${(c.mismatch || []).map(m => `<div class="mis">
+              <span class="mk">${esc(m.kind)}:</span>
+              <span class="md">${esc(m.measured)} → needs ${esc(m.target)}. ${esc(m.detail)}</span>
+            </div>`).join("")}
+            ${(c.refs || []).map(refLine).join("")}
+          </div>`).join("")}
+          ${(s.refs || []).map(refLine).join("")}
+        </div></div>`).join("")}</div>
+    </section>`);
+    if (r.why_not) {
+      out.push(`<section><div class="nope">${esc(r.why_not)}</div></section>`);
+    }
+  }
+
+  if (eng.length) {
+    out.push(`<section><h2>What the enzyme would need</h2>
+      <p class="lede">The polymer arm asks a lab to move an optimum by 0.6 pH units.
+      Here it is five. These are directions with a stated basis, not predictions.</p>
+      <div style="margin-top:1rem">${eng.map(e => `<div class="gap">
+        <div class="g1">${esc(e.target)}</div>
+        <div class="g2">${esc(e.detail)}</div>
+        ${refLine(e.ref)}</div>`).join("")}</div></section>`);
+  }
+
+  if (r.alternative) {
+    out.push(`<section>
+      <details><summary>The one mechanism that does attack the metal itself</summary>
+        <div class="body">
+          <p>${esc(r.alternative.what)}</p>
+          <p class="note">${esc(r.alternative.why_not_used)}</p>
+          ${refLine(r.alternative.ref)}
+        </div></details></section>`);
+  }
+
+  out.push(`<section><details><summary>Sources
+    <span class="count">${Object.keys(M.refs).length}</span></summary>
+    <div class="body">${Object.values(M.refs).map(refLine).join("")}</div>
+    </details></section>`);
+
+  $("#main").innerHTML = out.join("");
+}
+
+let VIEW = "polymer";
+function setView(v) {
+  VIEW = v === "metal" ? "metal" : "polymer";
+  for (const b of document.querySelectorAll(".views button")) {
+    b.setAttribute("aria-selected", String(b.dataset.view === VIEW));
+  }
+  $("#polymerInputs").hidden = VIEW !== "polymer";
+  $("#metalInputs").hidden = VIEW !== "metal";
+  if (location.hash.slice(1) !== VIEW) location.hash = VIEW;
+  VIEW === "metal" ? renderMetal() : render();
+}
+
 function boot() {
   const sel = $("#material");
   const keys = Object.keys(DATA.decisions).sort((a, b) => {
@@ -672,16 +817,31 @@ function boot() {
   sel.innerHTML = keys.map(k => `<option value="${esc(k)}"${k === "PET" ? " selected" : ""}>${
     esc(matName(k))}${esc(matAbbr(k))}</option>`).join("");
 
+  const ms = $("#metal");
+  const M = DATA.metals;
+  ms.innerHTML = M.order.map(k => {
+    const r = M.routes[k];
+    const tail = r.route === "none" ? " — no route"
+      : r.route === "capture_only" ? " — capture only" : "";
+    return `<option value="${esc(k)}"${k === "steel" ? " selected" : ""}>${
+      esc(M.names[k])}${tail}</option>`;
+  }).join("");
+  ms.addEventListener("input", renderMetal);
+
   for (const id of ["#material", "#goal", "#mass", "#cryst", "#psize"]) {
     $(id).addEventListener("input", render);
   }
+  for (const b of document.querySelectorAll(".views button")) {
+    b.addEventListener("click", () => setView(b.dataset.view));
+  }
+  addEventListener("hashchange", () => setView(location.hash.slice(1)));
 
   const w = DATA.warehouse;
   $("#meta").innerHTML = `${w.proteins} enzymes with demonstrated activity,
     ${w.reviewed} Swiss-Prot reviewed, ${w.with_temperature} with a temperature optimum.
     Of ${DATA.kinetics_total || 289} catalytic constants, none was measured on a solid
     polymer. Built ${esc((DATA.generated_at || "").slice(0, 10))}.`;
-  render();
+  setView(location.hash.slice(1) || "polymer");
 }
 
 boot();
