@@ -1,0 +1,474 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>פרוטוקול הנדסת אנזים</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Heebo:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+/* Layout: a bench protocol, read right to left. Stages are numbered because
+   they really are a sequence with real day counts, and each carries its own
+   checkpoint -- a step you cannot verify is a step that fails silently. */
+:root{
+  --paper:#f8f8fa;
+  --raised:#ffffff;
+  --sunk:#eeeef3;
+  --ink:#16161d;
+  --ink-2:#4c4c5a;
+  --ink-3:#7d7d8c;
+  --rule:#e1e1e8;
+  --rule-2:#edeef2;
+  --accent:#4b3f8c;          /* indigo: the one strong colour */
+  --time:#8a5a1c;            /* timing chips */
+  --stop:#9a3730;
+  --ok:#2a6a4c;
+  --font-display:"Rubik",system-ui,sans-serif;
+  --font-ui:"Heebo",ui-sans-serif,system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#131319; --raised:#1b1b23; --sunk:#22222c;
+    --ink:#e9e9ef; --ink-2:#a9a9b8; --ink-3:#7e7e8d;
+    --rule:#2d2d38; --rule-2:#242430;
+    --accent:#9b8ce0; --time:#d8a455; --stop:#e07f76; --ok:#5bbd91;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131319; --raised:#1b1b23; --sunk:#22222c;
+  --ink:#e9e9ef; --ink-2:#a9a9b8; --ink-3:#7e7e8d;
+  --rule:#2d2d38; --rule-2:#242430;
+  --accent:#9b8ce0; --time:#d8a455; --stop:#e07f76; --ok:#5bbd91;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-ui);font-size:16.5px;line-height:1.68;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:50rem;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 80px}
+h1,h2,h3,h4{font-family:var(--font-display);text-wrap:balance;font-weight:600}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+
+header{padding-block:44px 26px;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--font-data);font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+h1{font-size:clamp(1.9rem,5.4vw,2.6rem);font-weight:700;line-height:1.18;
+   margin:0 0 14px;letter-spacing:-.01em}
+.standfirst{font-size:1.1rem;color:var(--ink-2);margin:0;max-width:38rem}
+.meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:22px;
+  font-family:var(--font-data);font-size:11.5px;color:var(--ink-3)}
+
+section{padding-block:42px 0}
+h2{font-size:1.52rem;margin:0 0 6px;padding-bottom:8px;
+   border-bottom:1px solid var(--rule)}
+.sec-sub{color:var(--ink-3);font-size:.92rem;margin:0 0 22px;
+  font-family:var(--font-data)}
+h3{font-size:1.14rem;margin:30px 0 8px}
+p{margin:0 0 15px}
+strong{font-weight:700}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+code{font-family:var(--font-data);font-size:.87em;background:var(--rule-2);
+  padding:1px 5px;border-radius:3px}
+
+/* answer box, for the three questions */
+.answer{background:var(--raised);border:1px solid var(--rule);
+  border-right:4px solid var(--accent);padding:22px;margin:24px 0}
+.answer .q{font-family:var(--font-data);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
+.answer .a{font-family:var(--font-display);font-size:1.3rem;font-weight:600;
+  line-height:1.35;margin:0 0 12px}
+.answer p:last-child{margin-bottom:0}
+
+/* stages */
+ol.stages{list-style:none;counter-reset:st;padding:0;margin:26px 0}
+ol.stages>li{counter-increment:st;position:relative;
+  padding:0 54px 28px 0;border-right:2px solid var(--rule);margin-right:16px}
+ol.stages>li:last-child{border-right-color:transparent;padding-bottom:0}
+ol.stages>li::before{content:counter(st);position:absolute;right:-18px;top:0;
+  width:34px;height:34px;border-radius:50%;background:var(--accent);
+  color:#fff;font-family:var(--font-data);font-size:14px;font-weight:500;
+  display:grid;place-items:center}
+:root[data-theme="dark"] ol.stages>li::before,
+:root:not([data-theme="light"]) ol.stages>li::before{color:#16161d}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) ol.stages>li::before{color:#fff}}
+ol.stages h3{margin:3px 0 4px;font-size:1.14rem}
+.chip{display:inline-block;font-family:var(--font-data);font-size:10.5px;
+  letter-spacing:.05em;text-transform:uppercase;border:1px solid currentColor;
+  border-radius:2px;padding:2px 7px;margin-left:.4rem;white-space:nowrap}
+.chip.t{color:var(--time)}
+.chip.s{color:var(--ink-3)}
+
+/* step lists inside a stage */
+ol.steps{padding-right:22px;padding-left:0;margin:12px 0 0}
+ol.steps li{margin-bottom:10px}
+ul.plain{padding-right:20px;padding-left:0;margin:0 0 15px}
+ul.plain li{margin-bottom:8px}
+
+.check{background:var(--sunk);border-radius:4px;padding:13px 16px;
+  margin:14px 0 0;font-size:14.8px;color:var(--ink-2)}
+.check b{color:var(--ok);font-weight:700}
+.stopbox{border-right:3px solid var(--stop);padding:2px 14px 2px 0;
+  margin:14px 0;font-size:15px}
+.stopbox b{color:var(--stop)}
+
+.scroll{overflow-x:auto;min-width:0;max-width:100%;margin:20px 0;
+  border:1px solid var(--rule)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:32rem}
+caption{text-align:right;font-size:12px;color:var(--ink-3);padding:10px 12px;
+  border-bottom:1px solid var(--rule);background:var(--rule-2)}
+th{text-align:right;font-family:var(--font-data);font-size:10.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:500;padding:9px 12px;border-bottom:1px solid var(--rule);
+  white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-family:var(--font-data);font-variant-numeric:tabular-nums;
+  text-align:left;direction:ltr;white-space:nowrap}
+td.name{font-weight:600;white-space:nowrap}
+
+/* the sequence block */
+.seq{background:var(--raised);border:1px solid var(--rule);border-radius:4px;
+  margin:18px 0;overflow:hidden}
+.seq .head{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;
+  padding:12px 15px;border-bottom:1px solid var(--rule);background:var(--rule-2);
+  font-family:var(--font-data);font-size:11.5px;color:var(--ink-3)}
+.seq pre{margin:0;padding:14px 15px;overflow-x:auto;direction:ltr;text-align:left;
+  font-family:var(--font-data);font-size:12.5px;line-height:1.75;
+  color:var(--ink);white-space:pre}
+.seq .foot{padding:11px 15px;border-top:1px solid var(--rule);
+  font-size:13.5px;color:var(--ink-2)}
+
+.note{font-size:14.8px;color:var(--ink-2);background:var(--sunk);
+  padding:15px 17px;margin:22px 0;border-radius:3px}
+.note b{color:var(--ink)}
+
+footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);
+  font-size:13.5px;color:var(--ink-3)}
+footer p{margin:0 0 9px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap" dir="rtl">
+
+<header>
+  <p class="eyebrow">ShrapMind · פרוטוקול מעבדה</p>
+  <h1>פרוטוקול הנדסת אנזים</h1>
+  <p class="standfirst">
+    משלוש שאלות לשלושה פלטים: אילו שיירים באנזים נתון רגישים ל-pH פיזיולוגי,
+    איך הופכים תכנון חלבוני לרצף DNA שאפשר להזמין, ומה בדיוק עושים על השולחן
+    כדי לבדוק אם זה עבד.
+  </p>
+  <div class="meta">
+    <span>TfH · UniProt Q6A0I4 · PDB 4CG1</span>
+    <span>הרצה 2026-11-02</span>
+    <span>מחושב מ-<code>f2c/phsites.py</code> ו-<code>tools/design_construct.py</code></span>
+  </div>
+</header>
+
+<section>
+  <h2>התשובות הקצרות</h2>
+  <p class="sec-sub">לפני הפרוטוקול, כי שתי השאלות היו "האם זה בכלל אפשרי"</p>
+
+  <div class="answer">
+    <p class="q">האם אפשר לייצר רצף DNA שייצר את החלבון?</p>
+    <p class="a">כן, וזה חשבון ולא מחקר.</p>
+    <p>רצף חלבון ועוד טבלת קודונים ועוד סט אילוצים נותנים גן סינתטי. הכלי
+      בנוי, רץ, והפלט למטה הוא 810 בסיסים אמיתיים שעוברים בדיקת תרגום
+      חוזר מול טבלת קודונים סטנדרטית עצמאית. מה שזה <strong>לא</strong> אומר:
+      שהחלבון מתקפל, מסיס, פעיל או בטוח. תרגום הפוך הוא צעד מכני, ולכן הוא
+      נושא כל אי-ודאות שהתכנון נושא — בלי להוסיף ובלי להפחית.</p>
+  </div>
+
+  <div class="answer">
+    <p class="q">האם אפשר למצוא באנזים קיים אתרים רגישים ל-pH פיזיולוגי?</p>
+    <p class="a">כן, ומבנה אחד מספיק.</p>
+    <p>שייר מגיב לשינוי pH רק אם ה-pKa שלו נמצא <em>בין</em> שני ערכי ה-pH.
+      זה מצמצם את השאלה מ-65 שיירים מתכיילים ל-8 בלבד
+      במעבר מ-pH 8 ל-7.4. ההיסטידין הקטליטי מוביל את הרשימה, וזה נכון כימית:
+      בטריאדה Ser-Asp-His הוא הבסיס הכללי.</p>
+  </div>
+
+  <div class="note">
+    <b>אבל הממצא המעניין הוא שלילי.</b> המעבר מ-pH 8 לרקמה ב-7.4 כמעט לא נוגע
+    בכלום — שינוי היוניזציה של ההיסטידין הקטליטי הוא 0.028 בלבד, כי שני
+    הערכים רחוקים הרבה מעל ל-pKa 6.0. לשם השוואה, מעבר מ-pH 2 ל-7.4 — מה
+    שאנזים של אצידופיל כמו Cyc2 מתמודד איתו — הופך 31 שיירים, כולל
+    היפוך מלא של מצב הטעינה של הטריאדה. זה הפער שהזרוע המתכתית מכנה "חמש
+    יחידות pH", וכעת הוא מחושב ולא מוצהר.
+  </div>
+
+  <div class="stopbox">
+    <p><b>ומה שאי אפשר לקבוע מראש.</b> הנטייה היתה לכתוב כאן ש"הבעיה של TfH
+      אינה pH אלא טמפרטורה". המחסן לא תומך בזה. ארבע המדידות של אופטימום
+      הטמפרטורה ל-TfH הן 25, 25, 50, 55 מעלות — פיזור של 30
+      מעלות, עם חציון 37.5, שהוא בעצמו טמפרטורת גוף. <strong>הספרות
+      חלוקה על עצמה</strong>, ולכן אין בסיס להצהיר שהטמפרטורה היא הבעיה יותר
+      מה-pH. הפרוטוקול מודד את שתיהן בדיוק מהסיבה הזו, וסעיף 4 הוא שמכריע
+      ביניהן.</p>
+  </div>
+</section>
+
+<section>
+  <h2>חלק א' — ניתוח חישובי</h2>
+  <p class="sec-sub">יום 0, לפני שמזמינים משהו</p>
+
+  <p>שני שלבים, שניהם מהקוד שבריפו ושניהם ניתנים לשחזור מאפס. הם קודמים להכול
+    כי הם זולים, ושלב שעולה שלושה דולר ומבטל הזמנה של שלוש מאות ראוי להיעשות
+    ראשון.</p>
+
+  <div class="scroll"><table><caption>שיירים מתכיילים לפי עדיפות, מתוך 65 במבנה. עמודת Δיוניזציה השנייה מראה מה היה קורה במעבר מ-pH 2, לשם השוואה.</caption><thead><tr><th>שייר</th><th>pKa מודל</th><th>מרחק (Å)</th><th>Δיון 8→7.4</th><th>Δיון 2→7.4</th><th>priority</th><th>קטליטי</th></tr></thead><tbody><tr><td class="name">HIS208</td><td class="num">6.0</td><td class="num">0.0</td><td class="num">0.028</td><td class="num">0.962</td><td class="num">0.0284</td><td class="num">כן</td></tr><tr><td class="name">HIS129</td><td class="num">6.0</td><td class="num">3.09</td><td class="num">0.028</td><td class="num">0.962</td><td class="num">0.0211</td><td class="num">—</td></tr><tr><td class="name">HIS184</td><td class="num">6.0</td><td class="num">7.17</td><td class="num">0.028</td><td class="num">0.962</td><td class="num">0.0114</td><td class="num">—</td></tr><tr><td class="name">HIS156</td><td class="num">6.0</td><td class="num">10.2</td><td class="num">0.028</td><td class="num">0.962</td><td class="num">0.0043</td><td class="num">—</td></tr><tr><td class="name">TYR200</td><td class="num">10.1</td><td class="num">7.69</td><td class="num">0.006</td><td class="num">0.002</td><td class="num">0.0021</td><td class="num">—</td></tr><tr><td class="name">TYR60</td><td class="num">10.1</td><td class="num">10.52</td><td class="num">0.006</td><td class="num">0.002</td><td class="num">0.0007</td><td class="num">—</td></tr><tr><td class="name">LYS186</td><td class="num">10.5</td><td class="num">9.64</td><td class="num">0.002</td><td class="num">0.001</td><td class="num">0.0005</td><td class="num">—</td></tr><tr><td class="name">LYS159</td><td class="num">10.5</td><td class="num">10.09</td><td class="num">0.002</td><td class="num">0.001</td><td class="num">0.0004</td><td class="num">—</td></tr></tbody></table></div>
+
+  <p>העמודה שקובעת היא <span class="ltr">priority</span>: מכפלה של שינוי
+    היוניזציה בקרבה לאתר הפעיל. שייר צריך להיות גם מגיב וגם קרוב — כל אחד
+    לבדו אינו מועמד. המרחק נמדד מהאטומים שנושאים את המטען בפועל ולא מה-Cα, כי
+    מה שמצמד שייר מתכייל לקטליזה הוא איפה יושב הפרוטון שלו.</p>
+
+  <div class="stopbox">
+    <p><b>מה הטבלה הזו אינה.</b> אלה ערכי pKa מודל במים, לא מחושבים. שייר קבור
+      או מגושר-מלח יכול לסטות בכמה יחידות, והסטייה הזו היא בדיוק השאלה.
+      הטבלה היא <strong>רשימה קצרה לשלוח לחישוב אמיתי</strong> —
+      <span class="ltr">PROPKA</span>, <span class="ltr">H++</span> או
+      <span class="ltr">constant-pH MD</span> — ולא תחליף לו.</p>
+  </div>
+
+  <h3>וממצא נוסף, שאינו קטליטי</h3>
+  <p>נקודת האיזואלקטרי התיאורטית של TfH היא <strong>7.96</strong>, והמטען
+    הנקי ב-pH 7.4 הוא 0.89+ בלבד. חלבון קרוב ל-pI שלו הוא חלבון עם
+    יציבות קולואידית מינימלית, כלומר נטייה לאגרגציה. לדפו מוזרק זו בעיית
+    פורמולציה ולא בעיית קטליזה, ולכן היא מדווחת בנפרד — אבל היא אומרת שהבאפר
+    לא יכול להיות סתם PBS.</p>
+</section>
+
+<section>
+  <h2>חלק ב' — מה מזמינים</h2>
+  <p class="sec-sub">הפלט שביקשת: רצף DNA</p>
+
+  <p>האתר הקטליטי של TfH הוא Ser130–Asp176–His208 במספור המבנה, שהוא מספור
+    UniProt פחות 40 — ההפרש הוא פפטיד האיתות באורך 40 שיירים, שנחתך לביטוי
+    ציטופלזמי. הקוד מאמת את שלושת המיקומים בכל בנייה, ובודק את השייר הפראי
+    בכל מוטציה לפני שהוא מחיל אותה. <strong>מוטציה שנכתבה לפי מספור שגוי היא
+    הדרך הנפוצה ביותר שבה קונסטרקט נכשל, והיא נכשלת אחרי שכבר שילמת.</strong></p>
+
+  <div class="seq"><div class="head"><span>TfH H208A</span><span>810 bp</span><span>GC 59.9%</span><span>E. coli codon-optimised</span></div><pre>   1  ATGCATCATCATCATCATCACGCGAACCCGTATGAACGTGGCCCGAACCCGACCGATGCG
+  61  CTGCTGGAAGCGAGCAGCGGCCCGTTTAGCGTGAGCGAAGAAAACGTGAGCCGTCTGAGC
+ 121  GCGAGCGGCTTTGGCGGCGGCACCATCTATTATCCGCGTGAAAACAACACCTATGGCGCG
+ 181  GTGGCGATCAGCCCGGGCTATACCGGCACCGAAGCGAGCATCGCGTGGCTGGGCGAACGT
+ 241  ATCGCGAGCCACGGCTTTGTGGTGATCACCATCGATACCATCACCACCCTGGATCAGCCG
+ 301  GATAGCCGTGCGGAACAGCTGAACGCGGCGCTGAACCACATGATCAACCGTGCGAGCAGC
+ 361  ACCGTGCGTAGCCGTATCGATAGCAGCCGTCTGGCGGTGATGGGCCATAGCATGGGCGGC
+ 421  GGCGGCACCCTGCGTCTGGCGAGCCAGCGTCCGGATCTGAAAGCGGCGATCCCGCTGACC
+ 481  CCGTGGCATCTGAACAAAAACTGGAGCAGCGTGACCGTGCCGACCCTGATCATCGGCGCG
+ 541  GATCTGGATACCATCGCGCCGGTGGCGACCCATGCGAAACCGTTTTATAACAGCCTGCCG
+ 601  AGCAGCATCAGCAAAGCGTATCTGGAACTGGATGGCGCGACCGCGTTTGCGCCGAACATC
+ 661  CCGAACAAAATCATCGGCAAATATAGCGTGGCGTGGCTGAAACGTTTTGTGGATAACGAT
+ 721  ACCCGTTATACCCAGTTTCTGTGCCCGGGCCCGCGTGATGGCCTGTTTGGCGAAGTGGAA
+ 781  GAATATCGTAGCACCTGCCCGTTTTAATGA</pre><div class="foot">מתחיל ב-<code>ATG</code>, ואחריו תגית הקסאהיסטידין, ואחריו החלבון הבוגר ללא פפטיד האיתות. מסתיים בשני קודוני עצירה בפאזה, כך שקריאת-יתר בודדת עדיין נעצרת. הרצף עובר תרגום חוזר מול טבלת קודונים סטנדרטית שנבנית בנפרד בחבילת הבדיקות, ולא מול הטבלה שהכלי עצמו משתמש בה.</div></div>
+
+  <div class="scroll"><table><caption>מפרט הקונסטרקט, כפי שהכלי מדווח אותו.</caption><thead><tr><th>שדה</th><th>ערך</th></tr></thead><tbody><tr><td class="name">אנזים</td><td>TfH · Q6A0I4 · Thermobifida sp.</td></tr><tr><td class="name">מחלקת EC</td><td>3.1.1.74</td></tr><tr><td class="name">אורך פראי</td><td>301 שיירים</td></tr><tr><td class="name">פפטיד איתות שנחתך</td><td>40 שיירים</td></tr><tr><td class="name">מוטציות</td><td>H208A</td></tr><tr><td class="name">תגית</td><td>HHHHHH בקצה N</td></tr><tr><td class="name">חלבון מבוטא</td><td>267 שיירים</td></tr><tr><td class="name">אורך DNA</td><td>810 בסיסים</td></tr><tr><td class="name">תכולת GC</td><td>59.9% · חלונות 45.0–73.3%</td></tr><tr><td class="name">קודונים שהוזזו</td><td>2</td></tr><tr><td class="name">אתרי חיתוך שנבדקו</td><td>BamHI, BsaI, BsmBI, EcoRI, HindIII, NcoI, NdeI, NotI, SalI, XhoI</td></tr><tr><td class="name">הפרות אילוץ</td><td>אין</td></tr></tbody></table></div>
+
+  <div class="note">
+    <b>למה נדרשה נסיגה בבחירת הקודונים.</b> מתיונין וטריפטופן הם קודון אחד כל
+    אחד. כשה-<span class="ltr">ATG</span> או ה-<span class="ltr">TGG</span>
+    משלימים אתר חיתוך, אין מה לנסות באותו מיקום — התיקון חייב לבוא מהקודון
+    שלפניו. הגרסה הראשונה של הכלי רק סימנה את המקרים האלה והוציאה
+    <span class="ltr">ORF</span> עם אתרי
+    <span class="ltr">NdeI</span> ו-<span class="ltr">NcoI</span> פנימיים,
+    שהיו נחתכים בשלב השבטה. עכשיו הוא נסוג קודון אחד אחורה ופותר אותם, וזה
+    הסבר למה 2 קודונים אינם הבחירה המועדפת.
+  </div>
+</section>
+
+<section>
+  <h2>חלק ג' — הפרוטוקול</h2>
+  <p class="sec-sub">שבעה שלבים, כ-6 שבועות עד התשובה הראשונה</p>
+
+  <ol class="stages">
+    <li>
+      <h3>סינתזת גן ושבטה<span class="chip t">7–12 ימים</span><span class="chip s">מיקור חוץ</span></h3>
+      <p>מזמינים את שני הקונסטרקטים — פראי ו-H208A — כגן סינתטי משובט לווקטור
+        ביטוי עם מקדם T7, למשל <span class="ltr">pET-28a</span> בין
+        <span class="ltr">NdeI</span> ל-<span class="ltr">XhoI</span>. שני
+        האתרים האלה נבדקו ואינם מופיעים בתוך הרצף.</p>
+      <ol class="steps">
+        <li>לוודא שהספק מאשר את הרצף בסקוונוס סנגר מלא ולא רק בקצוות.</li>
+        <li>לבקש את הפלסמיד גם כ-<span class="ltr">glycerol stock</span> וגם
+          כ-DNA מטוהר.</li>
+      </ol>
+      <div class="check"><b>נקודת בקרה.</b> להשוות את הכרומטוגרמה החוזרת מול
+        קובץ ה-FASTA שבריפו, בסיס מול בסיס. אי-התאמה שקטה אחת בשלב הזה מזהמת
+        כל מספר שיבוא אחריו.</div>
+    </li>
+
+    <li>
+      <h3>ביטוי<span class="chip t">3 ימים</span></h3>
+      <ol class="steps">
+        <li>טרנספורמציה ל-<span class="ltr">E. coli BL21(DE3)</span>,
+          צלחת <span class="ltr">LB</span> + קנamycin 50 מיקרוגרם/מ"ל.</li>
+        <li>תרבית לילה, דילול 1:100, גידול ל-<span class="ltr">OD₆₀₀</span>
+          של 0.6–0.8 ב-37°C.</li>
+        <li>השראה ב-<span class="ltr">IPTG</span> 0.2 מילימולר, והעברה
+          ל-<strong>18°C ללילה</strong>. זו אינה טענה על TfH אלא ברירת מחדל
+          לכל חלבון הטרולוגי: השראה איטית וקרה מורידה את שיעור
+          ה-<span class="ltr">inclusion bodies</span>, ובהשראה ב-37°C הסיכוי
+          לקבל את רוב החלבון בפלט הבלתי-מסיס גבוה.</li>
+      </ol>
+      <div class="check"><b>נקודת בקרה.</b> ג'ל
+        <span class="ltr">SDS-PAGE</span> של שבריר מסיס מול בלתי-מסיס. פס
+        ב-28.9 קילודלטון לערך. אם הכול בפלט הבלתי-מסיס — להוריד ל-15°C,
+        להוסיף 0.5 מולר סורביטול, או לעבור לשותף קיפול.</div>
+    </li>
+
+    <li>
+      <h3>טיהור<span class="chip t">1–2 ימים</span></h3>
+      <ol class="steps">
+        <li>ליזיס בסוניקציה, באפר 50 מילימולר
+          <span class="ltr">Tris</span> pH 8.0, 300 מילימולר
+          <span class="ltr">NaCl</span>, 20 מילימולר אימידזול.</li>
+        <li><span class="ltr">IMAC</span> על <span class="ltr">Ni-NTA</span>,
+          אלוציה בגרדיאנט אימידזול.</li>
+        <li><span class="ltr">SEC</span> על עמודה אנליטית — לא כצעד ניקוי אלא
+          כדי <strong>לראות אם יש אגרגט</strong>, בגלל ממצא ה-pI למעלה.</li>
+      </ol>
+      <div class="check"><b>נקודת בקרה.</b> פסגה סימטרית יחידה ב-SEC. כתף
+        בנפח החלל פירושה אגרגציה, ואז הבאפר צריך להתרחק מ-pI 7.96 — נסו
+        pH 8.5, או 150 מילימולר ארגינין.</div>
+    </li>
+
+    <li>
+      <h3>הבדיקה המרכזית: פרופיל pH<span class="chip t">2 ימים</span><span class="chip s">זה המדידה</span></h3>
+      <p>מודדים פעילות על אותו סובסטרט בכל ערכי ה-pH, בטמפרטורה קבועה, ואז
+        שוב בטמפרטורה השנייה. שתי הרצות, לא אחת, כי השאלה היא איזו משתי
+        הסביבות היא הבעיה.</p>
+      <ol class="steps">
+        <li>סדרת באפרים בכוח יוני זהה: 50 מילימולר
+          <span class="ltr">MES</span> ל-pH 6.0 ו-6.5, 50 מילימולר
+          <span class="ltr">HEPES</span> ל-7.0, 7.4 ו-8.0, 50 מילימולר
+          <span class="ltr">Tris</span> ל-8.5 ו-9.0.</li>
+        <li>סובסטרט: <span class="ltr">4-nitrophenyl butanoate</span>, מעקב
+          אחרי שחרור ניטרופנול ב-405 ננומטר.
+          <strong>המקדם המולרי של ניטרופנול תלוי בעצמו ב-pH</strong> — יש
+          לכייל עקומת תקן של ניטרופנול חופשי בכל באפר בנפרד, אחרת פרופיל
+          ה-pH שתמדדו יהיה חלקית פרופיל הצבע ולא פרופיל האנזים.</li>
+        <li>להריץ את כל הסדרה ב-37°C, ואז את כולה שוב ב-55°C.</li>
+      </ol>
+      <div class="check"><b>נקודת בקרה, והשאלה האמיתית.</b> להשוות את מפל
+        הפעילות בין pH 8 ל-7.4 מול המפל בין 55°C ל-37°C. הניתוח החישובי
+        חוזה שמפל ה-pH יהיה קטן; על הטמפרטורה הוא אינו חוזה כלום, כי המחסן
+        חלוק. <strong>אם מפל ה-pH אכן קטן — התכנית להנדס את ה-pH מתבטלת</strong>,
+        וזו תוצאה ששווה את כל הפרוטוקול, כי היא חוסכת סבב מוטנטים שלם. ואם מפל
+        הטמפרטורה גדול, יש סוף סוף מספר אחד במקום ארבעה סותרים.</div>
+    </li>
+
+    <li>
+      <h3>המוטנט כבקרה<span class="chip t">1 יום</span></h3>
+      <p>H208A מוציא את הבסיס הכללי מהטריאדה ואמור לבטל את הפעילות כמעט
+        לחלוטין. הוא לא מועמד לטיפול — הוא <strong>הבקרה השלילית שמוכיחה
+        שהאות שנמדד הוא האנזים</strong> ולא הידרוליזה ספונטנית של הסובסטרט
+        ולא זיהום אסטראזי מה-<span class="ltr">E. coli</span>.</p>
+      <ol class="steps">
+        <li>אותה בדיקה בדיוק, pH 7.4, 37°C, אותה מנת חלבון לפי
+          <span class="ltr">A₂₈₀</span>.</li>
+        <li>ובמקביל: באר בלי אנזים כלל, באר עם חלבון מבושל.</li>
+      </ol>
+      <div class="check"><b>נקודת בקרה.</b> H208A צריך לרדת מתחת ל-5%
+        מהפראי. אם הוא לא יורד — או שהמוטציה לא נכנסה, או שמה שנמדד אינו
+        הטריאדה. בשני המקרים כל מספר שהתקבל בשלב 4 מוטל בספק.</div>
+    </li>
+
+    <li>
+      <h3>יציבות בתנאי רקמה<span class="chip t">7 ימים</span></h3>
+      <p>זהו הפער שהמנוע מדווח עליו בכל חומר: <strong>לאף אנזים במחסן אין
+        זמן מחצית חיים מדוד</strong> בתנאי גוף. כאן הוא נמדד.</p>
+      <ol class="steps">
+        <li>דגירה ב-37°C ב-pH 7.4 עם 10% סרום אנושי, דגימה ב-0, 2, 6, 24, 48,
+          96 ו-168 שעות.</li>
+        <li>בכל נקודה: פעילות שארית, ו-<span class="ltr">SDS-PAGE</span> כדי
+          להבחין בין איבוד קיפול לבין פרוטאוליזה.</li>
+        <li>בקרה מקבילה בלי סרום, כדי להפריד חוסר-יציבות מפירוק.</li>
+      </ol>
+      <div class="check"><b>נקודת בקרה.</b> זמן מחצית חיים בשעות או ימים הוא
+        מספר שהמוצר לא החזיק עד היום. הוא נכנס ישירות למאזן המסה במנוע
+        ומחליף פרמטר מונח בפרמטר מדוד.</div>
+    </li>
+
+    <li>
+      <h3>רק אם הקודמים עברו: הסובסטרט האמיתי<span class="chip t">14+ ימים</span><span class="chip s">תנאי</span></h3>
+      <p>כל 289 הקבועים הקטליטיים במחסן נמדדו על תחליפים מסיסים ואף אחד על
+        פולימר מוצק. הניסוי הזה הוא שסוגר את הפער — ואין טעם להריץ אותו לפני
+        שידוע שהאנזים בכלל שורד ב-37°C בסרום.</p>
+      <ol class="steps">
+        <li>סרט PET אמורפי, שטח פנים ידוע, pH 7.4, 37°C.</li>
+        <li>מעקב אחרי שחרור <span class="ltr">TPA</span> ו-<span class="ltr">MHET</span>
+          ב-HPLC, לא אחרי צבע.</li>
+        <li>למדוד <strong>קצב לשטח פנים</strong>, לא
+          <span class="ltr">k<sub>cat</sub></span>: הסובסטרט אינו מומס ואין לו
+          ריכוז, ולכן קינטיקת מיכאליס-מנטן אינה החשבון הנכון כאן
+          (<a href="https://doi.org/10.1002/smll.75670" target="_blank"
+              rel="noopener">PMID 42706806</a>).</li>
+      </ol>
+      <div class="check"><b>נקודת בקרה.</b> קצב לשטח פנים בתנאי גוף הוא המספר
+        שאף אחד לא מדד, בשתי זרועות המוצר. זה הניסוי שהמנוע מבקש.</div>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>החלטות עצירה</h2>
+  <p class="sec-sub">נקבעות מראש, כי אחרי שרואים נתונים כבר מאוחר</p>
+
+  <div class="scroll">
+    <table>
+      <caption>מה מפסיק את המסלול ומה ממשיך אותו.</caption>
+      <thead><tr><th>שלב</th><th>תוצאה</th><th>החלטה</th></tr></thead>
+      <tbody>
+        <tr><td class="num">2</td><td>הכול בפלט בלתי-מסיס אחרי שלושה תנאים</td>
+            <td>לעבור לביטוי מופרש או למארח אחר. לא להמשיך עם חלבון מקופל-מחדש
+              בלי לאמת שוב את הפעילות.</td></tr>
+        <tr><td class="num">4</td><td>המפל ב-pH גדול מהמפל בטמפרטורה</td>
+            <td>הניתוח החישובי שגה. להריץ PROPKA על המבנה לפני שמתכננים מוטנט
+              נוסף.</td></tr>
+        <tr><td class="num">5</td><td>H208A שומר על פעילות</td>
+            <td><strong>עצירה.</strong> כל תוצאות שלב 4 בטלות עד שמקור האות
+              מזוהה.</td></tr>
+        <tr><td class="num">6</td><td>זמן מחצית חיים מתחת לשעתיים בסרום</td>
+            <td>לעצור את מסלול האנזים החופשי. המשך רק דרך קיבוע או עטיפה, וזו
+              שאלת נשא ולא שאלת חלבון.</td></tr>
+        <tr><td class="num">7</td><td>אין שחרור TPA מדיד אחרי 14 יום</td>
+            <td>לדווח כתוצאה שלילית ולפרסם את הקצב העליון. תקרה מדודה שווה
+              יותר מהערכה.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <b>מה הפרוטוקול הזה לא מכסה.</b> הוא על אנזים לפולימר, כי שם יש מבנה
+    מאומת וטריאדה ידועה. הזרוע המתכתית צריכה פרוטוקול משלה, ונקודת הפתיחה שלה
+    השתנתה בשבוע האחרון: הסקירה הקלינית של הצוות הביאה שני מאמרים שמראים
+    הידרוגנאז <em>חוץ-תאי מופרש</em> שמחמצן Fe⁰ במגע ישיר
+    (<a href="https://doi.org/10.1038/s41598-018-33541-5" target="_blank"
+        rel="noopener">PMID 30310166</a>), ותווך נטול-תאים שעושה את זה
+    (<a href="https://doi.org/10.1128/mBio.00496-15" target="_blank"
+        rel="noopener">PMID 25900658</a>). המנוע טען שזה בלתי אפשרי. זה היה
+    שגוי. הפרוטוקול הראשון שם הוא לא ביטוי אלא <strong>בדיקת רגישות לחמצן</strong>,
+    כי שני אורגניזמי המקור הם אנאירובים מוחלטים ורקמה מחומצנת.
+  </div>
+</section>
+
+<footer>
+  <p><strong>איך לשחזר.</strong> הטבלאות והרצף בדף הזה נוצרים מהקוד:
+    <code>python -m tools.design_construct --target TfH --mutate H208A
+    --remove-signal-peptide 40</code> ואז
+    <code>python -m tools.build_protocol</code>. המבנה נמשך מ-RCSB ומאומת
+    בכל בנייה על ידי <code>tools/build_structure.py</code>, שנופל אם שלושת
+    מיקומי הטריאדה אינם Ser, Asp ו-His.</p>
+  <p>אבטיפוס מחקרי. לא מכשיר רפואי, לא כלי להחלטה קלינית, ולא מאומת לשימוש
+    באדם או בבעל חיים. הפרוטוקול הוא עבודת ספסל בחלבון מטוהר ואינו תכנון ניסוי
+    בבעלי חיים — לזה נדרשים אישורי ועדה שאינם חלק מהמסמך הזה.</p>
+  <p><a href="https://claude.ai/artifact/XQgkTkYvMmCjTXCqcXUr9H">ShrapMind</a>
+    — המנוע, ואינדקס כל הדפים בפרויקט.</p>
+</footer>
+
+</div>

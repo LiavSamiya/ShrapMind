@@ -297,6 +297,10 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
                 "dfo_mesylate_g_per_mol": metals.DFO_MESYLATE_G_PER_MOL,
             },
             "carrier_lifetime_weeks": metals.CARRIER_LIFETIME_WEEKS,
+            # From the team's clinical feasibility review. The local column is
+            # what a depot can cite; systemic precedent answers a different
+            # question.
+            "clinical_precedents": list(metals.CLINICAL_PRECEDENTS),
         },
         # The host-safety screen, counted once here rather than quoted from
         # memory in each page. A page that states 5/6/33/461 while the

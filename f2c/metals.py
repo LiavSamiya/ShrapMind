@@ -151,6 +151,34 @@ REFS = {
         "makes is reoxidised immediately. Measured on goethite at pH 6, not on "
         "metallic iron.",
     ),
+    "extracellular_hydrogenase": _ref(
+        "30310166", "10.1038/s41598-018-33541-5",
+        "An extracellular [NiFe] hydrogenase mediating iron corrosion is "
+        "encoded in a genetically unstable genomic island in Methanococcus "
+        "maripaludis",
+        2018,
+        "The paper that overturns this arm's assumption that nothing but a "
+        "biofilm attacks metallic iron. A 12-kb 'MIC island' encodes a [NiFe] "
+        "hydrogenase together with the TatA/TatC machinery that secretes it "
+        "and its maturation protease, so the enzyme reaches the outside of the "
+        "cell and contacts Fe(0) directly: Fe(0) + 2 H+ -> Fe(2+) + H2. A "
+        "deletion mutant lost the corroding activity. This is a secreted "
+        "protein acting on solid metal, not a community of cells.",
+    ),
+    "cell_free_electron_uptake": _ref(
+        "25900658", "10.1128/mBio.00496-15",
+        "Extracellular enzymes facilitate electron uptake in biocorrosion and "
+        "bioelectrosynthesis",
+        2015,
+        "And the demonstration that the cells are not needed at all. Free, "
+        "surface-associated hydrogenases and presumably formate "
+        "dehydrogenases, released from Methanococcus maripaludis during "
+        "ordinary culture, catalyse H2 or formate formation when sorbed to a "
+        "redox-active surface -- and rates from cell-free spent medium were "
+        "sufficient to account for the methane formed from Fe(0). A mutant "
+        "lacking every catabolic hydrogenase still showed it. Cell-free "
+        "activity on metallic iron is the result this arm said did not exist.",
+    ),
     "mic_electron_transfer": _ref(
         "27134022", "10.1016/bs.ampbs.2016.02.002",
         "Mechanisms of bacterial extracellular electron exchange",
@@ -233,6 +261,30 @@ METALS: dict[str, dict[str, Any]] = {
         "no_enzyme_reason": "Pb has no biological redox couple to exploit. "
                             "Nothing oxidises it usefully; there is no "
                             "lead-oxidising enzyme to engineer.",
+        "but_there_is_a_pathway": (
+            "Just not a shrinking one, and the team's clinical review draws "
+            "the distinction this arm was missing. Phosphatases, ureases and "
+            "carbonic anhydrase all act on Pb(2+): they raise local phosphate "
+            "or carbonate and precipitate it as pyromorphite, "
+            "Pb5(PO4)3Cl, or as cerussite. That is biomineralisation, and it "
+            "is real -- one 2026 study reports up to 99% removal of Pb(2+) "
+            "from solution with carbonic anhydrase. What it does is lock the "
+            "ion into an insoluble mineral, which lowers mobility and "
+            "toxicity. It does not make the fragment smaller. "
+            "DETOXIFICATION IS NOT SHRINKAGE, and conflating them would be "
+            "the most inviting error available in this arm: a route with "
+            "genuine enzymes, genuine products and no effect on the thing the "
+            "patient came in with."
+        ),
+        "the_one_metallic_lead_precedent": (
+            "Paecilomyces javanicus transforms metallic lead shot to "
+            "pyromorphite on the metal surface, through fungal biocorrosion "
+            "coupled to phosphate-mediated mineralisation. It is the closest "
+            "anything comes to acting on Pb(0) -- and no single enzyme was "
+            "isolated from it, so there is nothing to put in a hydrogel. "
+            "Named because it is the honest state of the art, not because it "
+            "is a lead."
+        ),
         "evidence": SPECIFIED,
     },
     "aluminium": {
@@ -878,7 +930,9 @@ def route(material: str) -> dict[str, Any] | None:
             ),
             "cycle": (
                 "What happens underneath is the part that matters. Iron's oxide "
-                "does not passivate: strip it and fresh metal is exposed, "
+                "is a poor passivating layer -- porous and non-adherent where "
+                "aluminium's and titanium's are dense and self-healing -- so "
+                "strip it and fresh metal is exposed, "
                 "oxygenated tissue re-oxidises that, and the chelator takes the "
                 "new layer. The metal is consumed one layer at a time, "
                 "indirectly, and the chelator never has to touch the lattice. "
@@ -894,6 +948,15 @@ def route(material: str) -> dict[str, Any] | None:
                 "engineering problem is the opposite one: making the fragment "
                 "corrode at all."
             ),
+            "but_not_nothing": (
+                "Poor is not absent, and the team's clinical review is right "
+                "to press on this: oxidising Fe(II) to Fe(III) produces oxides "
+                "and hydroxides that do accumulate and do slow the reaction, "
+                "so a ferroxidase on its own is not obviously an accelerant. "
+                "That is the argument for a chelator setting the rate rather "
+                "than an oxidase, and this arm reaches the same conclusion "
+                "from the dissolution side."
+            ),
             "what_moves_it": (
                 "Surface state rather than chemistry. Sandblasting raised pure "
                 "iron's corrosion rate and the increase held through long-term "
@@ -904,14 +967,16 @@ def route(material: str) -> dict[str, Any] | None:
             "evidence": LITERATURE,
             "refs": [REFS["iron_corrodes_too_slowly"], REFS["chelating_hydrogel"]],
         }
+    if m["element"] == "Fe":
+        out["direct_attack"] = _direct_fe0_attack(mass_mg=None)
     out["alternative"] = {
-        "what": "Microbially influenced corrosion is the one mechanism that acts "
-                "on metallic iron directly, by extracellular electron transfer "
-                "from Fe(0).",
-        "why_not_used": "It is a living biofilm, not a protein that can be "
-                        "injected, and deliberately establishing one in a wound "
-                        "is not a therapy. It is listed because it is the reason "
-                        "to believe the first stage is physically possible.",
+        "what": "Microbially influenced corrosion acts on metallic iron "
+                "directly, by extracellular electron transfer from Fe(0).",
+        "why_not_used": "As a community of living cells it is not a therapy: "
+                        "deliberately establishing a biofilm in a wound is not "
+                        "something to propose. But the enzymes behind it are a "
+                        "different matter, and this arm was wrong about that "
+                        "-- see the direct-attack section above.",
         "evidence": LITERATURE,
         "ref": REFS["mic_electron_transfer"],
     }
@@ -1182,3 +1247,312 @@ def carrier_placements(material: str, particle_size_mm: float | None,
         ),
         "evidence": DERIVED,
     }
+
+
+# ---------------------------------------------------------------------------
+# Direct attack on metallic iron, and the two things that stand in its way.
+#
+# This arm said, in plain words, that the only mechanism acting on metallic
+# iron was "a living biofilm, not a protein that can be injected". The team's
+# clinical review brought two papers that say otherwise, and they say it
+# clearly enough that the claim had to go:
+#
+#   Tsurumaru 2018 -- a [NiFe] hydrogenase encoded beside its own Tat
+#   secretion machinery, reaching the outside of the cell and oxidising Fe(0)
+#   on contact. Deleting the island removes the corroding activity.
+#
+#   Deutzmann 2015 -- the cells are not needed. Free enzymes shed into the
+#   medium, sorbed to the metal, account for the observed rates; a strain with
+#   every catabolic hydrogenase deleted still shows it.
+#
+# So a secreted protein acting on solid Fe(0) is not hypothetical. It is the
+# best lead this arm has, and it was ruled out by an assumption rather than by
+# evidence.
+#
+# Two problems follow immediately, and neither is in the review. The first is
+# oxygen. The second is arithmetic, and it is the one nobody has written down:
+# the reaction makes hydrogen gas, one mole per mole of iron, and a fragment
+# sits in a closed fibrotic capsule.
+# ---------------------------------------------------------------------------
+
+GAS_CONSTANT_L_ATM = 0.0820573
+BODY_TEMPERATURE_K = 310.15
+
+
+def hydrogen_evolution(mass_mg: float | None, material: str = "steel",
+                       volume_fraction: float = 1.0) -> dict[str, Any]:
+    """How much H2 the hydrogenase route would release, as a volume.
+
+    Fe(0) + 2 H+ -> Fe(2+) + H2 is one mole of hydrogen per mole of iron, so
+    the volume follows from the fragment's mass and nothing else. It is the
+    same mass balance the rest of this arm runs on, pointed at the product
+    instead of the reactant.
+    """
+    key = resolve(material)
+    if key is None or mass_mg is None or mass_mg <= 0:
+        return {"computable": False,
+                "why": "Needs a known metal and a fragment mass."}
+    if METALS[key]["element"] != "Fe":
+        return {"computable": False,
+                "why": "This stoichiometry is specific to Fe(0) oxidation."}
+
+    fe_mg = mass_mg * METAL_FRACTION.get(key, 1.0) * volume_fraction
+    mol = fe_mg / 1000.0 / FE_G_PER_MOL
+    litres = mol * GAS_CONSTANT_L_ATM * BODY_TEMPERATURE_K
+    return {
+        "computable": True,
+        "volume_fraction": volume_fraction,
+        "iron_mg": fe_mg,
+        "h2_mmol": mol * 1000,
+        "h2_ml_at_37c": litres * 1000,
+        "basis": "One mole of H2 per mole of Fe(0) oxidised, from "
+                 "Fe(0) + 2 H+ -> Fe(2+) + H2, at 37 C and one atmosphere.",
+        "why_it_matters": (
+            "A 20% debulk of a 50 mg fragment is about 4.5 mL of hydrogen, "
+            "released inside an avascular fibrotic capsule next to the nerve "
+            "the treatment exists to protect. Gas in a closed tissue space "
+            "raises pressure, which is the symptom being treated, and on "
+            "imaging it looks like gas-forming infection. Neither the clinical "
+            "review nor the carrier document states this, and it follows from "
+            "the reaction they both cite."
+        ),
+        "what_would_settle_it": (
+            "Whether hydrogen diffuses out faster than it is made. H2 is the "
+            "smallest molecule there is and tissue is not sealed, so the "
+            "steady-state volume may be far below the total -- but that is a "
+            "measurement, not an assumption, and the total is what the mass "
+            "balance fixes."
+        ),
+        "evidence": DERIVED,
+    }
+
+
+def _direct_fe0_attack(mass_mg: float | None = None) -> dict[str, Any]:
+    """The enzymes that act on metallic iron, and what blocks each."""
+    return {
+        "what_changed": (
+            "This arm previously stated that nothing but a living biofilm "
+            "attacks metallic iron. That was wrong, and the correction comes "
+            "from the team's clinical feasibility review rather than from "
+            "here."
+        ),
+        "enzymes": [
+            {
+                "name": "Extracellular [NiFe] hydrogenase",
+                "organism": "Methanococcus maripaludis OS7",
+                "reaction": "Fe(0) + 2 H+ -> Fe(2+) + H2",
+                "why_it_matters": "Secreted through Tat machinery encoded in "
+                                  "the same island, so it contacts Fe(0) "
+                                  "directly. A deletion mutant loses the "
+                                  "activity, which ties the phenotype to this "
+                                  "protein rather than to the community.",
+                "evidence": LITERATURE,
+                "ref": REFS["extracellular_hydrogenase"],
+            },
+            {
+                "name": "Cell-free hydrogenase and formate dehydrogenase",
+                "organism": "Methanococcus maripaludis MM901",
+                "reaction": "Fe(0) + 2 H+ -> Fe(2+) + H2; and with CO2, "
+                            "Fe(0) + CO2 + H+ -> Fe(2+) + formate",
+                "why_it_matters": "Spent medium with no cells in it takes "
+                                  "electrons from Fe(0) at rates sufficient to "
+                                  "explain the whole phenotype. This is the "
+                                  "result that makes the route an injectable "
+                                  "protein rather than an ecology.",
+                "evidence": LITERATURE,
+                "ref": REFS["cell_free_electron_uptake"],
+            },
+            {
+                "name": "[FeFe] hydrogenase",
+                "organism": "Clostridium acetobutylicum",
+                "reaction": "Fe(0) + 2 H+ -> Fe(2+) + H2",
+                "why_it_matters": "Direct electron transfer between the metal "
+                                  "surface and the enzyme, shown to accelerate "
+                                  "mild-steel corrosion. Cited in the team's "
+                                  "review from Corrosion Science 2016, which "
+                                  "PubMed does not index, so it is named here "
+                                  "without an identifier rather than given a "
+                                  "link this project cannot verify.",
+                "evidence": LITERATURE,
+                "ref": None,
+            },
+        ],
+        "blocking_problems": [
+            {
+                "problem": "Oxygen",
+                "detail": "Both hydrogenase classes are oxygen-sensitive, "
+                          "many of them irreversibly so within minutes, and "
+                          "both source organisms are strict anaerobes -- one "
+                          "is a methanogenic archaeon. Tissue is oxygenated. "
+                          "This is the first thing to establish and the review "
+                          "does not raise it.",
+                "severity": "blocking until shown otherwise",
+                "what_would_settle_it": "Residual activity of the purified "
+                                        "enzyme after exposure to air at the "
+                                        "dissolved-oxygen tension of "
+                                        "subcutaneous tissue. If it is minutes, "
+                                        "the route needs an O2-tolerant "
+                                        "hydrogenase, and those exist in "
+                                        "Ralstonia and Aquifex -- which turns "
+                                        "this into a protein-engineering "
+                                        "programme with a known starting "
+                                        "point.",
+            },
+            {
+                "problem": "The product is a gas",
+                "detail": "One mole of H2 per mole of iron, inside a closed "
+                          "capsule. See hydrogen_evolution() for the volume; "
+                          "it is millilitres, not microlitres.",
+                "severity": "needs a number before it needs a solution",
+                "what_would_settle_it": "Whether diffusion out beats "
+                                        "production. H2 is the smallest "
+                                        "molecule there is, so it may never "
+                                        "accumulate -- but the total is fixed "
+                                        "by the mass balance and has to be "
+                                        "compared against it.",
+            },
+            {
+                "problem": "It releases Fe(II), the dangerous oxidation state",
+                "detail": "The reaction's iron product is ferrous, which is "
+                          "the Fenton reactant. So this route does not remove "
+                          "the capture requirement, it sharpens it: capture "
+                          "has to be in place before dissolution starts, not "
+                          "alongside it.",
+                "severity": "same constraint as the rest of the arm",
+                "what_would_settle_it": "Nothing new -- it is the chelator "
+                                        "ceiling already computed here.",
+            },
+        ],
+        "why_this_is_still_the_best_lead": (
+            "Every other candidate in this arm acts on Fe(II) that is already "
+            "in solution, which means something else has to dissolve the "
+            "fragment first and the enzyme only manages the ion. These three "
+            "act on the solid. That is the one step the arm could not "
+            "otherwise fill, and it is filled by proteins rather than by "
+            "chemistry alone."
+        ),
+        "evidence": LITERATURE,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Approved products where an enzyme touches a person.
+#
+# From the team's clinical feasibility review, which assembled it from the FDA
+# Purple Book and current labels. It belongs in the engine because it answers
+# the question a judge asks first -- has anyone ever injected an enzyme into a
+# person on purpose -- and because two entries answer a narrower question this
+# arm needed and had no answer for: whether an injected *oxidoreductase* has
+# precedent. ELITEK and KRYSTEXXA are recombinant urate oxidases given
+# intravenously, which is the closest regulatory analogue a ferroxidase has.
+#
+# Route of administration is the column that matters. The product here is a
+# local depot, so the precedents worth most are the local ones.
+# ---------------------------------------------------------------------------
+
+CLINICAL_PRECEDENTS: tuple[dict[str, Any], ...] = (
+    {
+        "product": "XIAFLEX",
+        "enzyme_class": "peptidase",
+        "enzyme": "Collagenase clostridium histolyticum (AUX-I/AUX-II)",
+        "route": "Intralesional injection",
+        "proves": "A bacterial enzyme injected locally to break down a solid "
+                  "structure at the site. The closest human precedent the "
+                  "concept has.",
+        "but": "Its own label warns against injection into nerves, vessels or "
+               "other collagen-containing structures -- which is this "
+               "product's anatomy. See hostsafety.PROPOSED_REAGENTS.",
+        "locality": "local",
+    },
+    {
+        "product": "HYLENEX",
+        "enzyme_class": "glycosidase",
+        "enzyme": "Recombinant human hyaluronidase PH20",
+        "route": "Subcutaneous / infiltration",
+        "proves": "Local enzymatic hydrolysis of extracellular matrix with a "
+                  "recombinant human enzyme.",
+        "but": "It degrades hyaluronic acid, which is the carrier backbone in "
+               "the team's hydrogel design. An HA gel in tissue meets host "
+               "hyaluronidase whether or not anyone injects more.",
+        "locality": "local",
+    },
+    {
+        "product": "ELITEK",
+        "enzyme_class": "oxidoreductase",
+        "enzyme": "Rasburicase, recombinant urate oxidase",
+        "route": "Intravenous infusion",
+        "proves": "An injected OXIDOREDUCTASE, used to change a substrate's "
+                  "oxidation state fast. This is the regulatory analogue a "
+                  "ferroxidase arm needed and did not have.",
+        "but": "Systemic, and its substrate is a dissolved metabolite rather "
+               "than a solid.",
+        "locality": "systemic",
+    },
+    {
+        "product": "KRYSTEXXA",
+        "enzyme_class": "oxidoreductase",
+        "enzyme": "Pegloticase, PEGylated recombinant uricase",
+        "route": "Intravenous infusion",
+        "proves": "A PEGylated engineered oxidase dosed chronically in people. "
+                  "Precedent for both the enzyme class and the PEG carrier.",
+        "but": "Also the precedent for the anti-PEG problem: pegloticase's own "
+               "immunogenicity is dominated by anti-PEG antibodies, which is "
+               "the risk flagged against Pluronic F127 in the carrier review.",
+        "locality": "systemic",
+    },
+    {
+        "product": "ACTIVASE / Cathflo",
+        "enzyme_class": "peptidase",
+        "enzyme": "Alteplase, recombinant tPA",
+        "route": "IV; Cathflo instilled locally into a blocked catheter",
+        "proves": "Enzymatic dissolution of a solid network, and a licensed "
+                  "product whose whole mode of use is instillation into a "
+                  "small closed space.",
+        "but": "Fibrin is a protein network, not a mineral or a metal.",
+        "locality": "local",
+    },
+    {
+        "product": "NEXOBRID",
+        "enzyme_class": "peptidase",
+        "enzyme": "Anacaulase-bcdb, bromelain-enriched proteases",
+        "route": "Topical gel on the burn",
+        "proves": "Controlled enzymatic debridement replacing mechanical "
+                  "excision -- the argument this product makes about surgery, "
+                  "already approved for a different tissue.",
+        "but": "Topical on an open wound, where a retained fragment is closed "
+               "and deep.",
+        "locality": "local",
+    },
+    {
+        "product": "PALYNZIQ",
+        "enzyme_class": "lyase",
+        "enzyme": "Pegvaliase, PEGylated phenylalanine ammonia lyase",
+        "route": "Chronic subcutaneous injection",
+        "proves": "A non-human, engineered, PEGylated enzyme dosed chronically "
+                  "in people.",
+        "but": "Carries a boxed warning for anaphylaxis, which is the honest "
+               "price of a microbial enzyme in a human.",
+        "locality": "systemic",
+    },
+    {
+        "product": "PULMOZYME",
+        "enzyme_class": "nuclease",
+        "enzyme": "Dornase alfa, recombinant human DNase I",
+        "route": "Inhaled",
+        "proves": "Local delivery to a compartment with low systemic "
+                  "exposure, which is the depot argument.",
+        "but": "The airway clears itself; a fibrotic capsule does not.",
+        "locality": "local",
+    },
+)
+
+
+def clinical_precedent(kind: str = "all") -> list[dict[str, Any]]:
+    """Approved products, optionally narrowed to the locally administered ones.
+
+    `kind` of "local" is the set worth citing for a depot, because systemic
+    precedent answers a question this product is not asking.
+    """
+    if kind == "all":
+        return list(CLINICAL_PRECEDENTS)
+    return [p for p in CLINICAL_PRECEDENTS if p["locality"] == kind]

@@ -176,6 +176,26 @@ CHECKS: list[dict[str, Any]] = [
          __import__("f2c.metals", fromlist=["x"])._penetration_fraction(0.20)
          * 100, 2)},
 
+    # --- protocol (Hebrew) -----------------------------------------------
+    {"page": "protocol", "what": "construct length, bp",
+     "claimed": 810, "truth": lambda d: _construct()["dna_length_bp"]},
+    {"page": "protocol", "what": "titratable residues in 4CG1",
+     "claimed": 65, "truth": lambda d: _ph("narrow")["titratable_total"]},
+    {"page": "protocol", "what": "responsive, pH 8 to 7.4",
+     "claimed": 8, "truth": lambda d: _ph("narrow")["responsive_in_span"]},
+    {"page": "protocol", "what": "responsive, pH 2 to 7.4",
+     "claimed": 31, "truth": lambda d: _ph("wide")["responsive_in_span"]},
+    {"page": "protocol", "what": "theoretical pI of TfH",
+     "claimed": 7.96, "truth": lambda d: _pi()["pI"]},
+    {"page": "protocol", "what": "top-ranked pH-sensitive residue",
+     "claimed": "HIS208",
+     "truth": lambda d: _ph("narrow")["shortlist"][0]["residue"]},
+    {"page": "protocol", "what": "codons moved off the preferred choice",
+     "claimed": 2,
+     "truth": lambda d: len(_construct()["codon_swaps_from_preferred"])},
+    {"page": "protocol", "what": "reported temperature optima for TfH",
+     "claimed": "25, 25, 50, 55", "truth": lambda d: _topts()},
+
     # --- carrier-review (Hebrew) -----------------------------------------
     {"page": "carrier-review", "what": "DFO for a 20% debulk of 50 mg, mg",
      "claimed": 98,
@@ -192,6 +212,42 @@ CHECKS: list[dict[str, Any]] = [
      "claimed": 141,
      "truth": lambda d: _placements(d, 3.0, "pure_iron_low")},
 ]
+
+
+_PH_CACHE: dict[str, Any] = {}
+
+
+def _ph(which: str) -> dict[str, Any]:
+    """The pH-site analysis the protocol page quotes."""
+    if which not in _PH_CACHE:
+        from f2c import phsites
+        pdb = ROOT / "data" / "raw" / "structures" / "4cg1_trimmed.pdb"
+        spans = {"narrow": (8.0, 7.4), "wide": (2.0, 7.4)}
+        a, b = spans[which]
+        _PH_CACHE[which] = phsites.analyse(pdb, [130, 176, 208],
+                                           pH_from=a, pH_to=b)
+    return _PH_CACHE[which]
+
+
+def _pi() -> dict[str, Any]:
+    from f2c import phsites, warehouse
+    seq = {p.name: p for p in warehouse.load()}["TfH"].sequence
+    return phsites.isoelectric_point(seq)
+
+
+def _topts() -> str:
+    from f2c import warehouse
+    prot = {p.name: p for p in warehouse.load()}["TfH"]
+    vals = sorted(o.value for o in prot.observations
+                  if o.metric == "temperature_optimum_c" and o.value)
+    return ", ".join(f"{v:g}" for v in vals)
+
+
+def _construct() -> dict[str, Any]:
+    path = ROOT / "data" / "constructs" / "TfH_H208A.json"
+    if not path.exists():
+        raise SystemExit("run tools.design_construct first")
+    return json.loads(path.read_text())
 
 
 def _placements(d: dict[str, Any], size_mm: float, label: str) -> int:

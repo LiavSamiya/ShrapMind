@@ -779,15 +779,37 @@ def test_the_metal_carrier_states_why_it_matters_more_than_in_the_polymer_arm():
 
 def test_the_arm_answers_what_happens_to_unrusted_metal():
     """Every candidate acts on the oxide, which invites the obvious objection
-    that the metal underneath is untouched. Iron's oxide does not passivate, so
-    stripping it exposes fresh metal that tissue re-oxidises — the route has to
-    say that rather than leave the gap for a reviewer to find."""
+    that the metal underneath is untouched.
+
+    The invariant, not the wording: the arm must distinguish iron from the
+    metals whose oxide really does protect them, must explain how the metal is
+    consumed indirectly, and must concede that oxide still accumulates. An
+    earlier version of this test asserted the literal phrase "does not
+    passivate" and failed when that claim was deliberately softened -- the
+    team's clinical review is right that oxidising Fe(II) produces oxides that
+    slow the reaction, so "does not passivate" was too absolute. The test was
+    wrong about what it was protecting.
+    """
     from f2c import metals
 
     u = metals.route("steel")["unrusted_metal"]
-    assert "does not passivate" in u["cycle"]
-    assert u["refs"], "the cycle claim needs its citations"
-
+    cycle = u["cycle"].lower()
+    # Iron is treated differently from the self-healing oxides, by name.
+    assert "aluminium" in cycle and "titanium" in cycle
+    # And the mechanism is indirect consumption, not attack on the lattice.
+    assert "lattice" in cycle
+    assert re.search(r"re-?oxidis", cycle), (
+        "the strip-reoxidise-strip cycle is the whole argument for iron"
+    )
+    # The concession has to be present too: a poor passivating layer is not no
+    # passivating layer, and the arm must say so rather than overclaim.
+    assert u.get("but_not_nothing"), (
+        "the arm must concede that oxide accumulation slows the reaction"
+    )
+    assert "slow" in u["but_not_nothing"].lower()
+    # Aluminium and titanium themselves must stay excluded.
+    for metal in ("aluminium", "titanium"):
+        assert metals.METALS[metal]["route"] == "none"
 
 def test_the_arm_corrects_its_own_runaway_warning():
     """The arm warns that dissolution could run away into systemic exposure.
@@ -1109,3 +1131,274 @@ def test_the_built_safety_review_has_no_unfilled_tokens():
     assert built.exists(), "run `python -m tools.build_safety_review`"
     left = re.findall(r"\{\{[A-Z_]+\}\}", built.read_text())
     assert not left, f"unsubstituted tokens in the published page: {set(left)}"
+
+
+# --- the pH-site screen -----------------------------------------------------
+
+def test_only_residues_whose_pka_is_inside_the_span_respond():
+    """A side chain responds to a pH move only if its pKa lies between the two.
+
+    Asp at 3.9 and Arg at 12.5 are fully ionised at both ends of the
+    physiological span, so a pH 8 to 7.4 move changes nothing for them.
+    Histidine at 6.0 is the residue that actually switches.
+    """
+    from f2c import phsites
+    asp = phsites.charged_fraction(3.9, 8.0, "deprotonated")
+    asp_t = phsites.charged_fraction(3.9, 7.4, "deprotonated")
+    his = phsites.charged_fraction(6.0, 6.0, "protonated")
+    assert abs(asp - asp_t) < 0.01, "Asp must not register as pH-responsive here"
+    assert abs(his - 0.5) < 0.01, "at its own pKa a residue is half charged"
+    # And the direction is right: a base is less protonated as pH rises.
+    assert (phsites.charged_fraction(6.0, 5.0, "protonated")
+            > phsites.charged_fraction(6.0, 8.0, "protonated"))
+
+
+def test_the_catalytic_histidine_leads_the_shortlist():
+    from pathlib import Path
+    from f2c import phsites
+    pdb = Path(__file__).resolve().parent.parent / "data/raw/structures/4cg1_trimmed.pdb"
+    if not pdb.exists():
+        import pytest as _p
+        _p.skip("structure not built; run tools/build_structure.py")
+    r = phsites.analyse(pdb, site_residues=[130, 176, 208],
+                        pH_from=8.0, pH_to=7.4)
+    assert not r["site_residues_missing_from_structure"]
+    assert r["shortlist"][0]["residue"] == "HIS208"
+    assert r["shortlist"][0]["is_catalytic"] is True
+
+
+def test_proximity_is_measured_from_the_ionisable_group_not_the_backbone():
+    """Every residue's backbone touches its sequence neighbour's.
+
+    Measuring all atoms put His129 1.33 A from Ser130 -- a peptide bond, not a
+    functional proximity -- and shortlisted it for being adjacent in sequence.
+    """
+    from pathlib import Path
+    from f2c import phsites
+    pdb = Path(__file__).resolve().parent.parent / "data/raw/structures/4cg1_trimmed.pdb"
+    if not pdb.exists():
+        import pytest as _p
+        _p.skip("structure not built")
+    r = phsites.analyse(pdb, site_residues=[130, 176, 208])
+    his129 = next(x for x in r["rows"] if x["residue"] == "HIS129")
+    assert his129["distance_to_site_a"] > 2.0, (
+        "a sequence neighbour must not read as a bond length away"
+    )
+
+
+def test_a_wide_ph_move_changes_far_more_than_a_narrow_one():
+    """The acidophile problem, quantified rather than asserted.
+
+    The arm says Cyc2 carries a five-pH-unit gap. Moving a structure from pH 2
+    to 7.4 must flip many more residues than moving it from 8 to 7.4, including
+    the catalytic acid.
+    """
+    from pathlib import Path
+    from f2c import phsites
+    pdb = Path(__file__).resolve().parent.parent / "data/raw/structures/4cg1_trimmed.pdb"
+    if not pdb.exists():
+        import pytest as _p
+        _p.skip("structure not built")
+    narrow = phsites.analyse(pdb, [130, 176, 208], pH_from=8.0, pH_to=7.4)
+    wide = phsites.analyse(pdb, [130, 176, 208], pH_from=2.0, pH_to=7.4)
+    assert wide["responsive_in_span"] > 3 * narrow["responsive_in_span"]
+    asp = next(x for x in wide["rows"] if x["residue"] == "ASP176")
+    assert asp["ionisation_change"] > 0.9, (
+        "the catalytic aspartate inverts its charge across this span"
+    )
+
+
+def test_pi_is_computed_and_flags_proximity_to_body_ph():
+    from f2c import phsites, warehouse
+    seq = {p.name: p for p in warehouse.load()}["TfH"].sequence
+    out = phsites.isoelectric_point(seq)
+    assert 3.0 < out["pI"] < 12.0
+    # TfH's pI sits close to 7.4, which is a formulation finding rather than a
+    # catalytic one, and the function must say so.
+    assert out["aggregation_risk_near_pI"] is True
+    assert abs(out["pI"] - 7.4) < 1.0
+
+
+# --- the DNA construct ------------------------------------------------------
+
+def test_the_construct_translates_back_to_the_designed_protein():
+    """Reverse translation is mechanical, so this must be exact.
+
+    Checked against a standard codon table built here, not against the tool's
+    own table, since round-tripping through one table proves nothing.
+    """
+    from tools.design_construct import (CODONS, STOP, TAGS, reverse_translate)
+    bases, aas = "TCAG", (
+        "FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG")
+    std = {}
+    i = 0
+    for a in bases:
+        for b in bases:
+            for c in bases:
+                std[a + b + c] = aas[i]
+                i += 1
+    # Every codon the tool can emit must mean what the tool thinks it means.
+    for aa, codons in CODONS.items():
+        for codon in codons:
+            assert std[codon] == aa, f"{codon} is {std[codon]}, not {aa}"
+    assert all(std[STOP[i:i + 3]] == "*" for i in range(0, len(STOP), 3))
+
+    from f2c import warehouse
+    seq = {p.name: p for p in warehouse.load()}["TfH"].sequence[40:]
+    prefix = "ATG" + TAGS["his6_n"]["dna"]
+    body, _ = reverse_translate(seq, prefix=prefix)
+    orf = prefix + body + STOP
+    protein = "".join(std[orf[i:i + 3]] for i in range(0, len(orf) - 2, 3))
+    assert protein.split("*")[0] == "M" + TAGS["his6_n"]["protein"] + seq
+    assert len(orf) % 3 == 0
+
+
+def test_the_construct_carries_no_internal_restriction_site():
+    """Methionine and tryptophan have one codon each, so a site completed by
+    ATG or TGG can only be fixed by changing the codon before it. Greedy
+    selection alone produced an ORF with internal NdeI and NcoI sites."""
+    from f2c import warehouse
+    from tools.design_construct import (RESTRICTION, STOP, TAGS, _violates,
+                                        reverse_translate, revcomp)
+    seq = {p.name: p for p in warehouse.load()}["TfH"].sequence[40:]
+    prefix = "ATG" + TAGS["his6_n"]["dna"]
+    body, _ = reverse_translate(seq, prefix=prefix)
+    orf = prefix + body + STOP
+    assert not _violates(orf), f"constraints violated: {_violates(orf)}"
+    for name, site in RESTRICTION.items():
+        assert site not in orf and revcomp(site) not in orf, name
+
+
+def test_a_mutation_written_against_wrong_numbering_is_refused():
+    """The commonest way a construct fails, and it fails after it is paid for."""
+    import pytest as _p
+    from f2c import warehouse
+    from tools.design_construct import apply_mutations
+    seq = {p.name: p for p in warehouse.load()}["TfH"].sequence
+    # Correct: structure numbering plus the 40-residue signal peptide.
+    out, applied = apply_mutations(seq, ["H208A"], offset=40)
+    assert applied[0]["uniprot_position"] == 248
+    assert out[247] == "A" and seq[247] == "H"
+    # Wrong: the same mutation read as UniProt numbering.
+    with _p.raises(SystemExit):
+        apply_mutations(seq, ["H208A"], offset=0)
+    # And a position past the end.
+    with _p.raises(SystemExit):
+        apply_mutations(seq, ["H9999A"], offset=40)
+
+
+def test_the_mutant_differs_from_wild_type_at_exactly_one_position():
+    from f2c import warehouse
+    from tools.design_construct import apply_mutations
+    seq = {p.name: p for p in warehouse.load()}["TfH"].sequence
+    mutant, _ = apply_mutations(seq, ["H208A"], offset=40)
+    diffs = [i for i, (a, b) in enumerate(zip(seq, mutant)) if a != b]
+    assert diffs == [247]
+
+
+# --- what the clinical review corrected -------------------------------------
+
+def test_the_arm_no_longer_claims_only_a_biofilm_attacks_metallic_iron():
+    """It said so in plain words, and the team's clinical review disproved it.
+
+    Tsurumaru 2018 shows a secreted [NiFe] hydrogenase oxidising Fe(0) on
+    contact; Deutzmann 2015 shows cell-free spent medium doing it. A secreted
+    protein acting on solid metal is the one step this arm could not fill.
+    """
+    from f2c import metals
+    direct = metals.route("steel")["direct_attack"]
+    names = [e["name"] for e in direct["enzymes"]]
+    assert any("NiFe" in n for n in names)
+    assert any("Cell-free" in n for n in names)
+    pmids = {e["ref"]["pmid"] for e in direct["enzymes"] if e.get("ref")}
+    assert {"30310166", "25900658"} <= pmids
+    # An enzyme the project cannot cite must carry no reference rather than an
+    # invented one.
+    unreferenced = [e for e in direct["enzymes"] if not e.get("ref")]
+    assert unreferenced and "FeFe" in unreferenced[0]["name"]
+    # And the old claim must be gone from the alternative section.
+    alt = metals.route("steel")["alternative"]
+    assert "wrong about that" in alt["why_not_used"]
+
+
+def test_the_hydrogen_the_route_would_release_is_computed():
+    """One mole of H2 per mole of Fe(0), inside a closed capsule.
+
+    Neither the clinical review nor the carrier document states this, and it
+    follows from the reaction both cite.
+    """
+    from f2c import metals
+    h = metals.hydrogen_evolution(50.0, "steel", 0.20)
+    assert h["computable"]
+    # Millilitres, not microlitres: the number is what makes it a problem.
+    assert 3.0 < h["h2_ml_at_37c"] < 6.0
+    # Stoichiometry is 1:1, so the volume scales with the iron.
+    full = metals.hydrogen_evolution(50.0, "steel", 1.0)
+    assert full["h2_ml_at_37c"] == pytest.approx(h["h2_ml_at_37c"] * 5, rel=1e-6)
+    # And it is specific to iron.
+    assert metals.hydrogen_evolution(50.0, "lead")["computable"] is False
+
+
+def test_lead_distinguishes_detoxification_from_shrinkage():
+    """The most inviting error in this arm: real enzymes, real products, and
+    no effect on the thing the patient came in with."""
+    from f2c import metals
+    pb = metals.METALS["lead"]
+    assert pb["route"] == "capture_only"
+    text = pb["but_there_is_a_pathway"]
+    assert "DETOXIFICATION IS NOT SHRINKAGE" in text
+    assert "pyromorphite" in text.lower()
+    assert pb["the_one_metallic_lead_precedent"]
+
+
+def test_an_injected_oxidoreductase_has_clinical_precedent():
+    """The question the ferroxidase arm could not answer before."""
+    from f2c import metals
+    # Classified as data, not matched on the product name: "uricase" is an
+    # oxidase and the string does not say so.
+    oxidases = [p for p in metals.CLINICAL_PRECEDENTS
+                if p["enzyme_class"] == "oxidoreductase"]
+    assert len(oxidases) >= 2
+    assert {"ELITEK", "KRYSTEXXA"} <= {p["product"] for p in oxidases}
+    # Every precedent must state its limitation as well as what it proves.
+    for p in metals.CLINICAL_PRECEDENTS:
+        assert p["proves"] and p["but"], p["product"]
+        assert p["enzyme_class"], p["product"]
+    assert metals.clinical_precedent("local")
+    assert all(p["locality"] == "local"
+               for p in metals.clinical_precedent("local"))
+
+
+def test_the_built_protocol_has_no_unfilled_tokens():
+    from pathlib import Path
+    import re
+    built = Path(__file__).resolve().parent.parent / "ui" / "protocol.html"
+    assert built.exists(), "run `python -m tools.build_protocol`"
+    text = built.read_text()
+    assert not re.findall(r"\{\{[A-Z_]+\}\}", text)
+    # The sequence has to actually be in the page, not described.
+    assert "ATGCATCATCATCATCATCAC" in text, (
+        "the construct the protocol is about must appear in it"
+    )
+
+
+def test_the_protocol_does_not_claim_a_settled_temperature_optimum():
+    """TfH's four reported optima are 25, 25, 50 and 55 -- a median of 37.5.
+
+    A draft of the protocol asserted that TfH's problem was temperature rather
+    than pH. The warehouse does not support that, and the page now states the
+    scatter instead. This test exists because the claim was written and had to
+    be caught.
+    """
+    from pathlib import Path
+    from f2c import warehouse
+    prot = {p.name: p for p in warehouse.load()}["TfH"]
+    vals = sorted(o.value for o in prot.observations
+                  if o.metric == "temperature_optimum_c" and o.value)
+    assert len(vals) > 1 and max(vals) - min(vals) > 20, (
+        "fixture gone: this test is about a disagreeing literature"
+    )
+    page = (Path(__file__).resolve().parent.parent / "ui" / "protocol.html").read_text()
+    assert ", ".join(f"{v:g}" for v in vals) in page, (
+        "the page must show every reported optimum, not pick one"
+    )

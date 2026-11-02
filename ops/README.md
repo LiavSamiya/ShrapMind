@@ -23,9 +23,9 @@ otherwise the two drift and the restore quietly reverts a fix.
 
 ## The published pages
 
-Eight artifacts were published for this project. Four are current; the other
+Nine artifacts were published for this project. Five are current; the other
 four are earlier work, kept rather than deleted. The directory that lists all
-eight lives in the `#index` section of `ui/app.html`, so it ships with the
+nine lives in the `#index` section of `ui/app.html`, so it ships with the
 engine rather than existing only as a message in a chat.
 
 | Page | Artifact | Source in this repo |
@@ -33,6 +33,7 @@ engine rather than existing only as a message in a chat.
 | ShrapMind (entry point) | `XQgkTkYvMmCjTXCqcXUr9H` | `ui/app.html` → `tools/build_app.py` → `ui/shrapmind.html` |
 | Fragment-to-Catalyst Safety Review | `9NDiDW7T9dgooUJEGD9jYt` | `ui/safety-review.src.html` → `tools/build_safety_review.py` → `ui/safety-review.html` |
 | ביקורת ארכיטקטורת ההידרוג'ל | `7vSe3aYcf4KM8KQKTzbfD5` | `ui/carrier-review.html` |
+| פרוטוקול הנדסת אנזים | `5eHNCDQXRmxf82gyNiDsSg` | `ui/protocol.src.html` → `tools/build_protocol.py` → `ui/protocol.html` |
 | Shrapnel — team workspace | `R8WfMNJXNCrfk7jiMiAYMj` | not in this repo; holds its own live database written by the team |
 | TfH Catalytic Site | `TmWMoL2bKvSPyrL63t9JVf` | superseded — its viewer is inline in `ui/app.html` |
 | Shrapnel · רקע לבדיקה | `5c9UekC5TgCLZ15cQ5ueEn` | earlier work |
@@ -74,3 +75,26 @@ scores, and nothing is dropped from the pool, so a refusal stays auditable.
 The same screen covers reagents the warehouse has never seen
 (`PROPOSED_REAGENTS`), which is how the carrier document's Stage 0 collagenase
 is refused by the same mechanism rather than by a separate argument.
+
+
+## Designing a variant, end to end
+
+Two tools answer the chief biologist's two questions, and both write their
+numbers into the protocol page rather than being quoted by hand.
+
+    python -m tools.design_construct --target TfH --mutate H208A \
+        --remove-signal-peptide 40
+    python -m tools.build_protocol
+
+`tools/design_construct.py` verifies the wild-type residue at every mutated
+position before touching it, trims the signal peptide, reverse-translates with
+E. coli codon preferences, and backtracks one codon when methionine or
+tryptophan completes a restriction site — greedy selection alone produced an
+ORF carrying internal NdeI and NcoI sites. The test suite translates the
+result back through a standard codon table built independently of the tool's
+own, so a round trip proves something.
+
+`f2c/phsites.py` ranks titratable residues by how much a pH move changes their
+ionisation, weighted by distance from the catalytic site measured at the atoms
+that carry the charge. It is a shortlist to hand to PROPKA or constant-pH MD,
+not a substitute for one, and it says so in its own output.

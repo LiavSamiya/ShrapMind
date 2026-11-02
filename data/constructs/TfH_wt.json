@@ -1,0 +1,53 @@
+{
+  "target": "TfH",
+  "uniprot": "Q6A0I4",
+  "organism": "Thermobifida sp.",
+  "ec": [
+    "3.1.1.74"
+  ],
+  "wild_type_length": 301,
+  "mutations": [],
+  "signal_peptide_removed": 40,
+  "tag": {
+    "name": "his6_n",
+    "protein": "HHHHHH",
+    "note": "Hexahistidine for IMAC. On the N terminus it is cleavable only if a protease site is added; here it is left fused, which is fine for an assay and not for anything injected."
+  },
+  "protein_expressed": "HHHHHHANPYERGPNPTDALLEASSGPFSVSEENVSRLSASGFGGGTIYYPRENNTYGAVAISPGYTGTEASIAWLGERIASHGFVVITIDTITTLDQPDSRAEQLNAALNHMINRASSTVRSRIDSSRLAVMGHSMGGGGTLRLASQRPDLKAAIPLTPWHLNKNWSSVTVPTLIIGADLDTIAPVATHAKPFYNSLPSSISKAYLELDGATHFAPNIPNKIIGKYSVAWLKRFVDNDTRYTQFLCPGPRDGLFGEVEEYRSTCPF",
+  "protein_length": 267,
+  "dna_length_bp": 810,
+  "gc_percent": 59.6,
+  "gc_window_min": 45.0,
+  "gc_window_max": 73.3,
+  "codon_swaps_from_preferred": [
+    {
+      "position": 77,
+      "residue": "H",
+      "preferred": "CAT",
+      "used": "CAC",
+      "why": "preferred codon created a forbidden motif or a GC-extreme window"
+    },
+    {
+      "position": 106,
+      "residue": "H",
+      "preferred": "CAT",
+      "used": "CAC",
+      "why": "preferred codon created a forbidden motif or a GC-extreme window"
+    }
+  ],
+  "constraint_violations": [],
+  "restriction_sites_checked": [
+    "BamHI",
+    "BsaI",
+    "BsmBI",
+    "EcoRI",
+    "HindIII",
+    "NcoI",
+    "NdeI",
+    "NotI",
+    "SalI",
+    "XhoI"
+  ],
+  "what_this_is": "A synthesisable open reading frame. Reverse translation is mechanical, so this is a faithful encoding of the designed protein and nothing more -- it carries every uncertainty the design carries.",
+  "what_this_is_not": "Not evidence the protein folds, is soluble, is active, or is safe. For this target none of those is known at 37 C in tissue, and ordering DNA does not change that."
+}
