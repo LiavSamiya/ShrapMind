@@ -775,3 +775,40 @@ def test_the_metal_carrier_states_why_it_matters_more_than_in_the_polymer_arm():
     assert any("swell" in c["property"].lower() for c in carrier), (
         "non-swelling is still the property most likely to end the programme"
     )
+
+
+def test_the_arm_answers_what_happens_to_unrusted_metal():
+    """Every candidate acts on the oxide, which invites the obvious objection
+    that the metal underneath is untouched. Iron's oxide does not passivate, so
+    stripping it exposes fresh metal that tissue re-oxidises — the route has to
+    say that rather than leave the gap for a reviewer to find."""
+    from f2c import metals
+
+    u = metals.route("steel")["unrusted_metal"]
+    assert "does not passivate" in u["cycle"]
+    assert u["refs"], "the cycle claim needs its citations"
+
+
+def test_the_arm_corrects_its_own_runaway_warning():
+    """The arm warns that dissolution could run away into systemic exposure.
+    The biodegradable-implant literature says iron corrodes too slowly in the
+    body for its intended purpose, so the engineering problem is the opposite.
+    Both have to be present: the safety concern stands, the priority flips."""
+    from f2c import metals
+
+    route = metals.route("steel")
+    assert route["warning"]["status"].startswith("inverts")
+    assert "too slowly" in route["unrusted_metal"]["the_real_bottleneck"] or \
+           "corrode at all" in route["unrusted_metal"]["the_real_bottleneck"]
+
+
+def test_passivating_metals_are_excluded_for_the_reason_iron_works():
+    """The same property decides both: iron's oxide flakes and exposes metal,
+    aluminium's and titanium's heal over. One sentence should not be able to
+    drift from the other."""
+    from f2c import metals
+
+    assert "non-passivating" in metals.METALS["steel"]["oxide"]
+    for key in ("aluminium", "titanium"):
+        assert "passivating" in metals.METALS[key]["oxide"]
+        assert metals.METALS[key]["route"] == "none"

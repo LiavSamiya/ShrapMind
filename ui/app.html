@@ -830,6 +830,19 @@ function renderMetal() {
       </div></section>`);
   }
 
+  if (r.unrusted_metal) {
+    const u = r.unrusted_metal;
+    out.push(`<section><h2>${esc(u.question)}</h2>
+      <div class="goal" style="margin-top:1rem">
+        <div class="means">${esc(u.answer)}</div>
+        <p class="note">${esc(u.cycle)}</p>
+        <div class="caution"><div class="t">This inverts the warning above</div>
+          <div class="d">${esc(u.the_real_bottleneck)}</div></div>
+        <p class="note">${esc(u.what_moves_it)}</p>
+        ${(u.refs || []).map(refLine).join("")}
+      </div></section>`);
+  }
+
   if (r.carrier) {
     out.push(`<section><h2>What the hydrogel has to do</h2>
       <p class="lede">More here than in the polymer arm. Ferritin is a cytosolic

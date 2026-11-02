@@ -107,6 +107,30 @@ REFS = {
         "Identifies MnxG as the enzyme that oxidises Mn(II) to Mn(IV) oxide in "
         "bacterial spores. A named, isolated metal-oxidising enzyme.",
     ),
+    "iron_corrodes_too_slowly": _ref(
+        "27598975", "10.1021/acsami.6b07068",
+        "Accelerated degradation behavior and cytocompatibility of pure iron "
+        "treated with sandblasting",
+        2016,
+        "States the opposite of this arm's own warning: iron's corrosion rate "
+        "in a biological environment 'may be too slow for the targeted "
+        "applications'. Sandblasting raised it and the increase persisted "
+        "through long-term immersion, which identifies surface state rather "
+        "than chemistry as the lever. The engineering problem with iron in "
+        "tissue is making it corrode at all, not stopping it.",
+    ),
+    "chelating_hydrogel": _ref(
+        "41885000", "10.1002/adhm.202505864",
+        "Ion-chelating hydrogel regulates porous zinc scaffold degradation for "
+        "osteoimmune bone repair",
+        2026,
+        "Published precedent for this arm's whole architecture: a hydrogel "
+        "whose hydroxyl and carboxyl groups chelate the released metal ion to "
+        "regulate corrosion kinetics and stabilise ion release, in vivo. Zinc "
+        "rather than iron, and a scaffold placed deliberately rather than a "
+        "fragment to be removed -- but the chelating gel controlling a "
+        "corroding metal is not hypothetical.",
+    ),
     "ligand_dissolution": _ref(
         "25965980", "10.1021/acs.est.5b01191",
         "Synergistic effect of reductive and ligand-promoted dissolution of "
@@ -508,10 +532,13 @@ CARRIER_REQUIREMENTS = [
                "which makes this the load-bearing component of the whole arm "
                "rather than a delivery convenience.",
         "evidence": SPECIFIED,
-        "note": "Nothing here is measured. Ferritin nanocages are an "
-                "established delivery vehicle, which is why this is treated as "
-                "a formulation problem, but no one has loaded one into a gel "
-                "against a corroding fragment.",
+        "note": "The architecture has a precedent: a hydrogel whose own "
+                "hydroxyl and carboxyl groups chelate the released ion has been "
+                "used in vivo to regulate a zinc scaffold's corrosion and "
+                "stabilise its ion release (PMID 41885000). Zinc rather than "
+                "iron, and a scaffold rather than a fragment, but a chelating "
+                "gel controlling a corroding metal is not hypothetical. What "
+                "nobody has done is load ferritin into one against a fragment.",
     },
     {
         "property": "Carries capture capacity in excess, before anything dissolves",
@@ -715,6 +742,43 @@ def route(material: str) -> dict[str, Any] | None:
         ),
     }
     out["carrier"] = CARRIER_REQUIREMENTS
+    if m["element"] == "Fe":
+        out["unrusted_metal"] = {
+            "question": "Everything here acts on the oxide. What about metal "
+                        "that has not rusted?",
+            "answer": (
+                "There is none to treat. A fragment begins corroding the moment "
+                "it enters tissue, so its surface is oxide by the time anyone "
+                "sees it -- the measured case is the real one."
+            ),
+            "cycle": (
+                "What happens underneath is the part that matters. Iron's oxide "
+                "does not passivate: strip it and fresh metal is exposed, "
+                "oxygenated tissue re-oxidises that, and the chelator takes the "
+                "new layer. The metal is consumed one layer at a time, "
+                "indirectly, and the chelator never has to touch the lattice. "
+                "Aluminium and titanium are excluded from this arm for exactly "
+                "the reason this works for iron."
+            ),
+            "the_real_bottleneck": (
+                "Which makes re-oxidation the rate-limiting step, not "
+                "dissolution -- and that inverts this arm's own warning. The "
+                "biodegradable-implant literature is explicit that iron "
+                "corrodes too slowly in the body for its intended purpose. The "
+                "safety concern about runaway release stands, but the "
+                "engineering problem is the opposite one: making the fragment "
+                "corrode at all."
+            ),
+            "what_moves_it": (
+                "Surface state rather than chemistry. Sandblasting raised pure "
+                "iron's corrosion rate and the increase held through long-term "
+                "immersion. That lever is not available on an embedded "
+                "fragment, but it says where to look: roughness and exposed "
+                "area, not a stronger reagent."
+            ),
+            "evidence": LITERATURE,
+            "refs": [REFS["iron_corrodes_too_slowly"], REFS["chelating_hydrogel"]],
+        }
     out["alternative"] = {
         "what": "Microbially influenced corrosion is the one mechanism that acts "
                 "on metallic iron directly, by extracellular electron transfer "
