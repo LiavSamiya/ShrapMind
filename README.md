@@ -169,6 +169,25 @@ Downloaded and mapped, not yet wired in: CAZy (cellulose families), M-CSA
 script: SABIO-RK (serves its web app, not data) and FireProtDB (documented API
 paths 404).
 
+Looked at and deliberately left out, recorded in `tools/fetch_sources.py` so
+the search is not repeated:
+
+**Kaggle** — searched through its public API, which needs no token. *plastic
+degrading enzyme* returns nothing at all, *shrapnel* returns a satellite
+telemetry set, *PETase* returns two datasets under a kilobyte with the licence
+listed as Unknown, and *clinical trials* returns stale redistributions of
+ClinicalTrials.gov, which this project queries live by NCT id. None of it
+carries provenance an `Observation` could point at, which is the one thing
+every number in the warehouse is required to have.
+
+**Meltome Atlas and ProThermDB** — both real, both reachable, and both a poor
+fit for a reason worth stating. Between them they hold tens of thousands of
+thermal-stability measurements, on 13 model species and on well-studied mutant
+proteins. This warehouse holds 360 organisms, most of them environmental
+isolates, compost metagenomes and soil bacteria, so almost none of its enzymes
+appear in either. And the temperature question here is activity at 37 °C on a
+solid polymer, which is not the quantity either database measures.
+
 ### A note on trusting curated databases
 
 BRENDA is carefully curated and still ships citations that point at the wrong

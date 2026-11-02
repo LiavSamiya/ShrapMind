@@ -1,44 +1,10 @@
 {
-  "fetched_at": "2026-10-27T15:31:52+00:00",
+  "fetched_at": "2026-11-02T09:06:02+00:00",
   "sources": {
-    "pazy": {
-      "records": 505,
-      "file": "data/raw/pazy_proteins.json"
-    },
-    "mcsa": {
-      "entries": 1003,
-      "pages": 11,
-      "dir": "data/raw/mcsa"
-    },
-    "interpro": {
-      "requested": 232,
-      "retrieved": 232,
-      "dir": "data/raw/interpro"
-    },
-    "alphafold": {
-      "requested": 232,
-      "retrieved": 219,
-      "dir": "data/raw/alphafold"
-    },
-    "pdb": {
-      "requested": 603,
-      "retrieved": 602,
-      "dir": "data/raw/pdb"
-    },
     "chebi": {
       "requested": 69,
       "retrieved": 69,
       "dir": "data/raw/chebi"
-    },
-    "cazy": {
-      "retrieved": true,
-      "file": "data/raw/cazy/cazy_data.zip",
-      "members": [
-        "cazy_data_20260910.txt"
-      ],
-      "uncompressed_bytes": 376965077,
-      "content": "family assignments (feature, not activity label)",
-      "terms": "no access gate; CAZy asks to be cited"
     }
   },
   "unavailable": {
@@ -46,5 +12,10 @@
     "sabio_rk": "REST service returns the web application, not data, from this network",
     "fireprotdb": "documented API paths return 404; endpoint needs confirming",
     "rhea": "direct JSON blocked (403); Rhea ids are captured via UniProt instead"
+  },
+  "surveyed_and_rejected": {
+    "kaggle": "searched via the public API, which needs no token. 'plastic degrading enzyme' returns nothing; 'shrapnel' returns a satellite-telemetry set; 'PETase' returns two datasets under a kilobyte with licence 'Unknown'; 'clinical trials' returns stale dumps of ClinicalTrials.gov, which this project queries live by NCT id. Nothing here carries provenance the engine could attach an Observation to",
+    "meltome_atlas": "real, reachable, well documented -- ProteomicsDB exposes an OData API and PRIDE holds the raw data (PXD011929). It covers 13 model species. The warehouse holds 360 organisms, mostly environmental isolates, compost metagenomes and soil bacteria, so the overlap with our enzymes is close to zero. Worth revisiting only if the engine ever ranks enzymes from model organisms",
+    "prothermdb": "32,000 thermodynamic measurements, free, no login, but downloads go through a web form rather than an API, and the content is mutant stability for well-studied model proteins. Same organism mismatch as Meltome. The temperature gap this project has is activity at 37 C on a solid polymer, which is not what either database measures"
   }
 }

@@ -41,6 +41,36 @@ BLOCKED = {
     "rhea": "direct JSON blocked (403); Rhea ids are captured via UniProt instead",
 }
 
+# Sources that are reachable and were deliberately NOT wired in. Recorded with
+# the reason so the survey is not repeated: "we looked and it is not there" is
+# a finding, and without it written down the next person spends the same day
+# rediscovering it. Checked 2026-11-02.
+SURVEYED_AND_REJECTED = {
+    "kaggle": (
+        "searched via the public API, which needs no token. 'plastic degrading "
+        "enzyme' returns nothing; 'shrapnel' returns a satellite-telemetry set; "
+        "'PETase' returns two datasets under a kilobyte with licence 'Unknown'; "
+        "'clinical trials' returns stale dumps of ClinicalTrials.gov, which this "
+        "project queries live by NCT id. Nothing here carries provenance the "
+        "engine could attach an Observation to"
+    ),
+    "meltome_atlas": (
+        "real, reachable, well documented -- ProteomicsDB exposes an OData API "
+        "and PRIDE holds the raw data (PXD011929). It covers 13 model species. "
+        "The warehouse holds 360 organisms, mostly environmental isolates, "
+        "compost metagenomes and soil bacteria, so the overlap with our enzymes "
+        "is close to zero. Worth revisiting only if the engine ever ranks "
+        "enzymes from model organisms"
+    ),
+    "prothermdb": (
+        "32,000 thermodynamic measurements, free, no login, but downloads go "
+        "through a web form rather than an API, and the content is mutant "
+        "stability for well-studied model proteins. Same organism mismatch as "
+        "Meltome. The temperature gap this project has is activity at 37 C on a "
+        "solid polymer, which is not what either database measures"
+    ),
+}
+
 # CAZy publishes one flat archive and asks to be cited rather than gating access.
 CAZY_URL = "https://www.cazy.org/IMG/cazy_data/cazy_data.zip"
 
@@ -178,6 +208,7 @@ def main() -> int:
         "fetched_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "sources": {},
         "unavailable": BLOCKED,
+        "surveyed_and_rejected": SURVEYED_AND_REJECTED,
     }
 
     def want(name: str) -> bool:
