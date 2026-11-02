@@ -853,8 +853,22 @@ function renderMetal() {
   </div></section>`);
 
   if (r.route === "none") {
+    /* A refusal is an answer and deserves the same detail as a route. For
+       stainless in particular the clinical consequence matters more than the
+       chemistry: a radiograph does not distinguish it from carbon steel, so a
+       trial that does not establish composition up front will enrol fragments
+       this treatment cannot touch. */
     out.push(`<section><h2>There is no route for this metal</h2>
-      <div class="nope" style="margin-top:.8rem">${esc(r.why_not)}</div></section>`);
+      <div class="nope" style="margin-top:.8rem">${esc(r.why_not)}</div>
+      ${r.oxide ? `<dl class="kv" style="margin-top:1rem">
+        <dt>What covers it</dt><dd>${esc(r.oxide)}</dd></dl>` : ""}
+      ${r.clinical_consequence ? `<div class="alert" style="margin-top:1rem">
+        <div class="t">Why this matters at the bedside</div>
+        <div class="d">${esc(r.clinical_consequence)}</div></div>` : ""}
+      ${r.how_to_tell ? `<div class="goal" style="margin-top:1rem">
+        <div class="means">How you would know which one you have</div>
+        <p class="note">${esc(r.how_to_tell)}</p></div>` : ""}
+      </section>`);
   } else {
     if (r.warning) {
       out.push(`<section><div class="alert">

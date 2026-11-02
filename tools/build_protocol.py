@@ -108,6 +108,26 @@ def sequence_block(report: dict, dna: str) -> str:
         'הבדיקות, ולא מול הטבלה שהכלי עצמו משתמש בה.</div></div>')
 
 
+def _disulfide_uniprot(sequence: str) -> str:
+    """Where the structure's SSBOND lands in UniProt numbering.
+
+    Read from the PDB rather than asserted. TfH carries one disulfide, which
+    is the reason the expression host cannot be an ordinary BL21: the E. coli
+    cytoplasm is reducing and will not form it.
+    """
+    pairs = []
+    for line in STRUCTURE.with_name("4cg1.pdb").read_text().splitlines():
+        if line.startswith("SSBOND"):
+            try:
+                pairs.append((int(line[17:21]), int(line[31:35])))
+            except ValueError:
+                continue
+    if not pairs:
+        return "—"
+    return "; ".join(f"Cys{a + SIGNAL_PEPTIDE} ו-Cys{b + SIGNAL_PEPTIDE}"
+                     for a, b in pairs)
+
+
 def main() -> int:
     from f2c import phsites, warehouse
 
@@ -168,6 +188,7 @@ def main() -> int:
         "{{PI}}": pi["pI"],
         "{{NET_CHARGE}}": pi["net_charge_at_7_4"],
         "{{SWAPS}}": len(report["codon_swaps_from_preferred"]),
+        "{{CYS_UNIPROT}}": _disulfide_uniprot(prot.sequence),
         "{{KDA}}": round(mw / 1000, 1),
         "{{TOPT}}": int(topt),
         "{{TOPT_VALUES}}": ", ".join(f"{v:g}" for v in topts) or "—",

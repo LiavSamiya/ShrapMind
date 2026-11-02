@@ -210,6 +210,14 @@ METALS: dict[str, dict[str, Any]] = {
         "why_common": "Fragmentation casings and most improvised munitions. The "
                       "commonest retained fragment, and ferromagnetic, which is "
                       "what rules out MRI and makes the clinical bind.",
+        "which_steel": (
+            "Carbon and low-alloy steel specifically. Stainless is a separate "
+            "entry and a separate answer: above about 10.5% chromium the alloy "
+            "passivates and this entire route stops working. Treating 'steel' "
+            "as one material was an error in this engine, and it is the error "
+            "most likely to matter in a real patient, because ball bearings "
+            "packed into a device are often stainless."
+        ),
         "element": "Fe",
         "ferromagnetic": True,
         "route": "two_stage",
@@ -219,6 +227,51 @@ METALS: dict[str, dict[str, Any]] = {
         "enzymes": ["cyc2"],
         "capture": "siderophore or equivalent Fe(III) chelator",
         "evidence": LITERATURE,
+    },
+    "stainless": {
+        "name": "Stainless steel",
+        "why_common": "Ball bearings and nuts packed into improvised devices, "
+                      "and any surgical hardware already in the patient. Not a "
+                      "rare case: bearings are among the commonest "
+                      "penetrating fragments in a blast injury.",
+        "element": "Fe",
+        "ferromagnetic": True,   # true for the martensitic and ferritic grades
+        "route": "none",
+        "oxide": "Chromium(III) oxide. Dense, adherent and self-healing -- "
+                 "the opposite of rust in every property that matters here.",
+        "enzymes": [],
+        "capture": "not reached; nothing is released to capture",
+        "no_enzyme_reason": (
+            "Stainless is passivating, and that single fact moves it out of "
+            "this arm and in beside aluminium and titanium. At or above about "
+            "10.5% chromium the alloy grows a Cr2O3 film a few nanometres "
+            "thick that is dense rather than flaky, adherent rather than "
+            "spalling, and re-forms within seconds wherever it is scratched. "
+            "The whole iron route depends on the opposite behaviour: rust "
+            "flakes, fresh metal is exposed, tissue re-oxidises it, and the "
+            "chelator takes the next layer. Against Cr2O3 there is no next "
+            "layer. Deferoxamine is also selective for Fe(III) and does not "
+            "meaningfully lift chromium oxide, so the chelator that drives "
+            "the carbon-steel route does nothing here."
+        ),
+        "why_this_matters_clinically": (
+            "A surgeon cannot tell carbon steel from stainless by looking at "
+            "a radiograph, and this engine was treating them as one material. "
+            "They are not one material: the same treatment that slowly "
+            "debulks a carbon-steel fragment does nothing at all to a "
+            "stainless bearing. Any trial has to establish fragment "
+            "composition as an inclusion criterion, not discover it "
+            "afterwards."
+        ),
+        "how_to_tell": (
+            "Retrieved fragments go to XRF or SEM-EDS, which is routine and "
+            "fast. In situ it is harder: dual-energy CT separates some alloys, "
+            "and a stainless fragment is usually less MRI-hostile than a "
+            "carbon-steel one because many bearing grades are austenitic and "
+            "only weakly magnetic. Neither is definitive, and the honest "
+            "position is that composition is unknown before retrieval."
+        ),
+        "evidence": SPECIFIED,
     },
     "iron": {
         "name": "Iron",
@@ -337,6 +390,9 @@ METALS: dict[str, dict[str, Any]] = {
 
 ALIASES = {
     "fe": "iron", "ferrous": "iron", "carbon steel": "steel", "mild steel": "steel",
+    "stainless steel": "stainless", "inox": "stainless", "ss": "stainless",
+    "304": "stainless", "316": "stainless", "316l": "stainless",
+    "ball bearing": "stainless", "surgical steel": "stainless",
     "cu": "copper", "brass": "copper", "bronze": "copper",
     "pb": "lead", "al": "aluminium", "aluminum": "aluminium",
     "ti": "titanium", "w": "tungsten", "tungsten carbide": "tungsten",
@@ -514,13 +570,13 @@ def capacity(material: str, mass_mg: float | None) -> dict[str, Any]:
     key = resolve(material)
     if key is None or mass_mg is None or mass_mg <= 0:
         return {"computable": False,
-                "reason": "needs a recognised metal and a fragment mass"}
+                "why": "needs a recognised metal and a fragment mass"}
     fraction = METAL_FRACTION.get(key)
     element = METALS[key]["element"]
     if fraction is None or element != "Fe":
         return {
             "computable": False,
-            "reason": (
+            "why": (
                 f"{METALS[key]['name']} fragments are composites and the "
                 f"{element} fraction depends on the round, so the molar "
                 "quantity cannot be bounded from mass. Characterise the "
@@ -669,9 +725,11 @@ def timeline(material: str, particle_size_mm: float | None,
     """Years to remove this fraction of a fragment, across the rate range."""
     key = resolve(material)
     if key is None or METALS[key]["route"] == "none":
-        return {"computable": False, "reason": "no dissolution route for this metal"}
+        return {"computable": False,
+                "why": "no dissolution route for this metal: "
+                       + METALS[key].get("no_enzyme_reason", "")}
     if not particle_size_mm or particle_size_mm <= 0:
-        return {"computable": False, "reason": "needs a particle size"}
+        return {"computable": False, "why": "needs a particle size"}
 
     frac = _penetration_fraction(volume_fraction)
     depth_mm = particle_size_mm * frac
@@ -777,6 +835,14 @@ def route(material: str) -> dict[str, Any] | None:
     if m["route"] == "none":
         out["stages"] = []
         out["why_not"] = m["no_enzyme_reason"]
+        # A refusal carries its consequences too, where they exist. For
+        # stainless the chemistry is the easy half: the hard half is that a
+        # radiograph does not distinguish it from carbon steel.
+        for key_in, key_out in (("why_this_matters_clinically",
+                                 "clinical_consequence"),
+                                ("how_to_tell", "how_to_tell")):
+            if m.get(key_in):
+                out[key_out] = m[key_in]
         return out
 
     if m["route"] == "capture_only":
@@ -1147,6 +1213,15 @@ def chelator_demand(material: str, mass_mg: float | None,
         return {"computable": False,
                 "why": f"DFO is selective for Fe(III); {m['name']} is not iron. "
                        "A chelator for this metal has not been chosen."}
+    if m["route"] == "none":
+        # Iron content is not the question. Stainless is iron and the chelator
+        # still does nothing, because what stands in the way is a chromium
+        # oxide film DFO does not lift. Computing a DFO mass here would be
+        # arithmetic answering a question the chemistry has already closed.
+        return {"computable": False,
+                "why": f"{m['name']} has no dissolution route, so there is "
+                       "nothing for a chelator to capture. "
+                       + m.get("no_enzyme_reason", "")}
 
     fe_mg = mass_mg * METAL_FRACTION.get(key, 1.0) * volume_fraction
     free_base = fe_mg * DFO_FREE_BASE_G_PER_MOL / FE_G_PER_MOL
@@ -1279,7 +1354,7 @@ GAS_CONSTANT_L_ATM = 0.0820573
 BODY_TEMPERATURE_K = 310.15
 
 
-def hydrogen_evolution(mass_mg: float | None, material: str = "steel",
+def hydrogen_evolution(material: str = "steel", mass_mg: float | None = None,
                        volume_fraction: float = 1.0) -> dict[str, Any]:
     """How much H2 the hydrogenase route would release, as a volume.
 
@@ -1295,6 +1370,10 @@ def hydrogen_evolution(mass_mg: float | None, material: str = "steel",
     if METALS[key]["element"] != "Fe":
         return {"computable": False,
                 "why": "This stoichiometry is specific to Fe(0) oxidation."}
+    if METALS[key]["route"] == "none":
+        return {"computable": False,
+                "why": f"{METALS[key]['name']} is not dissolved by this route, "
+                       "so no hydrogen is evolved from it."}
 
     fe_mg = mass_mg * METAL_FRACTION.get(key, 1.0) * volume_fraction
     mol = fe_mg / 1000.0 / FE_G_PER_MOL

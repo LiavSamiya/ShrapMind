@@ -150,7 +150,7 @@ def render(decision: Decision) -> str:
             )
         lines.append(f"  release rate       : {cap['rate']}")
     else:
-        lines.append(f"  not computable: {cap.get('reason', 'unknown')}")
+        lines.append(f"  not computable: {cap.get('why', 'unknown')}")
     lines += ["", f"  residue: {residue_note(m.polymer)}", ""]
 
     if decision.alternatives:

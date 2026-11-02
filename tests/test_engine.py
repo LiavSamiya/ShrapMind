@@ -750,7 +750,7 @@ def test_metal_capacity_refuses_a_composite_fragment():
 
     cu = metals.capacity("copper", 50.0)
     assert cu["computable"] is False
-    assert "composite" in cu["reason"]
+    assert "composite" in cu["why"]
 
 
 def test_capacity_names_its_one_assumption_and_bounds_it():
@@ -1328,15 +1328,15 @@ def test_the_hydrogen_the_route_would_release_is_computed():
     follows from the reaction both cite.
     """
     from f2c import metals
-    h = metals.hydrogen_evolution(50.0, "steel", 0.20)
+    h = metals.hydrogen_evolution("steel", 50.0, 0.20)
     assert h["computable"]
     # Millilitres, not microlitres: the number is what makes it a problem.
     assert 3.0 < h["h2_ml_at_37c"] < 6.0
     # Stoichiometry is 1:1, so the volume scales with the iron.
-    full = metals.hydrogen_evolution(50.0, "steel", 1.0)
+    full = metals.hydrogen_evolution("steel", 50.0, 1.0)
     assert full["h2_ml_at_37c"] == pytest.approx(h["h2_ml_at_37c"] * 5, rel=1e-6)
     # And it is specific to iron.
-    assert metals.hydrogen_evolution(50.0, "lead")["computable"] is False
+    assert metals.hydrogen_evolution("lead", 50.0)["computable"] is False
 
 
 def test_lead_distinguishes_detoxification_from_shrinkage():
@@ -1402,3 +1402,57 @@ def test_the_protocol_does_not_claim_a_settled_temperature_optimum():
     assert ", ".join(f"{v:g}" for v in vals) in page, (
         "the page must show every reported optimum, not pick one"
     )
+
+
+# --- carbon steel is not stainless steel ------------------------------------
+
+def test_stainless_is_a_separate_material_with_no_route():
+    """The engine treated "steel" as one material. It is two.
+
+    Above about 10.5% chromium the alloy grows a dense, self-healing Cr2O3
+    film -- the aluminium and titanium behaviour this arm excludes, not the
+    flaking rust it depends on. Ball bearings packed into a device are often
+    stainless, so this is not an edge case.
+    """
+    from f2c import metals
+    assert metals.METALS["stainless"]["route"] == "none"
+    assert metals.METALS["steel"]["route"] == "two_stage"
+    assert metals.METALS["stainless"]["element"] == "Fe", (
+        "stainless is iron; the refusal must rest on passivation, not on "
+        "the element"
+    )
+    reason = metals.METALS["stainless"]["no_enzyme_reason"].lower()
+    assert "chromium" in reason and "passivat" in reason
+    # And steel must now say which steel it means.
+    assert "stainless" in metals.METALS["steel"]["which_steel"].lower()
+
+
+def test_the_words_a_clinician_would_use_resolve_correctly():
+    from f2c import metals
+    for word in ("stainless steel", "316L", "ball bearing", "surgical steel",
+                 "inox"):
+        assert metals.resolve(word) == "stainless", word
+    for word in ("mild steel", "carbon steel"):
+        assert metals.resolve(word) == "steel", word
+
+
+def test_no_quantity_is_computed_for_a_metal_with_no_route():
+    """Iron content is not the question.
+
+    chelator_demand happily returned a DFO mass for stainless, because it
+    checked the element and not the verdict. Arithmetic answering a question
+    the chemistry has already closed is exactly the failure this engine is
+    built to refuse.
+    """
+    from f2c import metals
+    for fn, args in (("capacity", ("stainless", 50.0)),
+                     ("chelator_demand", ("stainless", 50.0)),
+                     ("hydrogen_evolution", ("stainless", 50.0)),
+                     ("timeline", ("stainless", 0.8)),
+                     ("carrier_placements", ("stainless", 0.8))):
+        out = getattr(metals, fn)(*args)
+        assert out["computable"] is False, f"{fn} answered for stainless"
+        assert out["why"], f"{fn} refused without saying why"
+    # The same calls must still work for carbon steel.
+    assert metals.chelator_demand("steel", 50.0, 0.20)["computable"]
+    assert metals.hydrogen_evolution("steel", 50.0, 0.20)["computable"]
