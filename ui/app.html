@@ -238,6 +238,10 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
       <label for="metal">Fragment metal</label>
       <select id="metal"></select>
     </div>
+    <div class="field">
+      <label for="metalMass">Mass (mg)</label>
+      <input id="metalMass" type="number" min="1" step="1" value="50">
+    </div>
   </div>
   <div class="inputs" id="polymerInputs">
     <div class="field">
@@ -792,6 +796,49 @@ function renderMetal() {
         ${refLine(e.ref)}</div>`).join("")}</div></section>`);
   }
 
+  const cap = metalCapacity(key, parseFloat($("#metalMass").value));
+  if (cap) {
+    out.push(`<section><h2>How much capture the fragment demands</h2>
+      <p class="lede">Derived from mass and iron's atomic weight. No kinetic
+      assumption, which is why it can be stated at all.</p>
+      <div class="goal" style="margin-top:1rem">
+        <dl class="kv">
+          <dt>Iron in the fragment</dt><dd class="mono">${fmt(cap.mmol)} mmol</dd>
+          <dt>Ferritin shells needed</dt><dd class="mono">${cap.shells.toExponential(2)}</dd>
+          <dt>Protein mass</dt><dd class="mono">${fmt(cap.proteinMg)} mg</dd>
+          <dt>Ratio to fragment</dt><dd class="mono">${fmt(cap.ratio)}× its own mass</dd>
+        </dl>
+        <p class="note">This is the calculation to do before any biology: an
+        absurd answer would kill the route on arithmetic alone. It is not absurd,
+        and the ratio holds at every fragment size because both sides scale with
+        iron content.</p>
+        <div class="caution"><div class="t">The one assumed number</div>
+          <div class="d">${esc(DATA.metals.capacity_constants.fe_atoms_per_shell)} iron
+          atoms per shell is an order-of-magnitude figure, and the loading actually
+          achieved inside a carrier is exactly what nobody has measured. At a
+          pessimistic 1000 atoms per shell the requirement is
+          ${fmt(cap.pessimistic)} mg, or ${fmt(cap.pessimistic / cap.mass)}× the
+          fragment — a formulation problem rather than an impossible one.</div></div>
+        <p class="note"><strong>Rate stays unavailable.</strong> How fast the
+        fragment releases iron at 37&nbsp;°C under a protein corona is unmeasured,
+        exactly as turnover on a solid polymer is.</p>
+      </div></section>`);
+  }
+
+  if (r.carrier) {
+    out.push(`<section><h2>What the hydrogel has to do</h2>
+      <p class="lede">More here than in the polymer arm. Ferritin is a cytosolic
+      protein and the fragment corrodes outside the cell, so the gel is the only
+      thing that puts the two in contact — and it has to hold roughly twice the
+      fragment's mass in protein while doing it.</p>
+      <div style="margin-top:1rem">${r.carrier.map(c => `<div class="stage">
+        <div class="rowhead"><span class="t">${esc(c.property)}</span>${badge(c.evidence)}</div>
+        <div class="why">${esc(c.spec)}</div>
+        <div class="why">${esc(c.why)}</div>
+        ${c.note ? `<div class="why" style="color:var(--ink-3)">${esc(c.note)}</div>` : ""}
+      </div>`).join("")}</div></section>`);
+  }
+
   if (r.alternative) {
     out.push(`<section>
       <details><summary>The one mechanism that does attack the metal itself</summary>
@@ -808,6 +855,27 @@ function renderMetal() {
     </details></section>`);
 
   $("#main").innerHTML = out.join("");
+}
+
+/* Mass balance for a metal fragment, recomputed as the reader changes the mass.
+   Only iron: a jacketed or alloyed fragment's metal fraction depends on the
+   round, and guessing it would be the one invented number here. */
+function metalCapacity(key, massMg) {
+  const C = DATA.metals.capacity_constants;
+  const fraction = C.metal_fraction[key];
+  if (!fraction || !(massMg > 0)) return null;
+  const atoms = (massMg / 1000 * fraction) / C.fe_g_per_mol * C.avogadro;
+  const shellMass = n => n * (C.shell_kda * 1000) / C.avogadro * 1000;
+  const proteinMg = shellMass(atoms / C.fe_atoms_per_shell);
+  return {
+    mass: massMg,
+    mmol: (massMg / 1000 * fraction) / C.fe_g_per_mol * 1000,
+    atoms,
+    shells: atoms / C.fe_atoms_per_shell,
+    proteinMg,
+    ratio: proteinMg / massMg,
+    pessimistic: shellMass(atoms / 1000),
+  };
 }
 
 let VIEW = "polymer";
@@ -842,6 +910,7 @@ function boot() {
       esc(M.names[k])}${tail}</option>`;
   }).join("");
   ms.addEventListener("input", renderMetal);
+  $("#metalMass").addEventListener("input", renderMetal);
 
   for (const id of ["#material", "#goal", "#mass", "#cryst", "#psize"]) {
     $(id).addEventListener("input", render);

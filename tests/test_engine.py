@@ -679,3 +679,50 @@ def test_metal_aliases_resolve_the_words_a_clinician_would_write():
     assert metals.resolve("brass") == "copper"
     assert metals.resolve("aluminum") == "aluminium"
     assert metals.resolve("PET") is None
+
+
+def test_metal_capacity_is_derived_and_scales_linearly():
+    """Same discipline as the polymer arm: capacity from mass, rate refused.
+    Linearity matters because a rounding bug there once destroyed it."""
+    from f2c import metals
+
+    small = metals.capacity("steel", 10.0)
+    large = metals.capacity("steel", 1000.0)
+    assert small["computable"] and large["computable"]
+    assert abs(large["ferritin_mg"] / small["ferritin_mg"] - 100.0) < 0.01
+    assert abs(small["ratio_to_fragment"] - large["ratio_to_fragment"]) < 1e-6
+    assert "Not derivable" in large["rate"]
+
+
+def test_metal_capacity_refuses_a_composite_fragment():
+    """A jacketed fragment's copper fraction depends on the round. Guessing it
+    would be the one invented number in the arm."""
+    from f2c import metals
+
+    cu = metals.capacity("copper", 50.0)
+    assert cu["computable"] is False
+    assert "composite" in cu["reason"]
+
+
+def test_capacity_names_its_one_assumption_and_bounds_it():
+    """Atoms per shell is the only figure here that is not derived, so it has
+    to be labelled and a pessimistic case shown beside it."""
+    from f2c import metals
+
+    cap = metals.capacity("steel", 50.0)
+    assert "assumed rather than derived" in cap["assumption"]
+    worst = min(cap["sensitivity"], key=lambda s: s["atoms_per_shell"])
+    assert worst["ferritin_mg"] > cap["ferritin_mg"]
+
+
+def test_the_metal_carrier_states_why_it_matters_more_than_in_the_polymer_arm():
+    """Ferritin is cytosolic and the fragment is extracellular, so the gel is
+    the only contact between them rather than a delivery convenience."""
+    from f2c import metals
+
+    carrier = metals.route("steel")["carrier"]
+    holds = [c for c in carrier if "surface" in c["property"]]
+    assert holds and "cytosolic" in holds[0]["why"]
+    assert any("swell" in c["property"].lower() for c in carrier), (
+        "non-swelling is still the property most likely to end the programme"
+    )

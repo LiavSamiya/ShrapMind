@@ -33,7 +33,8 @@ from typing import Any
 # `measured`: no candidate here has been tested on a fragment in tissue, and
 # labelling a literature-sourced enzyme as measured would be the exact error
 # the polymer arm was built to prevent.
-LITERATURE, SPECIFIED, ABSENT = "literature", "specified", "absent"
+LITERATURE, SPECIFIED, DERIVED, ABSENT = (
+    "literature", "specified", "derived", "absent")
 
 
 def _ref(pmid: str, doi: str, title: str, year: int, says: str) -> dict[str, Any]:
@@ -392,6 +393,151 @@ def rank_candidates(element: str, limit: int = 8) -> list[dict[str, Any]]:
     return out[:limit]
 
 
+# ---------------------------------------------------------------------------
+# Mass balance, the metal arm's version.
+#
+# The polymer arm derives a capture requirement from mass without touching
+# kinetics, and refuses to state a rate. The same split applies here, and it
+# was the calculation to do before any biology: if a fragment needs an absurd
+# quantity of protein, the route is dead on arithmetic alone.
+#
+# It is not absurd. A 24-subunit ferritin shell holds on the order of 4500 iron
+# atoms, so a 50 mg steel fragment needs roughly 1.8 times its own mass in
+# protein -- a ratio that holds at every fragment size, because both scale
+# linearly with iron content. Even at a pessimistic 1000 atoms per shell it is
+# about eight times, which is a formulation problem rather than an impossible
+# one.
+# ---------------------------------------------------------------------------
+AVOGADRO = 6.02214076e23
+FE_G_PER_MOL = 55.845
+CU_G_PER_MOL = 63.546
+# Order of magnitude for a loaded 24-mer. Reported ranges run to ~4500, and the
+# figure is carried as an assumption rather than a measurement because the
+# loading achieved in a carrier is exactly what nobody has measured.
+FE_ATOMS_PER_SHELL = 4500
+FERRITIN_SHELL_KDA = 474.0
+# Fraction of fragment mass that is the target metal. Carbon steel is nearly
+# all iron; a jacketed fragment is a composite and its copper fraction depends
+# on the round, so copper is left unset rather than guessed.
+METAL_FRACTION = {"steel": 0.98, "iron": 1.0}
+
+
+def capacity(material: str, mass_mg: float | None) -> dict[str, Any]:
+    """How much capture the fragment demands, derived from mass alone."""
+    key = resolve(material)
+    if key is None or mass_mg is None or mass_mg <= 0:
+        return {"computable": False,
+                "reason": "needs a recognised metal and a fragment mass"}
+    fraction = METAL_FRACTION.get(key)
+    element = METALS[key]["element"]
+    if fraction is None or element != "Fe":
+        return {
+            "computable": False,
+            "reason": (
+                f"{METALS[key]['name']} fragments are composites and the "
+                f"{element} fraction depends on the round, so the molar "
+                "quantity cannot be bounded from mass. Characterise the "
+                "fragment first, as the polymer arm says for an uncharacterised "
+                "polymer."
+            ),
+        }
+
+    grams = mass_mg / 1000.0 * fraction
+    moles = grams / FE_G_PER_MOL
+    atoms = moles * AVOGADRO
+    shells = atoms / FE_ATOMS_PER_SHELL
+    protein_mg = shells * (FERRITIN_SHELL_KDA * 1000) / AVOGADRO * 1000
+
+    return {
+        "computable": True,
+        "element": element,
+        "metal_fraction": fraction,
+        "mmol_metal": moles * 1000,
+        "atoms": atoms,
+        "shells_needed": shells,
+        "ferritin_mg": protein_mg,
+        "ratio_to_fragment": protein_mg / mass_mg,
+        "assumption": (
+            f"{FE_ATOMS_PER_SHELL} Fe atoms per 24-subunit shell, which is an "
+            "order-of-magnitude figure and the one number here that is assumed "
+            "rather than derived. Loading achieved inside a carrier is exactly "
+            "what has not been measured."
+        ),
+        "sensitivity": [
+            {"atoms_per_shell": cap,
+             "ferritin_mg": round(atoms / cap * (FERRITIN_SHELL_KDA * 1000)
+                                  / AVOGADRO * 1000, 1)}
+            for cap in (1000, 2000, FE_ATOMS_PER_SHELL)
+        ],
+        "basis": "Fragment mass and iron's atomic mass. No kinetic assumption.",
+        "rate": (
+            "Not derivable. How fast the fragment releases iron at 37 C under a "
+            "protein corona is unmeasured, exactly as turnover on a solid "
+            "polymer is."
+        ),
+    }
+
+
+# What the hydrogel has to do in this arm, which is more than it does in the
+# polymer one. There the gel holds an enzyme near a substrate it can reach.
+# Here the enzyme cannot reach the fragment at all -- ferritin works inside
+# cells and the metal corrodes outside them -- so the gel is the only thing
+# that puts the two in contact, and it has to hold roughly twice the
+# fragment's mass in protein while doing it.
+CARRIER_REQUIREMENTS = [
+    {
+        "property": "Holds the capture protein at the surface",
+        "spec": "Ferritin immobilised in the network, pores facing the metal, "
+                "at the loading the mass balance above demands.",
+        "why": "Ferritin is a cytosolic protein and the fragment is "
+               "extracellular. Without the gel there is no contact at all, "
+               "which makes this the load-bearing component of the whole arm "
+               "rather than a delivery convenience.",
+        "evidence": SPECIFIED,
+        "note": "Nothing here is measured. Ferritin nanocages are an "
+                "established delivery vehicle, which is why this is treated as "
+                "a formulation problem, but no one has loaded one into a gel "
+                "against a corroding fragment.",
+    },
+    {
+        "property": "Carries capture capacity in excess, before anything dissolves",
+        "spec": "At or above the ferritin mass the balance gives, in place "
+                "before stage 1 is allowed to start.",
+        "why": "The released ion is the hazard. In the polymer arm capture "
+               "catches what degradation releases; here it has to be waiting.",
+        "evidence": DERIVED,
+    },
+    {
+        "property": "Does not swell",
+        "spec": "Final volume equal to injected volume.",
+        "why": "Unchanged from the polymer arm and still the property most "
+               "likely to end the programme: a gel beside a nerve that takes up "
+               "water becomes the compression it was placed to prevent.",
+        "evidence": SPECIFIED,
+        "note": "Still no number attached, in either arm.",
+    },
+    {
+        "property": "Keeps the loaded protein from unloading",
+        "spec": "Retain Fe(III) inside the shell until the carrier is cleared.",
+        "why": "Ferritin releases iron on demand inside a cell. Here it must "
+               "not, and a gel that lets loaded shells leak has moved the "
+               "hazard rather than removed it.",
+        "evidence": SPECIFIED,
+    },
+    {
+        "property": "Survives a corroding surface",
+        "spec": "Stable against the local pH shift and the oxidants corrosion "
+                "produces.",
+        "why": "Iron corrosion changes the chemistry immediately around it. A "
+               "gel tuned for neutral tissue may not be sitting in neutral "
+               "tissue once stage 1 runs.",
+        "evidence": SPECIFIED,
+        "note": "Not a concern the polymer arm has, because ester hydrolysis "
+                "does not acidify its own neighbourhood the way corrosion does.",
+    },
+]
+
+
 def resolve(material: str) -> str | None:
     key = (material or "").strip().lower()
     key = ALIASES.get(key, key)
@@ -498,6 +644,7 @@ def route(material: str) -> dict[str, Any] | None:
             "therefore gated on capture capacity, not on dissolution rate."
         ),
     }
+    out["carrier"] = CARRIER_REQUIREMENTS
     out["alternative"] = {
         "what": "Microbially influenced corrosion is the one mechanism that acts "
                 "on metallic iron directly, by extracellular electron transfer "

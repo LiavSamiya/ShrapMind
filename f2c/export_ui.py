@@ -280,6 +280,16 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
             "routes": {k: metals.route(k) for k in metals.METALS},
             "engineering": {k: metals.engineering_targets(k) for k in metals.METALS},
             "refs": metals.REFS,
+            "carrier": metals.CARRIER_REQUIREMENTS,
+            # Constants rather than a precomputed answer, because the mass is
+            # an input the reader changes.
+            "capacity_constants": {
+                "fe_g_per_mol": metals.FE_G_PER_MOL,
+                "fe_atoms_per_shell": metals.FE_ATOMS_PER_SHELL,
+                "shell_kda": metals.FERRITIN_SHELL_KDA,
+                "metal_fraction": metals.METAL_FRACTION,
+                "avogadro": metals.AVOGADRO,
+            },
         },
         "goal_rules": {
             "max_useful_crystallinity_pct": goals.MAX_USEFUL_CRYSTALLINITY_PCT,
