@@ -169,6 +169,49 @@ def materials(proteins: list[Protein]) -> list[str]:
     return degradable + no_enzyme + sorted(NON_ENZYMATIC)
 
 
+
+# Full names, so the interface can say "Polyethylene terephthalate" rather than
+# leaving a clinician to decode PBAT. PAZy carries a name beside every
+# abbreviation it records, and those are read out of the warehouse below.
+#
+# The rest need a table, for two different reasons. PE, PP, PS and PVC have no
+# substrate record at all, because no enzyme in the seed set acts on them --
+# their absence is the finding. The metals and minerals were never in PAZy to
+# begin with; they are here because a clinician will ask about them, and "no
+# enzymatic route exists" is a useful answer.
+_EXTRA_NAMES = {
+    "PE": "Polyethylene",
+    "PP": "Polypropylene",
+    "PS": "Polystyrene",
+    "PVC": "Polyvinyl chloride",
+    "steel": "Steel",
+    "iron": "Iron",
+    "lead": "Lead",
+    "aluminium": "Aluminium",
+    "titanium": "Titanium",
+    "glass": "Glass",
+    "silica": "Silica",
+    "ceramic": "Ceramic",
+    "stone": "Stone",
+}
+
+
+def material_names(proteins: list[Protein]) -> dict[str, str]:
+    """Abbreviation to full name, preferring what the source database says."""
+    names: dict[str, str] = {}
+    for protein in proteins:
+        for sub in protein.substrates or []:
+            if not isinstance(sub, dict):
+                continue
+            abbr = (sub.get("abbreviation") or "").strip()
+            name = (sub.get("name") or "").strip()
+            if abbr and name:
+                names.setdefault(abbr, name)
+    for abbr, name in _EXTRA_NAMES.items():
+        names.setdefault(abbr, name)
+    return names
+
+
 def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
     decisions: dict[str, Any] = {}
     for key in materials(proteins):
@@ -227,6 +270,7 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
             1 for p in proteins for o in p.observations
             if o.metric in substrate.KINETIC_METRICS and o.value is not None
         ),
+        "material_names": material_names(proteins),
         "goal_rules": {
             "max_useful_crystallinity_pct": goals.MAX_USEFUL_CRYSTALLINITY_PCT,
             "micro_size_mm": goals.MICRO_SIZE_MM,

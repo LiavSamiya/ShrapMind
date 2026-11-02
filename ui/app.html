@@ -251,6 +251,15 @@ const fmt = n => {
   const s = Number(n).toFixed(2);
   return s.includes(".") ? s.replace(/\.?0+$/, "") : s;
 };
+/* PAZy names every polymer it records; the interface says the name because
+   that is what a clinician recognises, and keeps the abbreviation beside it
+   because that is what the literature is indexed by. */
+const matName = k => (DATA.material_names || {})[k] || k;
+/* The abbreviation is worth showing beside the name only when it differs from
+   it. For a metal the key IS the word ("steel" -> "Steel"), so a
+   case-sensitive comparison would print "Steel (steel)". */
+const matAbbr = k => matName(k).toLowerCase() === k.toLowerCase() ? "" : ` (${k})`;
+
 const EV = { measured: "measured", derived: "derived",
              specified: "design spec", literature: "published" };
 const badge = ev => `<span class="ev ev-${ev}">${EV[ev] || ev}</span>`;
@@ -587,7 +596,9 @@ function render() {
   if (!d || d.verdict !== "enzyme_selected") {
     out.push(`<section class="finding">
       <div class="eyebrow">No catalyst</div>
-      <div class="name" style="font-size:1.9rem">${esc(key)}</div>
+      <div class="name" style="font-size:1.9rem">${esc(matName(key))}</div>
+      ${matAbbr(key) ? `<div class="org" style="font-style:normal">${
+        esc(key)}</div>` : ""}
       <p class="verdict">${esc(d ? d.rationale : "Unknown material.")}</p>
     </section>`);
     $("#main").innerHTML = out.join("");
@@ -596,7 +607,8 @@ function render() {
 
   const c = d.selected;
   out.push(`<section class="finding">
-    <div class="eyebrow">Selected catalyst</div>
+    <div class="eyebrow">Selected catalyst &middot; ${esc(matName(key))}${
+      esc(matAbbr(key))}</div>
     <div class="name">${esc(c.name)}</div>
     <div class="org">${esc(c.organism)}</div>
     <p class="verdict">${esc(d.rationale)}</p>
@@ -658,7 +670,7 @@ function boot() {
     return av === bv ? a.localeCompare(b) : (av ? -1 : 1);
   });
   sel.innerHTML = keys.map(k => `<option value="${esc(k)}"${k === "PET" ? " selected" : ""}>${
-    esc(k)}${DATA.decisions[k].verdict === "enzyme_selected" ? "" : " — no pathway"}</option>`).join("");
+    esc(matName(k))}${esc(matAbbr(k))}</option>`).join("");
 
   for (const id of ["#material", "#goal", "#mass", "#cryst", "#psize"]) {
     $(id).addEventListener("input", render);

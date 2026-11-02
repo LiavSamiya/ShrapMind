@@ -526,3 +526,30 @@ def test_smaller_fragments_present_more_surface_for_the_same_mass():
     coarse = geometry("PET", 50.0, 2.0)["specific_area_mm2_per_mg"]
     fine = geometry("PET", 50.0, 0.1)["specific_area_mm2_per_mg"]
     assert fine > coarse * 10
+
+
+def test_every_material_in_the_interface_has_a_full_name():
+    """PBAT means nothing to a clinician. The abbreviation is how the
+    literature is indexed; the name is how a person recognises the material,
+    and the interface needs both for everything it offers."""
+    from f2c import warehouse
+    from f2c.export_ui import build, material_names
+
+    proteins = warehouse.load()
+    payload = build(proteins)
+    names = material_names(proteins)
+    missing = [k for k in payload["decisions"] if k not in names]
+    assert not missing, f"materials shown with no full name: {missing}"
+
+
+def test_material_names_prefer_the_source_database_over_the_local_table():
+    from f2c import warehouse
+    from f2c.export_ui import material_names
+
+    names = material_names(warehouse.load())
+    # PAZy's own wording, not something retyped here.
+    assert names["PET"] == "Polyethylene terephthalate"
+    assert names["PBAT"] == "Polybutylene adipate terephthalate"
+    # And the ones PAZy never carried, because nothing degrades them.
+    assert names["steel"] == "Steel"
+    assert names["PE"] == "Polyethylene"
