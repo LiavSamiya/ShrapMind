@@ -182,6 +182,7 @@ summary .count{margin-inline-start:auto;font-size:.84rem;color:var(--ink-3);
   border:1px solid currentColor;white-space:nowrap;flex:none}
 .ev-measured{color:var(--ok)} .ev-derived{color:var(--accent)}
 .ev-literature{color:var(--unknown)} .ev-specified{color:var(--watch)}
+.ev-refused{color:var(--stop);border-color:currentColor}
 .ref{font-size:.87rem;margin-top:.4rem;color:var(--ink-2)}
 .ref .says{display:block;margin-top:.15rem;color:var(--ink-3)}
 .correction{border-left:3px solid var(--stop);padding-left:.85rem;margin-bottom:1.2rem}
@@ -968,6 +969,38 @@ function renderMetal() {
           of the ceiling above.</p>
         </div>
       </div></section>`);
+  }
+
+  /* Stage 0 goes through the same screen as everything else. The carrier
+     document proposes collagenase to clear the protein corona; the screen
+     refuses EC 3.4.x for digesting host structural protein; and the
+     epineurium that holds a nerve in place is collagen. Rendering the refusal
+     here is what makes it one mechanism rather than three documents that
+     happen to agree. */
+  const proposed = DATA.proposed_reagents || [];
+  if (proposed.length && r.route === "two_stage") {
+    out.push(`<section><h2>Clearing the surface first</h2>
+      <p class="lede">The fragment is coated. A protein corona adsorbs within
+      minutes and a fibrotic capsule closes around it over months, so the
+      surface the catalyst has to reach is not exposed. Something has to clear
+      it &mdash; and that something goes through the host-safety screen too.</p>
+      ${proposed.map(x => `<div class="goal" style="margin-top:1rem">
+        <div class="means">${esc(x.name)}</div>
+        <dl class="kv">
+          <dt>Proposed for</dt><dd>${esc(x.proposed_for)}</dd>
+          <dt>Screen verdict</dt><dd><span class="ev ev-refused">${
+            esc(x.screen.severity)}</span> on ${esc(x.screen.basis)}</dd>
+          <dt>Acts on</dt><dd>${esc(x.screen.host_substrate)}</dd>
+        </dl>
+        <div class="alert"><div class="t">Refused for this indication</div>
+          <div class="d">${esc(x.the_conflict)}</div></div>
+        <p class="note">${esc(x.label_says)}</p>
+        <p class="note">The screen that refuses this is the one that refuses
+        ${DATA.host_safety.counts.blocking} enzymes in the polymer arm, for the
+        same reason: a peptidase proposed for injection beside a nerve has to
+        show it does not digest the tissue holding that nerve in place, rather
+        than be assumed safe because nobody checked.</p>
+      </div>`).join("")}</section>`);
   }
 
   const size = parseFloat($("#metalSize").value);

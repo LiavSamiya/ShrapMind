@@ -69,12 +69,28 @@ def extract_subset(full_json: Path, ec_numbers: set[str], dest: Path) -> dict[st
     return subset
 
 
+# BRENDA writes -999 where a qualitative entry exists in place of a number --
+# typically with the substrate given as "more", meaning the paper reports
+# something about the constant without stating one. It is a sentinel, not a
+# measurement, and it was reaching the warehouse: 24 of them, including a
+# temperature optimum of -999 C on Proteinase K that inflated its measured
+# spread from 47 degrees to 1069 and so collapsed the confidence term in its
+# temperature fit. A project built to refuse unprovenanced numbers was
+# averaging a missing-value marker into its own scores.
+SENTINEL_VALUES = (-999.0, -999.9, 999999.0)
+
+
 def _parse_value(raw: Any) -> tuple[float | None, str | None]:
     match = _VALUE_RE.match(str(raw))
     if not match:
         return None, None
     substrate = (match.group(2) or "").strip() or None
-    return float(match.group(1)), substrate
+    value = float(match.group(1))
+    if value in SENTINEL_VALUES:
+        # Dropped, not zeroed and not clamped: there is no measurement here to
+        # represent, and a substituted value would be a fabrication.
+        return None, substrate
+    return value, substrate
 
 
 def _conditions(comment: str) -> dict[str, Any]:

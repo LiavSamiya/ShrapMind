@@ -9,6 +9,7 @@ unknown and counted against the confidence.
 from __future__ import annotations
 
 from . import substrate
+from . import hostsafety
 from .schema import (
     BODY_PH,
     BODY_TEMPERATURE_C,
@@ -321,10 +322,38 @@ def score(protein: Protein) -> ScoredCandidate:
 
 
 def rank(proteins: list[Protein]) -> list[ScoredCandidate]:
+    """Rank candidates, with the host-safety screen ahead of the score.
+
+    The screen sorts before the score rather than discounting it, because the
+    two are not commensurable: an enzyme that digests the tissue holding the
+    wound together is not a weaker candidate than a slow one, it is a
+    different kind of answer. A protease with excellent kinetics still sorts
+    below an unflagged enzyme with poor ones.
+
+    Nothing is dropped from the list. A refused candidate stays visible,
+    carrying the reason it was refused, because a pool that silently loses
+    entries cannot be audited.
+    """
     scored = [score(p) for p in proteins]
-    # Confident evidence first; ties broken toward the better-documented entry.
+    for c in scored:
+        verdict = hostsafety.screen(c.protein)
+        c.host_safety = verdict
+        if verdict["severity"] == hostsafety.BLOCKING:
+            c.reasons.insert(0, f"REFUSED on host safety: {verdict['statement']}")
+        elif verdict["severity"] == hostsafety.SERIOUS:
+            c.reasons.append(f"Host-safety caution: {verdict['statement']}")
+        elif not verdict["is_screened"]:
+            # The absence has to be recorded as an absence. Saying nothing
+            # here is what let a page claim the screen was a gate.
+            c.unknowns.append(
+                "Never tested against human tissue. The screen flags nothing "
+                "from its classification, which is not evidence of selectivity."
+            )
+    # Host safety first, then confident evidence; ties break toward the
+    # better-documented entry.
     scored.sort(
         key=lambda c: (
+            hostsafety.sort_key(c.protein),
             -c.score,
             c.uncertainty,
             -c.protein.publication_count(),

@@ -934,3 +934,178 @@ def test_reference_keys_are_unique():
                     if isinstance(k, ast.Constant)]
             dupes = {k for k in keys if keys.count(k) > 1}
             assert not dupes, f"{name} REFS has duplicate key(s): {dupes}"
+
+
+# --- the host-safety screen -------------------------------------------------
+# This existed as prose on the safety review page, which stated it was "now a
+# gate" and that host-unsafe candidates "sort last at retrieval". Neither was
+# true: nothing in rank.py knew about host substrates. These tests are what
+# makes the claim true.
+
+def test_peptidases_are_refused_on_their_own_class():
+    from f2c import hostsafety, warehouse
+    by_name = {p.name: p for p in warehouse.load()}
+    for name in ("Proteinase K", "Subtilisin Carlsberg", "Subtilisin Savinase"):
+        v = hostsafety.screen(by_name[name])
+        assert v["severity"] == hostsafety.BLOCKING, name
+        assert v["basis"].startswith("EC 3.4")
+
+
+def test_a_missing_ec_number_does_not_mean_a_missing_flag():
+    """The warehouse holds entries named only "protease", with no EC at all."""
+    from f2c import hostsafety, warehouse
+    nameless = [p for p in warehouse.load()
+                if not p.ec_numbers
+                and "protease" in (p.name or "").lower()]
+    assert nameless, "fixture gone: expected unclassified protease entries"
+    for p in nameless:
+        v = hostsafety.screen(p)
+        assert v["severity"] == hostsafety.BLOCKING, p.name
+        assert v["basis"] == "name"
+
+
+def test_no_flag_is_reported_as_an_absence_not_as_safety():
+    """The 457 enzymes the screen says nothing about must not read as clear.
+
+    Drawn from the warehouse rather than invented, because an invented EC
+    number proves only that the string matching works. A first draft of this
+    test used Cutinase, which is EC 3.1.1.74 and therefore a carboxylic-ester
+    hydrolase the screen rightly puts under caution -- the test was wrong and
+    the screen was right.
+    """
+    from f2c import hostsafety, warehouse
+    unflagged = [p for p in warehouse.load()
+                 if hostsafety.screen(p)["severity"] == hostsafety.UNFLAGGED]
+    assert unflagged, "fixture gone: expected unflagged entries"
+    for protein in unflagged[:40]:
+        v = hostsafety.screen(protein)
+        assert v["is_screened"] is False, (
+            f"{protein.name} reads as screened-and-clear"
+        )
+        assert "not evidence of selectivity" in v["statement"]
+        assert v["host_substrate"] is None
+
+
+def test_an_esterase_is_cautioned_not_cleared():
+    """Cutinase acts on esters, and host tissue is full of them."""
+    from f2c import hostsafety
+    v = hostsafety.screen_reagent("Cutinase", ["3.1.1.74"])
+    assert v["severity"] == hostsafety.CAUTION
+    assert v["basis"] == "EC 3.1.1"
+    # And the longest prefix wins, so a lipase is not merely an esterase.
+    lip = hostsafety.screen_reagent("CalB", ["3.1.1.3"])
+    assert lip["severity"] == hostsafety.SERIOUS
+    assert lip["basis"] == "EC 3.1.1.3"
+
+
+def test_the_screen_reaches_reagents_outside_the_warehouse():
+    """Stage 0 proposes collagenase, which the warehouse has never heard of."""
+    from f2c import hostsafety
+    v = hostsafety.screen_reagent(
+        "Collagenase clostridium histolyticum", ["3.4.24.3"])
+    assert v["severity"] == hostsafety.BLOCKING
+    assert "collagen" in v["host_substrate"].lower()
+    listed = {r["name"]: r for r in hostsafety.PROPOSED_REAGENTS}
+    assert any("Collagenase" in n for n in listed), (
+        "a reagent proposed in a team document must be screened here, or the "
+        "proposal and the screen drift apart"
+    )
+
+
+def test_refused_candidates_sort_below_every_unflagged_one():
+    """The gate, stated as an order rather than as a discount.
+
+    Proteinase K scores highest in the PLA pool on evidence strength. It must
+    still sort below candidates that score worse and are not refused, because
+    digesting host tissue is a different kind of answer from being slow.
+    """
+    from f2c import hostsafety, rank, retrieve, schema, warehouse
+    pool = retrieve.retrieve(schema.MaterialSpec(polymer="PLA"),
+                             warehouse.load()).candidates
+    ranked = rank.rank(pool)
+    severities = [hostsafety.screen(c.protein)["severity"] for c in ranked]
+    worst_unflagged = max(i for i, s in enumerate(severities)
+                          if s == hostsafety.UNFLAGGED)
+    first_blocking = min((i for i, s in enumerate(severities)
+                          if s == hostsafety.BLOCKING), default=None)
+    assert first_blocking is not None, "fixture gone: PLA had refused candidates"
+    assert first_blocking > worst_unflagged, (
+        "a refused candidate outranked an unflagged one"
+    )
+    refused = ranked[first_blocking]
+    assert any(r.startswith("REFUSED on host safety") for r in refused.reasons)
+    # And the refusal must not be achieved by hiding it from the pool.
+    assert len(ranked) == len(pool)
+
+
+def test_screen_counts_partition_the_warehouse():
+    from f2c import hostsafety, warehouse
+    s = hostsafety.summary(warehouse.load())
+    assert sum(s["counts"].values()) == s["total"]
+    assert s["counts"][hostsafety.BLOCKING] > 0
+
+
+# --- sentinel values --------------------------------------------------------
+
+def test_no_sentinel_values_reach_the_warehouse():
+    """BRENDA writes -999 where a qualitative entry replaces a number.
+
+    Twenty-four of them were being carried as measurements, including a
+    temperature optimum of -999 C that inflated Proteinase K's measured spread
+    from 47 degrees to 1069 and collapsed the confidence term in its
+    temperature fit. A project that refuses unprovenanced numbers was
+    averaging a missing-value marker into its own scores.
+    """
+    from f2c import warehouse
+    from f2c.sources import brenda
+    offenders = [
+        (p.name, o.metric, o.value)
+        for p in warehouse.load() for o in p.observations
+        if isinstance(o.value, (int, float))
+        and o.value in brenda.SENTINEL_VALUES
+    ]
+    assert not offenders, f"sentinel values in the warehouse: {offenders[:5]}"
+
+
+def test_sentinels_are_dropped_rather_than_substituted():
+    """There is no measurement to represent, so none is invented."""
+    from f2c.sources import brenda
+    value, substrate = brenda._parse_value("-999 {more}")
+    assert value is None
+    assert substrate == "more", (
+        "the substrate annotation is still worth keeping; only the number goes"
+    )
+    assert brenda._parse_value("3.81 {4-nitrophenyl octanoate}")[0] == 3.81
+
+
+def test_published_pages_do_not_contradict_the_engine():
+    """Run the cross-page consistency check as part of the suite.
+
+    The safety review was written on 2026-10-27 with correct figures. By
+    2026-11-02 the ranking had changed twice, a substrate classifier had been
+    added and 24 sentinel values had been removed -- and the page still stated
+    the October numbers, which looked exactly as authoritative as current ones.
+    A checker nobody runs is a checker that catches nothing.
+    """
+    from tools import verify_consistency as vc
+    d = vc._engine()
+    stale = []
+    for check in vc.CHECKS:
+        truth = check["truth"](d)
+        claimed = check["claimed"]
+        ok = (abs(claimed - truth) < 0.02
+              if isinstance(claimed, float) and isinstance(truth, (int, float))
+              else claimed == truth)
+        if not ok:
+            stale.append(f"{check['page']}: {check['what']} "
+                         f"(page {claimed}, engine {truth})")
+    assert not stale, "pages state figures the engine contradicts: " + "; ".join(stale)
+
+
+def test_the_built_safety_review_has_no_unfilled_tokens():
+    from pathlib import Path
+    import re
+    built = Path(__file__).resolve().parent.parent / "ui" / "safety-review.html"
+    assert built.exists(), "run `python -m tools.build_safety_review`"
+    left = re.findall(r"\{\{[A-Z_]+\}\}", built.read_text())
+    assert not left, f"unsubstituted tokens in the published page: {set(left)}"

@@ -251,7 +251,7 @@ footer p { margin: 0 0 9px; }
   <div class="meta">
     <span>Evidence snapshot 2026-10-27</span>
     <span>PAZy · UniProtKB · BRENDA 2026.1</span>
-    <span>505 proteins · 420 observations</span>
+    <span>505 proteins · 396 observations</span>
   </div>
 </header>
 
@@ -262,9 +262,10 @@ footer p { margin: 0 0 9px; }
   <div class="finding">
     <p class="big">Not one turnover number in the knowledge base was measured
       on a solid fragment.</p>
-    <p>Of 289 kinetic measurements across 505 experimentally-verified enzymes,
-      168 were made on chromogenic model esters, 42 on soluble oligomers, 58
-      record no substrate at all. None on the real material. Only eight
+    <p>Of 266 kinetic measurements across 505
+      experimentally-verified enzymes, 180 were made on chromogenic model
+      esters, 44 on soluble oligomers, 42 record no substrate
+      at all. None on the real material. Only 8
       enzymes have a <span class="mono">k<sub>cat</sub></span> of any kind, and
       none has a measured half-life.</p>
     <p>So every rate this system can compute is an extrapolation across
@@ -277,12 +278,12 @@ footer p { margin: 0 0 9px; }
     <div class="fig"><span class="n">8</span><span class="l">with any k<sub>cat</sub></span></div>
     <div class="fig z"><span class="n">0</span><span class="l">measured on solid polymer</span></div>
     <div class="fig z"><span class="n">0</span><span class="l">with measured half-life</span></div>
-    <div class="fig"><span class="n">4</span><span class="l">oligomer-level</span></div>
+    <div class="fig"><span class="n">6</span><span class="l">oligomer-level</span></div>
   </div>
 
   <p>The eighth entry on that list is worth naming on its own. <strong>Proteinase
-    K</strong> carries a <span class="mono">k<sub>cat</sub></span> of 3509&nbsp;s<sup>−1</sup>,
-    the highest in the dataset — measured on <strong>casein</strong>, milk
+    K</strong> carries a <span class="mono">k<sub>cat</sub></span> of
+    3654&nbsp;s<sup>−1</sup>, the highest in the dataset — measured on <strong>casein</strong>, milk
     protein. Fed into a surface-erosion model without checking what it was
     measured on, that single number predicts spectacular degradation of
     polylactide. It is a protease measured on a protein.</p>
@@ -306,29 +307,7 @@ footer p { margin: 0 0 9px; }
 
   <div class="scroll">
     <table>
-      <caption>Enzymes refused on their own catalytic class. All five are PLA
-        candidates — 12% of that material's pool.</caption>
-      <thead><tr>
-        <th>Enzyme</th><th>EC</th><th>Host substrate at risk</th><th>Basis</th><th>Verdict</th>
-      </tr></thead>
-      <tbody>
-        <tr><td class="name">Proteinase K</td><td class="num">3.4.21.64</td>
-            <td>Collagen, elastin, fibronectin, fibrinogen</td>
-            <td class="num">EC 3.4.21</td><td><span class="pill b">refused</span></td></tr>
-        <tr><td class="name">Subtilisin Carlsberg</td><td class="num">3.4.21.62</td>
-            <td>Host structural and plasma proteins</td>
-            <td class="num">EC 3.4.21</td><td><span class="pill b">refused</span></td></tr>
-        <tr><td class="name">Subtilisin Savinase</td><td class="num">3.4.21.62</td>
-            <td>Host structural and plasma proteins</td>
-            <td class="num">EC 3.4.21</td><td><span class="pill b">refused</span></td></tr>
-        <tr><td class="name">PAM</td><td class="num">3.4.-.-</td>
-            <td>Host proteins (peptide bonds)</td>
-            <td class="num">EC 3.4</td><td><span class="pill b">refused</span></td></tr>
-        <tr><td class="name">"protease"</td><td class="num">none</td>
-            <td>Host proteins (peptide bonds)</td>
-            <td class="num">name</td><td><span class="pill b">refused</span></td></tr>
-      </tbody>
-    </table>
+      <caption>The 6 enzymes the screen refuses outright. 2 of them carry no EC number at all and are caught on their name, because a missing classification must not mean a missing flag.</caption><thead><tr><th>Enzyme</th><th>EC</th><th>Host substrate at risk</th><th>Basis</th><th>Verdict</th></tr></thead><tbody><tr><td class="name">serineprotease</td><td class="num">none</td><td>Host proteins (peptide bonds)</td><td class="num">name</td><td><span class="pill b">refused</span></td></tr><tr><td class="name">protease</td><td class="num">none</td><td>Host proteins (peptide bonds)</td><td class="num">name</td><td><span class="pill b">refused</span></td></tr><tr><td class="name">Subtilisin Savinase</td><td class="num">3.4.21.62</td><td>Collagen, elastin, fibronectin, fibrinogen</td><td class="num">EC 3.4</td><td><span class="pill b">refused</span></td></tr><tr><td class="name">Subtilisin Carlsberg</td><td class="num">3.4.21.62</td><td>Collagen, elastin, fibronectin, fibrinogen</td><td class="num">EC 3.4</td><td><span class="pill b">refused</span></td></tr><tr><td class="name">Proteinase K</td><td class="num">3.4.21.64</td><td>Collagen, elastin, fibronectin, fibrinogen</td><td class="num">EC 3.4</td><td><span class="pill b">refused</span></td></tr><tr><td class="name">PAM</td><td class="num">3.4.-.-</td><td>Collagen, elastin, fibronectin, fibrinogen</td><td class="num">EC 3.4</td><td><span class="pill b">refused</span></td></tr></tbody></table>
   </div>
 
   <p>The last row matters for how the screen is built. That entry carries no EC
@@ -343,30 +322,14 @@ footer p { margin: 0 0 9px; }
 
   <div class="scroll">
     <table>
-      <caption>Host-safety screen across all 505 enzymes.</caption>
-      <thead><tr><th>Severity</th><th>Count</th><th>Classes</th><th>Consequence</th></tr></thead>
-      <tbody>
-        <tr><td><span class="pill b">blocking</span></td><td class="num">5</td>
-            <td class="num">EC 3.4.x</td>
-            <td>Digests host structural protein; not recoverable</td></tr>
-        <tr><td><span class="pill s">serious</span></td><td class="num">6</td>
-            <td class="num">EC 3.1.1.3, 1.11.1</td>
-            <td>Host fat hydrolysis; oxidative stress in an inflamed site</td></tr>
-        <tr><td><span class="pill n">caution</span></td><td class="num">33</td>
-            <td class="num">EC 3.1.1, 3.2.1</td>
-            <td>Promiscuous esterase activity on host esters; bound it experimentally</td></tr>
-        <tr><td><span class="pill c">no flag</span></td><td class="num">461</td>
-            <td>—</td>
-            <td>Nothing flagged from classification. Not evidence of selectivity.</td></tr>
-      </tbody>
-    </table>
+      <caption>Host-safety screen across all 505 enzymes, as <code>f2c/hostsafety.py</code> computes it. The screen is a gate in <code>rank.py</code>: refused candidates sort below every unflagged one, whatever they score.</caption><thead><tr><th>Severity</th><th>Count</th><th>Classes</th><th>Consequence</th></tr></thead><tbody><tr><td><span class="pill b">refused</span></td><td class="num">6</td><td class="num">EC 3.4.x, or named a protease</td><td>Digests host structural protein; not recoverable</td></tr><tr><td><span class="pill s">caution</span></td><td class="num">10</td><td class="num">EC 3.1.1.3, 1.11.1, or named a lipase</td><td>Host fat hydrolysis; oxidative stress in an inflamed site</td></tr><tr><td><span class="pill n">watch</span></td><td class="num">32</td><td class="num">EC 3.1.1, 3.2.1</td><td>Promiscuous activity on host esters and sugars; bound it experimentally</td></tr><tr><td><span class="pill c">no flag</span></td><td class="num">457</td><td class="num">—</td><td>Nothing flagged from classification. Not evidence of selectivity.</td></tr></tbody></table>
   </div>
 
   <div class="note">
     <b>On that last row.</b> The system reports "no host-substrate activity
     flagged from its classification" and then says, in the same sentence, that
     absence of a flag is not evidence of selectivity. The distinction is not
-    pedantry: 461 enzymes have never been tested against human tissue, and a
+    pedantry: 457 enzymes have never been tested against human tissue, and a
     screen that reported them as "safe" would be inventing a result.
   </div>
 </section>
@@ -377,73 +340,33 @@ footer p { margin: 0 0 9px; }
 
   <div class="scroll">
     <table>
-      <caption>Strongest host-safe candidate per material, with the substrate
-        its constant was actually measured on.</caption>
-      <thead><tr>
-        <th>Material</th><th>Pool</th><th>Unsafe</th><th>Best candidate</th>
-        <th>k<sub>cat</sub></th><th>Measured on</th><th>Provenance</th><th>Products</th>
-      </tr></thead>
-      <tbody>
-        <tr><td class="name">PET</td><td class="num">323</td><td class="num">0</td>
-            <td class="name">606</td><td class="num">14.1 s⁻¹</td>
-            <td>4-nitrophenyl butanoate</td><td><span class="pill n">model</span></td>
-            <td><span class="pill s">serious</span></td></tr>
-        <tr><td class="name">PA (nylon)</td><td class="num">76</td><td class="num">0</td>
-            <td class="name">NylB</td><td class="num">0.77 s⁻¹</td>
-            <td>6-aminohexanoate dimer</td><td><span class="pill c">oligomer</span></td>
-            <td><span class="pill c">clear</span></td></tr>
-        <tr><td class="name">PLA</td><td class="num">50</td><td class="num">5</td>
-            <td class="name">Cutinase</td><td class="num">3.81 s⁻¹</td>
-            <td>4-nitrophenyl octanoate</td><td><span class="pill n">model</span></td>
-            <td><span class="pill c">clear</span></td></tr>
-        <tr><td class="name">PHA</td><td class="num">22</td><td class="num">0</td>
-            <td class="name">Cutinase</td><td class="num">3.81 s⁻¹</td>
-            <td>4-nitrophenyl octanoate</td><td><span class="pill n">model</span></td>
-            <td><span class="pill c">clear</span></td></tr>
-        <tr><td class="name">PBS</td><td class="num">19</td><td class="num">0</td>
-            <td class="name">Cutinase</td><td class="num">3.81 s⁻¹</td>
-            <td>4-nitrophenyl octanoate</td><td><span class="pill n">model</span></td>
-            <td><span class="pill s">serious</span></td></tr>
-        <tr><td class="name">PEF</td><td class="num">7</td><td class="num">0</td>
-            <td class="name">IsPETase</td><td class="num">11.9 s⁻¹</td>
-            <td>4-nitrophenyl hexanoate</td><td><span class="pill n">unknown</span></td>
-            <td><span class="pill s">serious</span></td></tr>
-        <tr><td class="name">PC</td><td class="num">10</td><td class="num">0</td>
-            <td class="name">BhrPETase</td><td class="num">39.8 s⁻¹</td>
-            <td>4-nitrophenyl octanoate</td><td><span class="pill n">unknown</span></td>
-            <td><span class="pill b">blocking</span></td></tr>
-        <tr><td class="name">PUR</td><td class="num">55</td><td class="num">0</td>
-            <td class="name">LCC</td><td class="num">none</td>
-            <td>—</td><td><span class="pill n">model</span></td>
-            <td><span class="pill b">blocking</span></td></tr>
-        <tr><td class="name">PBAT</td><td class="num">23</td><td class="num">0</td>
-            <td class="name">Est119</td><td class="num">none</td>
-            <td>—</td><td><span class="pill n">model</span></td>
-            <td><span class="pill n">not assessed</span></td></tr>
-        <tr><td class="name">NR</td><td class="num">8</td><td class="num">0</td>
-            <td class="name">LCP_STRK3</td><td class="num">none</td>
-            <td>—</td><td><span class="pill n">unknown</span></td>
-            <td><span class="pill n">not assessed</span></td></tr>
-        <tr><td class="name">Cellulose / cotton</td><td class="num">0</td><td class="num">—</td>
-            <td colspan="4">No curated enzyme. PAZy is a plastics-active database
-              and contains no cellulase.</td>
-            <td><span class="pill c">clear</span></td></tr>
-      </tbody>
-    </table>
+      <caption>What each material selects, the substrate its turnover number was measured on, and how many enzymes in its pool the screen refuses. A dash under k<sub>cat</sub> means the selected candidate has none: since catalytic evidence stopped rewarding a model-ester constant, the strongest candidate is often one with no constant at all.</caption><thead><tr><th>Material</th><th>Pool</th><th>Refused</th><th>Selected</th><th>k<sub>cat</sub></th><th>Measured on</th><th>Substrate class</th></tr></thead><tbody><tr><td class="name">PET</td><td class="num">323</td><td class="num">0</td><td class="name">Cut190</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">PA</td><td class="num">62</td><td class="num">0</td><td class="name">NylC</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">PLA</td><td class="num">50</td><td class="num">6</td><td class="name">Cutinase</td><td class="num">29.74 s⁻¹</td><td>4-nitrophenyl acetate</td><td><span class="pill n">model</span></td></tr><tr><td class="name">PHA</td><td class="num">22</td><td class="num">0</td><td class="name">PhaZst</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">PBS</td><td class="num">19</td><td class="num">0</td><td class="name">PbsA</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">PEF</td><td class="num">7</td><td class="num">0</td><td class="name">PHL-7</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">PC</td><td class="num">10</td><td class="num">0</td><td class="name">PHL-7</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">PUR</td><td class="num">55</td><td class="num">0</td><td class="name">UMG-SP-1</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">PBAT</td><td class="num">23</td><td class="num">0</td><td class="name">PLE628</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr><tr><td class="name">NR</td><td class="num">8</td><td class="num">0</td><td class="name">LCP_STRK3</td><td class="num">—</td><td>—</td><td><span class="pill n">—</span></td></tr></tbody></table>
   </div>
 
-  <h3>The one route whose evidence holds, and why it still fails</h3>
-  <p><strong>Polyamide is the only material in the dataset that clears the
-    provenance gate.</strong> NylB and NylC are the only two enzymes anywhere
-    in the warehouse whose turnover numbers were measured on a genuine oligomer
-    of their own target — 6-aminohexanoate dimer and cyclic oligomer — rather
-    than on a chromogenic stand-in. Their products are 6-aminohexanoic acid,
-    with no blocking hazard mechanism. No unsafe candidates in the pool.</p>
+  <h3>The routes whose evidence holds, and why they still fail</h3>
+  <p>An earlier version of this page said polyamide was the only material that
+    cleared the provenance gate, and that NylB and NylC were the only two
+    enzymes anywhere in the warehouse with a turnover number on a genuine
+    oligomer of their own target. Rebuilding the figures from the engine
+    corrected both claims, and the correction is worth stating rather than
+    quietly fixing.</p>
+  <p><strong>6 enzymes have an oligomer-level constant, not
+    two.</strong> NylB and NylC carry theirs on 6-aminohexanoate dimer and
+    cyclic oligomer. The other four are on genuine PET and PHA intermediates:
+    606, IsPETase and BhrPETase on BHET and MHET, which are the real
+    intermediates of PET hydrolysis rather than chromogenic stand-ins, and
+    PhaY1 on linear and cyclic 3-hydroxybutyrate oligomers. So the oligomer
+    tier is wider than this page first reported, and two materials reach it
+    rather than one.</p>
 
-  <p>And then it fails anyway. NylB's measured 0.77&nbsp;s<sup>−1</sup> works
-    out to <strong>0.048&nbsp;µm/day</strong> of surface erosion under body
-    conditions, below the threshold at which erosion means anything. At that
-    rate an 8&nbsp;mm³ fragment is still there in decades.</p>
+  <p>And they fail anyway, which is the part that did not change. The
+    polyamide constants cluster between 0.29 and 1.17&nbsp;s<sup>−1</sup>,
+    and at that order of magnitude surface erosion under body conditions comes
+    out at a fraction of a micrometre per day — below the threshold at which
+    erosion means anything. An 8&nbsp;mm³ fragment is still there in decades.
+    A previous draft quoted a single 0.77&nbsp;s<sup>−1</sup> for NylB, which
+    is not one of its four measurements; the range is what the warehouse
+    holds, and the conclusion survives being stated as a range.</p>
 
   <div class="note">
     <b>This is the most useful result in the review.</b> The material with the

@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from . import formulate, goals, metals, pipeline, substrate
+from . import formulate, goals, hostsafety, metals, pipeline, substrate
 from .engine import decide
 from .formulate import REPEAT_UNIT_G_PER_MOL, capture_requirement
 from .rank import BODY_PH, BODY_TEMPERATURE_C, WEIGHTS, _summarise
@@ -298,6 +298,20 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
             },
             "carrier_lifetime_weeks": metals.CARRIER_LIFETIME_WEEKS,
         },
+        # The host-safety screen, counted once here rather than quoted from
+        # memory in each page. A page that states 5/6/33/461 while the
+        # warehouse says 6/10/32/457 is a page nobody can trust on the
+        # numbers it got right.
+        "host_safety": hostsafety.summary(proteins),
+        "host_safety_classes": [
+            {k: c[k] for k in ("prefix", "severity", "class_name",
+                               "host_substrate", "consequence")}
+            for c in hostsafety.EC_CLASSES
+        ],
+        "proposed_reagents": [
+            {**r, "screen": hostsafety.screen_reagent(r["name"], r["ec_numbers"])}
+            for r in hostsafety.PROPOSED_REAGENTS
+        ],
         "goal_rules": {
             "max_useful_crystallinity_pct": goals.MAX_USEFUL_CRYSTALLINITY_PCT,
             "micro_size_mm": goals.MICRO_SIZE_MM,

@@ -31,7 +31,7 @@ engine rather than existing only as a message in a chat.
 | Page | Artifact | Source in this repo |
 |---|---|---|
 | ShrapMind (entry point) | `XQgkTkYvMmCjTXCqcXUr9H` | `ui/app.html` → `tools/build_app.py` → `ui/shrapmind.html` |
-| Fragment-to-Catalyst Safety Review | `9NDiDW7T9dgooUJEGD9jYt` | `ui/safety-review.html` |
+| Fragment-to-Catalyst Safety Review | `9NDiDW7T9dgooUJEGD9jYt` | `ui/safety-review.src.html` → `tools/build_safety_review.py` → `ui/safety-review.html` |
 | ביקורת ארכיטקטורת ההידרוג'ל | `7vSe3aYcf4KM8KQKTzbfD5` | `ui/carrier-review.html` |
 | Shrapnel — team workspace | `R8WfMNJXNCrfk7jiMiAYMj` | not in this repo; holds its own live database written by the team |
 | TfH Catalytic Site | `TmWMoL2bKvSPyrL63t9JVf` | superseded — its viewer is inline in `ui/app.html` |
@@ -47,3 +47,30 @@ when the container is reclaimed.
 The team workspace is deliberately not folded into the entry point. Its
 content is written by the team into a database keyed to its own URL, so
 copying the page would strand the content.
+
+
+## Keeping the pages honest
+
+Three checkers, each for a different way a number goes wrong:
+
+| Tool | Checks | The failure it was built after |
+|---|---|---|
+| `tools/verify_sources.py` | imported warehouse data | BRENDA shipped three wrong citations in release 2026.1 |
+| `tools/verify_refs.py` | hand-typed references in `f2c/` | seven fabricated DOIs in the metal arm, including a ceruloplasmin citation pointing at a ferritin structure paper |
+| `tools/verify_consistency.py` | figures the published pages state | the safety review kept stating its 2026-10-27 figures after the engine changed three times |
+
+`verify_consistency` runs inside the test suite, so a page that contradicts the
+engine fails `pytest` rather than waiting for somebody to notice. Its `claimed`
+values are transcribed from the published pages by hand on purpose: editing a
+page means editing the claim too, and editing only one of them is the failure.
+
+Figures in the safety review are build tokens rather than literals, filled by
+`tools/build_safety_review.py` from `ui/decisions.json`. A number that cannot
+drift is a number nobody has to re-check.
+
+The host-safety screen lives in `f2c/hostsafety.py` and is a gate in
+`rank.py`: a refused candidate sorts below every unflagged one whatever it
+scores, and nothing is dropped from the pool, so a refusal stays auditable.
+The same screen covers reagents the warehouse has never seen
+(`PROPOSED_REAGENTS`), which is how the carrier document's Stage 0 collagenase
+is refused by the same mechanism rather than by a separate argument.

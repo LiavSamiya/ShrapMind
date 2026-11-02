@@ -1,0 +1,660 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Fragment-to-Catalyst Safety Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single measured column, lab-report rhythm. Data in bordered
+   tables, each hazard mechanism in a bounded block with its own stripe. */
+:root {
+  --paper: #fbfbfa;
+  --surface: #ffffff;
+  --ink: #15191f;
+  --ink-soft: #4a5260;
+  --ink-faint: #7b8494;
+  --rule: #dcdfe4;
+  --rule-soft: #eceef1;
+  --block: #c0392b;      /* refuses to advance */
+  --serious: #a66b00;    /* must be bounded */
+  --clear: #1b7a5a;      /* clears on evidence */
+  --accent: #1f5c7a;     /* structural: links, eyebrows */
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14171b;
+    --surface: #1b1f25;
+    --ink: #e8eaed;
+    --ink-soft: #a8b0bc;
+    --ink-faint: #7c848f;
+    --rule: #2e343c;
+    --rule-soft: #24292f;
+    --block: #e8705f;
+    --serious: #d9a341;
+    --clear: #4fbf92;
+    --accent: #6fb3d2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #14171b;
+  --surface: #1b1f25;
+  --ink: #e8eaed;
+  --ink-soft: #a8b0bc;
+  --ink-faint: #7c848f;
+  --rule: #2e343c;
+  --rule-soft: #24292f;
+  --block: #e8705f;
+  --serious: #d9a341;
+  --clear: #4fbf92;
+  --accent: #6fb3d2;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 72px;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 50rem; margin: 0 auto; }
+h1, h2, h3 { font-family: "Source Serif 4", Georgia, serif; text-wrap: balance; }
+
+/* masthead */
+header { padding-block: 44px 28px; border-bottom: 2px solid var(--ink); }
+.eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); margin: 0 0 14px;
+}
+h1 { font-size: clamp(1.9rem, 5.4vw, 2.7rem); font-weight: 700; line-height: 1.14;
+     margin: 0 0 14px; letter-spacing: -.015em; }
+.standfirst { font-size: 1.1rem; color: var(--ink-soft); margin: 0; max-width: 40rem; }
+.meta {
+  display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 22px;
+  font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-faint);
+}
+
+/* sections */
+section { padding-block: 40px 0; }
+h2 {
+  font-size: 1.5rem; font-weight: 600; margin: 0 0 6px; letter-spacing: -.01em;
+  padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+}
+.sec-sub { color: var(--ink-faint); font-size: .92rem; margin: 0 0 22px;
+           font-family: "IBM Plex Mono", monospace; }
+h3 { font-size: 1.12rem; font-weight: 600; margin: 30px 0 8px; }
+p { margin: 0 0 15px; }
+strong { font-weight: 600; }
+code, .mono { font-family: "IBM Plex Mono", monospace; font-size: .88em; }
+code { background: var(--rule-soft); padding: 1px 5px; border-radius: 3px; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+/* the one big number */
+.finding {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-left: 4px solid var(--block);
+  padding: 24px; margin: 26px 0;
+}
+.finding .big {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-size: clamp(1.4rem, 4.2vw, 1.95rem); font-weight: 700;
+  line-height: 1.22; margin: 0 0 12px; letter-spacing: -.012em;
+}
+.finding p:last-child { margin-bottom: 0; }
+
+/* figure strip */
+.figs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+  margin: 24px 0;
+}
+.fig { background: var(--surface); padding: 14px 16px; min-width: 0; }
+.fig .n {
+  font-family: "IBM Plex Mono", monospace; font-size: 1.5rem; font-weight: 500;
+  font-variant-numeric: tabular-nums; display: block; line-height: 1.1;
+}
+.fig .l { font-size: 11.5px; color: var(--ink-faint); line-height: 1.35;
+          display: block; margin-top: 5px; }
+.fig.z .n { color: var(--block); }
+
+/* tables */
+.scroll { overflow-x: auto; margin: 22px 0; border: 1px solid var(--rule); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 38rem; }
+caption { text-align: left; font-size: 12px; color: var(--ink-faint);
+          padding: 10px 12px; border-bottom: 1px solid var(--rule);
+          background: var(--rule-soft); }
+th {
+  text-align: left; font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 500;
+  padding: 9px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap;
+}
+td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft);
+     vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+td.num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+         white-space: nowrap; }
+td.name { font-weight: 500; white-space: nowrap; }
+
+/* verdict pills */
+.pill {
+  display: inline-block; font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px; border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.pill.b { color: var(--block); }
+.pill.s { color: var(--serious); }
+.pill.c { color: var(--clear); }
+.pill.n { color: var(--ink-faint); }
+
+/* mechanism blocks */
+.mech {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-faint); padding: 18px 20px; margin: 20px 0;
+}
+.mech.block { border-left-color: var(--block); }
+.mech.serious { border-left-color: var(--serious); }
+.mech.clear { border-left-color: var(--clear); }
+.mech h4 {
+  margin: 0 0 4px; font-size: 1rem; font-weight: 600;
+  font-family: "Source Serif 4", Georgia, serif;
+}
+.mech .tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint);
+  display: block; margin-bottom: 10px;
+}
+.mech p { margin: 0 0 11px; font-size: 14.5px; }
+.mech p:last-child { margin-bottom: 0; }
+.eq {
+  font-family: "IBM Plex Mono", monospace; font-size: 13px;
+  background: var(--rule-soft); padding: 11px 13px; margin: 12px 0;
+  overflow-x: auto; white-space: nowrap; border-radius: 3px;
+}
+.req {
+  font-size: 13.5px; padding-top: 11px; margin-top: 12px;
+  border-top: 1px dashed var(--rule); color: var(--ink-soft);
+}
+.req b { color: var(--ink); font-weight: 600; }
+
+/* cascade */
+ol.cascade { list-style: none; counter-reset: s; padding: 0; margin: 20px 0; }
+ol.cascade li {
+  counter-increment: s; position: relative;
+  padding: 0 0 20px 46px; border-left: 1px solid var(--rule);
+  margin-left: 13px;
+}
+ol.cascade li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.cascade li::before {
+  content: counter(s); position: absolute; left: -13px; top: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--rule); color: var(--ink-soft);
+  font-family: "IBM Plex Mono", monospace; font-size: 12px;
+  display: grid; place-items: center;
+}
+ol.cascade .when {
+  font-family: "IBM Plex Mono", monospace; font-size: 11px;
+  color: var(--ink-faint); text-transform: uppercase; letter-spacing: .07em;
+  display: block;
+}
+ol.cascade h4 { margin: 2px 0 5px; font-size: 1rem; font-weight: 600;
+                font-family: "Source Serif 4", Georgia, serif; }
+ol.cascade p { margin: 0; font-size: 14.5px; color: var(--ink-soft); }
+
+ul.plain { padding-left: 20px; margin: 0 0 15px; }
+ul.plain li { margin-bottom: 8px; }
+
+.note {
+  font-size: 13.5px; color: var(--ink-soft); background: var(--rule-soft);
+  padding: 15px 17px; margin: 22px 0; border-radius: 3px;
+}
+.note b { color: var(--ink); }
+
+footer {
+  margin-top: 54px; padding-top: 22px; border-top: 2px solid var(--ink);
+  font-size: 13px; color: var(--ink-faint);
+}
+footer p { margin: 0 0 9px; }
+/* Back to the project's single entry point. Seven pages were published for
+   this project and nothing linked them; this page is one of three still
+   current, and the directory lives on ShrapMind. */
+.upnav{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;
+  padding-block:14px 0;font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+.upnav a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+.upnav span{color:var(--ink-faint)}
+</style>
+
+<div class="wrap">
+
+<nav class="upnav">
+  <a href="https://claude.ai/artifact/XQgkTkYvMmCjTXCqcXUr9H">&larr; ShrapMind</a>
+  <span>This is one of three current pages. The engine, and the directory of
+    every page in the project, are there.</span>
+</nav>
+
+<header>
+  <p class="eyebrow">ShrapMind · Biological safety review</p>
+  <h1>Will the catalyst attack the patient?</h1>
+  <p class="standfirst">
+    A cross-reference of 505 curated enzymes against ten fragment materials,
+    asking two questions the gate battery originally conflated: what reaction
+    are we running, and what else can this particular protein do.
+  </p>
+  <div class="meta">
+    <span>Evidence snapshot 2026-10-27</span>
+    <span>PAZy · UniProtKB · BRENDA 2026.1</span>
+    <span>{{PROTEINS}} proteins · {{OBSERVATIONS}} observations</span>
+  </div>
+</header>
+
+<section>
+  <h2>The finding that governs everything else</h2>
+  <p class="sec-sub">Why most runs end in a refusal</p>
+
+  <div class="finding">
+    <p class="big">Not one turnover number in the knowledge base was measured
+      on a solid fragment.</p>
+    <p>Of {{CONSTANTS}} kinetic measurements across {{PROTEINS}}
+      experimentally-verified enzymes, {{MODEL}} were made on chromogenic model
+      esters, {{OLIGOMER}} on soluble oligomers, {{UNKNOWN}} record no substrate
+      at all. None on the real material. Only {{WITH_KCAT}}
+      enzymes have a <span class="mono">k<sub>cat</sub></span> of any kind, and
+      none has a measured half-life.</p>
+    <p>So every rate this system can compute is an extrapolation across
+      substrates. It is reported with a band wide enough to say so, and the
+      provenance gate refuses to let it be called a prediction.</p>
+  </div>
+
+  <div class="figs">
+    <div class="fig"><span class="n">{{PROTEINS}}</span><span class="l">curated enzymes</span></div>
+    <div class="fig"><span class="n">{{WITH_KCAT}}</span><span class="l">with any k<sub>cat</sub></span></div>
+    <div class="fig z"><span class="n">0</span><span class="l">measured on solid polymer</span></div>
+    <div class="fig z"><span class="n">0</span><span class="l">with measured half-life</span></div>
+    <div class="fig"><span class="n">{{OLIGOMER_ENZYMES}}</span><span class="l">oligomer-level</span></div>
+  </div>
+
+  <p>The eighth entry on that list is worth naming on its own. <strong>Proteinase
+    K</strong> carries a <span class="mono">k<sub>cat</sub></span> of
+    {{PROTEINASE_K_KCAT}}&nbsp;s<sup>−1</sup>, the highest in the dataset — measured on <strong>casein</strong>, milk
+    protein. Fed into a surface-erosion model without checking what it was
+    measured on, that single number predicts spectacular degradation of
+    polylactide. It is a protease measured on a protein.</p>
+</section>
+
+<section>
+  <h2>Two questions, not one</h2>
+  <p class="sec-sub">The gap this review opened</p>
+
+  <p>The original gate battery asked whether the bond class being attacked
+    occurs in human tissue. For polylactide the answer is no: PLA hydrolysis is
+    aliphatic-ester chemistry, and human structural protein is held together by
+    peptide bonds. Every protease in the dataset passed that check.</p>
+
+  <p>But the question was asked about the <em>reaction specification</em>, not
+    about the <em>protein</em>. All four peptidases in the warehouse are
+    retrieved as PLA candidates, and their own catalytic activity is on peptide
+    bonds — which is what collagen, elastin, fibronectin and laminin are made
+    of. An enzyme that digests the tissue holding the wound together is worse
+    than leaving the fragment in place.</p>
+
+  <div class="scroll">
+    <table>
+      {{TABLE_REFUSED}}
+  </div>
+
+  <p>The last row matters for how the screen is built. That entry carries no EC
+    number at all, so an EC-only filter would have missed it. Enzyme-family
+    names are screened as well, because a missing classification must not mean
+    a missing flag.</p>
+
+  <h3>Graded, not binary</h3>
+  <p>A screen that blocked everything would be useless. Severity tracks the
+    consequence: loss of structural integrity is not the same as local
+    irritation.</p>
+
+  <div class="scroll">
+    <table>
+      {{TABLE_SCREEN}}
+  </div>
+
+  <div class="note">
+    <b>On that last row.</b> The system reports "no host-substrate activity
+    flagged from its classification" and then says, in the same sentence, that
+    absence of a flag is not evidence of selectivity. The distinction is not
+    pedantry: {{UNFLAGGED}} enzymes have never been tested against human tissue, and a
+    screen that reported them as "safe" would be inventing a result.
+  </div>
+</section>
+
+<section>
+  <h2>Material by material</h2>
+  <p class="sec-sub">Best available candidate, and what refuses it</p>
+
+  <div class="scroll">
+    <table>
+      {{TABLE_MATERIALS}}
+  </div>
+
+  <h3>The routes whose evidence holds, and why they still fail</h3>
+  <p>An earlier version of this page said polyamide was the only material that
+    cleared the provenance gate, and that NylB and NylC were the only two
+    enzymes anywhere in the warehouse with a turnover number on a genuine
+    oligomer of their own target. Rebuilding the figures from the engine
+    corrected both claims, and the correction is worth stating rather than
+    quietly fixing.</p>
+  <p><strong>{{OLIGOMER_ENZYMES}} enzymes have an oligomer-level constant, not
+    two.</strong> NylB and NylC carry theirs on 6-aminohexanoate dimer and
+    cyclic oligomer. The other four are on genuine PET and PHA intermediates:
+    606, IsPETase and BhrPETase on BHET and MHET, which are the real
+    intermediates of PET hydrolysis rather than chromogenic stand-ins, and
+    PhaY1 on linear and cyclic 3-hydroxybutyrate oligomers. So the oligomer
+    tier is wider than this page first reported, and two materials reach it
+    rather than one.</p>
+
+  <p>And they fail anyway, which is the part that did not change. The
+    polyamide constants cluster between 0.29 and 1.17&nbsp;s<sup>−1</sup>,
+    and at that order of magnitude surface erosion under body conditions comes
+    out at a fraction of a micrometre per day — below the threshold at which
+    erosion means anything. An 8&nbsp;mm³ fragment is still there in decades.
+    A previous draft quoted a single 0.77&nbsp;s<sup>−1</sup> for NylB, which
+    is not one of its four measurements; the range is what the warehouse
+    holds, and the conclusion survives being stated as a range.</p>
+
+  <div class="note">
+    <b>This is the most useful result in the review.</b> The material with the
+    best evidence is measured to be too slow, and the materials with workable
+    rates have no evidence that the rates are real. That is not a dead end — it
+    is a specification. Either raise the rate on a route whose evidence already
+    holds, or obtain polymer-level measurements on a route whose rate already
+    looks workable. Both are concrete wet-lab programmes, and the second is
+    cheaper.
+  </div>
+</section>
+
+<section>
+  <h2>What the degradation products do</h2>
+  <p class="sec-sub">Mechanism, not classification</p>
+
+  <p>Hazard mechanisms are kept deliberately separate from GHS codes. A
+    regulatory classification has to be fetched from a registry and must never
+    be hand-entered; a mechanism can be reasoned about and checked, and it is
+    what tells a reviewer <em>why</em> a product matters. Both are tracked, and
+    the system reports unresolved GHS status as an unanswered question rather
+    than as a finding of safety.</p>
+
+  <div class="mech block">
+    <h4>Free iron — Fenton chemistry</h4>
+    <span class="tag">Blocking · established · metal route</span>
+    <p>Liberated Fe(II) reacts with hydrogen peroxide to produce the hydroxyl
+      radical, the most reactive oxygen species in biology, which reacts at
+      diffusion-limited rates with whatever it meets:</p>
+    <div class="eq">Fe(II) + H₂O₂ → Fe(III) + OH⁻ + •OH</div>
+    <p>A wound is the worst possible setting for this reaction, because the
+      co-reactant is already there and abundant: activated neutrophils generate
+      peroxide at the site as part of the respiratory burst. The consequences
+      are lipid peroxidation, protein carbonylation and DNA strand breaks in
+      the tissue immediately around the fragment, plus iron overload as a known
+      driver of ferroptotic cell death.</p>
+    <p class="req"><b>Requires:</b> chelation-grade capture, not merely
+      "capture". The gel has to bind iron as it is liberated and hold it
+      redox-inactive — a chelator that retains iron but leaves it free to cycle
+      between Fe(II) and Fe(III) does not solve this. <b>This is the mechanistic
+      reason the metal route is bounded by capture and not by rate:</b>
+      dissolving the fragment faster than the gel can sequester the ions
+      converts a locally inert object into distributed oxidative injury, which
+      is unambiguously worse than leaving it in place.</p>
+  </div>
+
+  <div class="mech block">
+    <h4>Bisphenol A — receptor agonism</h4>
+    <span class="tag">Blocking · established · polycarbonate</span>
+    <p>Binds nuclear and membrane oestrogen receptors as an agonist at low
+      concentrations. The dose-response is contested and non-monotonic in parts
+      of the literature, which makes a "safe local amount" argument hard to
+      make convincingly.</p>
+    <p class="req"><b>Requires:</b> a specific regulatory and toxicological
+      case before this product is generated inside tissue at all. The
+      polycarbonate route is gated on it, not merely cautioned — which is why
+      PC appears above with a workable candidate and a blocking verdict.</p>
+  </div>
+
+  <div class="mech block">
+    <h4>Aromatic diamines — genotoxicity</h4>
+    <span class="tag">Blocking · established · polyurethane</span>
+    <p>Polyurethane hydrolysis can liberate aromatic diamines from the hard
+      segment. Several, including 4,4′-methylenedianiline and the
+      toluenediamines, are classified as human or probable human carcinogens.</p>
+    <p class="req"><b>Requires:</b> a demonstrated amine-free product panel.
+      For this route the product panel <em>is</em> the gate, not the kinetics —
+      a polyurethane candidate must not advance on erosion rate alone.</p>
+  </div>
+
+  <div class="mech serious">
+    <h4>Ethylene glycol — oxidative metabolism to oxalate</h4>
+    <span class="tag">Serious · established · all polyester routes</span>
+    <p>Oxidised in vivo by alcohol dehydrogenase to glycolaldehyde, then
+      glycolic acid, then oxalic acid. Oxalate precipitates with calcium as
+      insoluble crystals, giving metabolic acidosis and calcium-oxalate
+      nephropathy. The effect is systemic and dose-dependent rather than
+      local.</p>
+    <p>It is also the hardest product to contain. At 62&nbsp;g/mol its derived
+      molecular radius is 0.26&nbsp;nm — the smallest of any organic product
+      here — so it diffuses out through a 20&nbsp;nm gel mesh far more readily
+      than the larger products do. In simulation it reaches 43% capture where
+      cellobiose at 0.51&nbsp;nm holds at 58%.</p>
+    <p class="req"><b>Requires:</b> a bounded total release, not just a release
+      rate. The absolute quantity is fixed by the fragment's mass through the
+      mass balance, so for a small fragment it may fall far below any toxic
+      threshold — but that has to be computed and stated rather than assumed.
+      This is the strongest single reason the polyester route needs its mass
+      balance closed.</p>
+  </div>
+
+  <div class="mech serious">
+    <h4>1,4-butanediol — metabolism to GHB</h4>
+    <span class="tag">Serious · established · PBS</span>
+    <p>Metabolised by alcohol and aldehyde dehydrogenase to
+      γ-hydroxybutyrate, a controlled substance with recognised sedative and
+      anaesthetic effects. Of every product considered here this is the one most
+      likely to have a systemic effect at a small absolute amount.</p>
+    <p class="req"><b>Requires:</b> capture, or a demonstrated release quantity
+      far below a pharmacologically active dose.</p>
+  </div>
+
+  <div class="mech block">
+    <h4>Detached particulate — the failure mode the whole approach exists to avoid</h4>
+    <span class="tag">Blocking · established · every route</span>
+    <p>Debris detached from the fragment surface is phagocytosed, drives a
+      foreign-body response, and — being mobile — migrates away from the treated
+      site. One locatable object becomes many unlocatable ones.</p>
+    <p class="req"><b>Requires:</b> surface erosion rather than bulk
+      fragmentation. This is why the model is a shrinking-core surface model
+      and why the fragmentation gate exists: a route that breaks the fragment up
+      has produced an outcome worse than the untreated state.</p>
+  </div>
+
+  <div class="mech clear">
+    <h4>The clean panel: cellulose and the polyhydroxyalkanoates</h4>
+    <span class="tag">Clear · established</span>
+    <p>Cellulose hydrolysis gives cellobiose and glucose. PHA gives
+      3-hydroxybutyrate, a physiological ketone body. PLA gives lactate, cleared
+      by the Cori cycle. PBS gives succinate, a citric-acid-cycle intermediate.
+      Polycarbonate's second product, carbonate, enters the bicarbonate buffer
+      system.</p>
+    <p class="req"><b>Note what this means for the wood-first argument.</b> The
+      concept brief leads with wood because the product profile is the mildest
+      of any material, and on the product side that argument is correct and
+      survives this review intact. It is the <em>kinetic</em> side that has no
+      support: the knowledge base contains no cellulase at all, so there is
+      currently no candidate to put behind it.</p>
+  </div>
+</section>
+
+<section>
+  <h2>The biological sequence</h2>
+  <p class="sec-sub">What the tissue is already doing, and where the intervention lands</p>
+
+  <p>The fragment is not sitting in neutral buffer. By the time anyone considers
+    treating a chronic retained fragment, the tissue has completed a
+    months-long response to it, and that response determines both what the
+    enzyme can reach and what the host does in reply.</p>
+
+  <ol class="cascade">
+    <li><span class="when">Minutes</span>
+      <h4>Protein adsorption</h4>
+      <p>Plasma proteins including fibrinogen adsorb onto the fragment's
+        surface and change conformation. This is the signal that recruits the
+        immune system — and it is also the first obstacle to catalysis, because
+        the surface the enzyme must reach is already coated.</p></li>
+    <li><span class="when">Hours to days</span>
+      <h4>Neutrophil and M1 macrophage recruitment</h4>
+      <p>Inflammatory cells arrive and attempt phagocytosis, secreting an
+        acidic microenvironment and inflammatory cytokines. The respiratory
+        burst generates hydrogen peroxide — the co-reactant that makes free iron
+        dangerous at this specific site.</p></li>
+    <li><span class="when">Weeks</span>
+      <h4>Frustrated phagocytosis</h4>
+      <p>Unable to engulf an object orders of magnitude larger than themselves,
+        macrophages fuse into foreign-body giant cells that attach to the
+        surface and secrete degradative enzymes into a hypoxic local
+        environment.</p></li>
+    <li><span class="when">Months</span>
+      <h4>Fibrotic capsule</h4>
+      <p>Fibroblasts lay down an avascular collagen wall; contractile
+        myofibroblasts tighten it around the fragment, producing the mechanical
+        pressure on adjacent nerves that generates the symptoms. The capsule
+        also isolates the fragment — which limits migration, and limits
+        access.</p></li>
+  </ol>
+
+  <h3>What the intervention has to survive</h3>
+  <ul class="plain">
+    <li><strong>A coated surface.</strong> The protein corona reduces
+      accessible surface area. The simulation treats accessibility as the
+      binding constraint for crystalline materials, with values of 0.2–0.45
+      rather than 1.</li>
+    <li><strong>Host proteases.</strong> The same proteolytic environment that
+      makes a protease candidate dangerous also degrades the therapeutic
+      enzyme. No half-life has been measured for any enzyme in this dataset
+      under these conditions — the simulator reports that as an assumed
+      parameter rather than substituting a plausible value.</li>
+    <li><strong>37 °C and pH 7.4.</strong> Nine enzymes in the dataset have
+      temperature optima at or above 60 °C, and the strongest PET evidence sits
+      at 50–70 °C on amorphous film at pH 8–9. Body conditions are not where
+      these constants were measured.</li>
+    <li><strong>Non-sterile fragments.</strong> A wood splinter carries soil
+      and bacteria, and biofilm blocks the surface the enzyme is trying to
+      reach.</li>
+    <li><strong>An immune system with history.</strong> Eighteen enzymes in the
+      dataset come from genera associated with wound infection, including three
+      from <em>Clostridium botulinum</em>. A recombinant protein is not its
+      source organism, but it may be a protein the local immune system is
+      already primed against.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>What the cited work establishes, and what it does not</h2>
+  <p class="sec-sub">Reading the precedent honestly</p>
+
+  <div class="scroll">
+    <table>
+      <caption>The precedent table, with both halves of each claim.</caption>
+      <thead><tr><th>Work</th><th>Establishes</th><th>Does not establish</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Yoshida 2016<br><span class="mono">PETase</span></td>
+            <td>A bacterial enzyme hydrolyses PET; the chemistry is real.</td>
+            <td>Activity on semi-crystalline fibre at 37 °C in serum. Measured
+                on amorphous film.</td></tr>
+        <tr><td class="name">Lu 2022<br><span class="mono">FAST-PETase</span></td>
+            <td>Model-guided engineering measurably improves a real
+                polymer-degrading enzyme.</td>
+            <td>Anything at body conditions — measured at 50 °C in buffer, with
+                a pH 8 optimum above tissue pH.</td></tr>
+        <tr><td class="name">Rouvre 2016<br>Deutzmann 2018</td>
+            <td>Hydrogenases accelerate Fe(0) oxidation near neutral pH. There
+                is a mechanistic anchor for the metal route.</td>
+            <td>Anything in tissue. Shown anaerobically on steel coupons, and
+                slowly. It liberates ions, which is a containment problem.</td></tr>
+        <tr><td class="name">Kim 2025<br><span class="mono">ZETA</span></td>
+            <td>A new active site incorporating a metal can be designed de
+                novo.</td>
+            <td>Dissolving solid metal. Of 96 designs tested, 86 were soluble
+                and five active; none shown in tissue.</td></tr>
+        <tr><td class="name">Yeh 2023<br><span class="mono">LuxSit</span></td>
+            <td>The full digital-to-protein chain works end to end.</td>
+            <td>That it works cheaply — three hits from 7,648 designs. It
+                demonstrates the cost of the search as much as the
+                capability.</td></tr>
+        <tr><td class="name">Madani 2023<br><span class="mono">ProGen</span></td>
+            <td>Generated sequences can be functional down to 31% identity to
+                any natural protein.</td>
+            <td>A new reaction, or one-shot success — screening was
+                required.</td></tr>
+        <tr><td class="name">Riehl · Nee 2021</td>
+            <td>The clinical gap is real: most retained fragments are managed
+                conservatively and removal carries its own risk.</td>
+            <td>That enzymatic erosion is a safe or effective third option.
+                That remains unproven.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Where this leaves the project</h2>
+  <p class="sec-sub">Four conclusions</p>
+
+  <ul class="plain">
+    <li><strong>The enzyme has to be screened separately from the reaction.</strong>
+      Five candidates in the dataset would act on host tissue, all of them
+      offered for the same material, and a reaction-level bond-class check
+      cleared every one. That screen is now a gate, host-unsafe candidates sort
+      last at retrieval, and an unscreened enzyme fails too — because not
+      asking is not the same as a negative answer.</li>
+    <li><strong>Capture, not rate, is the binding constraint on the metal
+      route.</strong> Fenton chemistry in a peroxide-rich wound is the
+      mechanism, and it means a faster iron route is a worse one unless
+      chelation keeps pace. This supports the mentor's caution about the metal
+      direction on mechanistic grounds rather than market ones.</li>
+    <li><strong>The wood-first argument survives on products and fails on
+      kinetics.</strong> Glucose and cellobiose are the mildest product panel
+      available, and that part of the brief holds. But there is no cellulase in
+      the knowledge base, so the route currently has no candidate behind it.
+      The gap is reported rather than filled with a constant borrowed from a
+      polyester.</li>
+    <li><strong>The decisive experiment is a measurement, not a design.</strong>
+      Every refusal in this review traces back to the same absence: no turnover
+      number on a solid fragment at body conditions. One such measurement, on
+      a route whose products are already clean, would move more than another
+      round of candidate generation.</li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Research prototype.</strong> Not a medical device, not a clinical
+    decision aid, and not validated for use in or on a person. Every figure
+    here is simulation output or a literature value, labelled with its
+    provenance; nothing has been validated in vitro, in vivo or clinically.</p>
+  <p>The host-safety screen is built on enzyme classification. Class membership
+    is not proof of harm in situ — a tethered enzyme inside a hydrogel is not
+    the same exposure as free enzyme in tissue. The burden of proof is placed
+    deliberately: a protease proposed for injection next to a nerve should have
+    to demonstrate that it does not digest tissue, rather than be assumed safe
+    because nobody checked.</p>
+  <p><a href="https://claude.ai/artifact/XQgkTkYvMmCjTXCqcXUr9H">ShrapMind</a> &mdash; the engine these verdicts come from, and the directory of every page in this project.</p>
+  <p>Evidence snapshot 2026-10-27 · PAZy, UniProtKB, BRENDA 2026.1 · GHS hazard
+    classification not yet resolved · ShrapMind Fragment-to-Catalyst</p>
+</footer>
+
+</div>
+
+</body></html>

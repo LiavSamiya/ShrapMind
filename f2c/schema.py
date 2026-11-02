@@ -150,6 +150,11 @@ class ScoredCandidate:
     reasons: list[str]
     unknowns: list[str]
     gaps: list[Gap] = field(default_factory=list)
+    # What the host-safety screen said about this protein. Separate from
+    # `score` on purpose: an enzyme that digests host tissue is not a
+    # low-scoring candidate, it is a refused one, and collapsing the two into
+    # one number would let good kinetics outvote the refusal.
+    host_safety: dict[str, Any] | None = None
 
 
 @dataclass
