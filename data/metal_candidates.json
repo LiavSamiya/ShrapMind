@@ -1,0 +1,3652 @@
+{
+  "fetched_at": "2026-11-02T12:26:29+00:00",
+  "queries": {
+    "ferroxidase": {
+      "purpose": "Fe(II) -> Fe(III). The class that matters most, because iron is the commonest fragment metal.",
+      "status": "ok",
+      "source": "ebi.ac.uk/proteins",
+      "returned": 127
+    },
+    "ferroxidase_bacterial": {
+      "purpose": "Bacterial non-heme ferritins, the prokaryotic equivalent.",
+      "status": "ok",
+      "source": "ebi.ac.uk/proteins",
+      "returned": 23
+    },
+    "metal_nadp": {
+      "purpose": "Metal ion reduction with NAD(P)+ as acceptor -- the reverse direction, listed to show it was looked at.",
+      "status": "ok",
+      "source": "ebi.ac.uk/proteins",
+      "returned": 97
+    },
+    "multicopper_oxidase": {
+      "purpose": "Laccase-class multicopper oxidases, which handle copper and some other metals.",
+      "status": "ok",
+      "source": "ebi.ac.uk/proteins",
+      "returned": 97
+    }
+  },
+  "candidates": [
+    {
+      "accession": "A0A0F5HNH9",
+      "name": "Ferritin-like protein",
+      "organism": "Bacillus thermotolerans",
+      "pdb_ids": [
+        "6N63"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "A0A1E3M8P2",
+      "name": "Ferric acinetobactin reductase",
+      "organism": "Acinetobacter baumannii",
+      "pdb_ids": [
+        "7LRN"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A0A1W7HCY1",
+      "name": "Ferric aerobactin reductase IutB",
+      "organism": "Vibrio vulnificus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A0A7E5WTY7",
+      "name": "Ferritin heavy chain",
+      "organism": "Trichoplusia ni",
+      "pdb_ids": [
+        "1Z6O"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "A0A7T1FRB0",
+      "name": "Laccase",
+      "organism": "Bacillus stratosphericus",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "A0R647",
+      "name": "Ferritin BfrB",
+      "organism": "Mycolicibacterium smegmatis (strain ATCC 700084 / mc(2)155)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "A2XCN6",
+      "name": "Putative laccase-18",
+      "organism": "Oryza sativa subsp. indica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "A2Y9C2",
+      "name": "Laccase-20",
+      "organism": "Oryza sativa subsp. indica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "A2Y9C5",
+      "name": "Putative laccase-19",
+      "organism": "Oryza sativa subsp. indica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "A3LN69",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Scheffersomyces stipitis (strain ATCC 58785 / CBS 6054 / NBRC 10063 / NRRL Y-11545)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A4J778",
+      "name": "Metal reductase",
+      "organism": "Desulforamulus reducens (strain ATCC BAA-1160 / DSM 100696 / MI-1)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A5DE11",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Meyerozyma guilliermondii (strain ATCC 6260 / CBS 566 / DSM 6381 / JCM 1539 / NBRC 10279 / NRRL Y-324)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A5F660",
+      "name": "Ferric vibriobactin reductase ViuB",
+      "organism": "Vibrio cholerae serotype O1 (strain ATCC 39541 / Classical Ogawa 395 / O395)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A5U6Z7",
+      "name": "DNA-binding protein HupB",
+      "organism": "Mycobacterium tuberculosis (strain ATCC 25177 / H37Ra)",
+      "pdb_ids": [
+        "4DKY",
+        "4PT4"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "A5YVV0",
+      "name": "Multicopper oxidase 3",
+      "organism": "Anopheles gambiae",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "A6ZN61",
+      "name": "Ferric/cupric reductase transmembrane component 7",
+      "organism": "Saccharomyces cerevisiae (strain YJM789)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A6ZU25",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Saccharomyces cerevisiae (strain YJM789)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "A7TQE6",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Vanderwaltozyma polyspora (strain ATCC 22028 / DSM 70294 / BCRC 21397 / CBS 2163 / NBRC 10782 / NRRL Y-8283 / UCD 57-17)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "B3A0L4",
+      "name": "Laccase",
+      "organism": "Hericium coralloides",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "B3EWG2",
+      "name": "Laccase",
+      "organism": "Lepiota magnispora",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "B3EWI3",
+      "name": "Laccase",
+      "organism": "Agaricus placomyces",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "B3LHL3",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Saccharomyces cerevisiae (strain RM11-1a)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "B9FJH4",
+      "name": "Laccase-12",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "B9WB34",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Candida dubliniensis (strain CD36 / ATCC MYA-646 / CBS 7987 / NCPF 3949 / NRRL Y-17841)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "C0HJB2",
+      "name": "Laccase",
+      "organism": "Sanghuangporus baumii",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "C0HLV6",
+      "name": "Laccase-S",
+      "organism": "Trametes hirsuta",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "C0HLV7",
+      "name": "Laccase",
+      "organism": "Ganoderma australe",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "C4Y9R6",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Clavispora lusitaniae (strain ATCC 42720)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "C5E398",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Lachancea thermotolerans (strain ATCC 56472 / CBS 6340 / NRRL Y-8284)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "C5E4F2",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Zygosaccharomyces rouxii (strain ATCC 2623 / CBS 732 / NBRC 1130 / NCYC 568 / NRRL Y-229)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "C5M5S1",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Candida tropicalis (strain ATCC MYA-3404 / T1)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "C7GPP6",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Saccharomyces cerevisiae (strain JAY291)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "C8Z891",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Saccharomyces cerevisiae (strain Lalvin EC1118 / Prise de mousse)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "D0LZ73",
+      "name": "Encapsulated ferritin-like protein",
+      "organism": "Haliangium ochraceum (strain DSM 14365 / JCM 11303 / SMP-2)",
+      "pdb_ids": [
+        "5N5F",
+        "7OE2",
+        "7OEU"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "D0VWU3",
+      "name": "Laccase",
+      "organism": "Trametes maxima",
+      "pdb_ids": [
+        "2H5U",
+        "3DIV"
+      ],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "D3ZYW7",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "D4APX3",
+      "name": "Laccase ARB_05828",
+      "organism": "Arthroderma benhamiae (strain ATCC MYA-4681 / CBS 112371)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "D4GPK6",
+      "name": "Laccase",
+      "organism": "Haloferax volcanii (strain ATCC 29605 / DSM 3757 / JCM 8879 / NBRC 14742 / NCIMB 2012 / VKM B-1768 / DS2)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "D9J041",
+      "name": "Mercuric reductase",
+      "organism": "Lysinibacillus sphaericus",
+      "pdb_ids": [
+        "5X1Y"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "E1WS50",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Bacteroides fragilis (strain 638R)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "F4I4K7",
+      "name": "Ferric reduction oxidase 3, mitochondrial",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "F4I4K7-2",
+      "name": "Isoform 2 of Ferric reduction oxidase 3, mitochondrial",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "F4I4K7-3",
+      "name": "Isoform 3 of Ferric reduction oxidase 3, mitochondrial",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "H8F1Z2",
+      "name": "Ferritin BfrB",
+      "organism": "Mycobacterium tuberculosis (strain ATCC 35801 / TMC 107 / Erdman)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "I4DJ24",
+      "name": "Ferritin heavy chain",
+      "organism": "Papilio xuthus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "I6WZK7",
+      "name": "Multicopper oxidase MmcO",
+      "organism": "Mycobacterium tuberculosis (strain ATCC 25618 / H37Rv)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "I7HD01",
+      "name": "Frataxin-like protein, mitochondrial",
+      "organism": "Leishmania donovani",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "J9VQZ4",
+      "name": "Laccase-2",
+      "organism": "Cryptococcus neoformans (strain H99 / ATCC 208821 / CBS 10515 / FGSC 9487)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "J9VY90",
+      "name": "Laccase-1",
+      "organism": "Cryptococcus neoformans (strain H99 / ATCC 208821 / CBS 10515 / FGSC 9487)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "O29428",
+      "name": "Ferric-chelate reductase (NAD(P)H)",
+      "organism": "Archaeoglobus fulgidus (strain ATCC 49558 / DSM 4304 / JCM 9628 / NBRC 100126 / VC-16)",
+      "pdb_ids": [
+        "1I0R",
+        "1I0S"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "O33125",
+      "name": "DNA-binding protein HupB",
+      "organism": "Mycobacterium leprae (strain TN)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O35943",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O46119",
+      "name": "Ferritin heavy chain",
+      "organism": "Echinococcus granulosus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O46414",
+      "name": "Ferritin heavy chain",
+      "organism": "Bos taurus",
+      "pdb_ids": [
+        "7U5L"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O50171",
+      "name": "Bacterial ferritin",
+      "organism": "Paramagnetospirillum magnetotacticum",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O59896",
+      "name": "Laccase",
+      "organism": "Pycnoporus cinnabarinus",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "O65100",
+      "name": "Ferritin-3, chloroplastic",
+      "organism": "Vigna unguiculata",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O68926",
+      "name": "Bacterioferritin",
+      "organism": "Salmonella typhimurium (strain LT2 / SGSC1412 / ATCC 700720)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O68935",
+      "name": "Bacterioferritin",
+      "organism": "Serratia marcescens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O74831",
+      "name": "Frataxin homolog, mitochondrial",
+      "organism": "Schizosaccharomyces pombe (strain 972 / ATCC 24843)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "O80434",
+      "name": "Laccase-4",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "O81081",
+      "name": "Laccase-2",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "O94727",
+      "name": "Ferric/cupric reductase transmembrane component 2",
+      "organism": "Schizosaccharomyces pombe (strain 972 / ATCC 24843)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P00392",
+      "name": "Mercuric reductase",
+      "organism": "Pseudomonas aeruginosa",
+      "pdb_ids": [
+        "1ZK7",
+        "1ZX9",
+        "2KT2",
+        "2KT3",
+        "4K7Z",
+        "4K8D"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P00393",
+      "name": "Type II NADH:quinone oxidoreductase",
+      "organism": "Escherichia coli (strain K12)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P00450",
+      "name": "Ceruloplasmin",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "1KCW",
+        "2J5W",
+        "4EJX",
+        "4ENZ"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P02794",
+      "name": "Ferritin heavy chain",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "1FHA",
+        "2CEI",
+        "2CHI",
+        "2CIH",
+        "2CLU",
+        "2CN6",
+        "2CN7",
+        "2FHA",
+        "2IU2",
+        "2Z6M",
+        "3AJO",
+        "3AJP",
+        "3AJQ",
+        "3ERZ",
+        "3ES3",
+        "4DYX",
+        "4DYY",
+        "4DYZ",
+        "4DZ0",
+        "4OYN",
+        "4Y08",
+        "4YKH",
+        "4ZJK",
+        "5CMQ",
+        "5CMR",
+        "5GN8",
+        "5GOU",
+        "5JKK",
+        "5JKL",
+        "5JKM",
+        "5N26",
+        "5N27",
+        "5UP7",
+        "5UP8",
+        "5UP9",
+        "5VTD",
+        "5XB1",
+        "5YI5",
+        "5ZND",
+        "6B8F",
+        "6B8G",
+        "6FTV",
+        "6GSR",
+        "6H5I",
+        "6H6T",
+        "6H6U",
+        "6IPC",
+        "6IPO",
+        "6IPP",
+        "6IPQ",
+        "6J4A",
+        "6J7G",
+        "6JOB",
+        "6JPS",
+        "6KE2",
+        "6KE4",
+        "6M52",
+        "6M54",
+        "6WYF",
+        "6WYG",
+        "6WYH",
+        "6Z6U",
+        "6Z9E",
+        "6Z9F",
+        "7A6A",
+        "7A6B",
+        "7CK8",
+        "7CK9",
+        "7JGK",
+        "7JGL",
+        "7JGM",
+        "7JGN",
+        "7JGO",
+        "7JGP",
+        "7JGQ",
+        "7K26",
+        "7K3V",
+        "7K3W",
+        "7KE3",
+        "7KE5",
+        "7PF1",
+        "7R5O",
+        "7RRP",
+        "7V66",
+        "7VD8",
+        "7ZG7",
+        "8A2L",
+        "8A2M",
+        "8A5N",
+        "8AAV",
+        "8B7O",
+        "8CPM",
+        "8CPS",
+        "8CPT",
+        "8CPU",
+        "8CPV",
+        "8CPW",
+        "8CPX",
+        "8DHX",
+        "8DNP",
+        "8F49",
+        "8F4L",
+        "8HHS",
+        "8J9L",
+        "8J9M",
+        "8JAI",
+        "8KFD",
+        "8PP2",
+        "8PP3",
+        "8PP4",
+        "8PP5",
+        "8QU9",
+        "8W92",
+        "8WB3",
+        "8WIE",
+        "8WIQ",
+        "8WJF",
+        "8XWB",
+        "8Y6F",
+        "9EQC",
+        "9HQ6",
+        "9I19",
+        "9I1B",
+        "9I1C",
+        "9I1E",
+        "9IVP",
+        "9J48",
+        "9JGO",
+        "9JGP",
+        "9JIU",
+        "9JQB",
+        "9JQC",
+        "9JQD",
+        "9JQE",
+        "9KAY",
+        "9LNY",
+        "9LUW",
+        "9RGH",
+        "9RGI",
+        "9RGJ",
+        "9SJR",
+        "9SJS",
+        "9SJT",
+        "9SJU",
+        "9SJV"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P06811",
+      "name": "Laccase",
+      "organism": "Neurospora crassa (strain ATCC 24698 / 74-OR23-1A / CBS 708.71 / DSM 1257 / FGSC 987)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P07229",
+      "name": "Ferritin, higher subunit",
+      "organism": "Aquarana catesbeiana",
+      "pdb_ids": [
+        "1BG7"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P07788",
+      "name": "Laccase",
+      "organism": "Bacillus subtilis (strain 168)",
+      "pdb_ids": [
+        "1GSK",
+        "1OF0",
+        "1W6L",
+        "1W6W",
+        "1W8E",
+        "2BHF",
+        "2WSD",
+        "2X87",
+        "2X88",
+        "3ZDW",
+        "4A66",
+        "4A67",
+        "4A68",
+        "4AKO",
+        "4AKP",
+        "4AKQ",
+        "4Q89",
+        "4Q8B",
+        "4YVN",
+        "4YVU",
+        "5ZLJ",
+        "5ZLK",
+        "5ZLL",
+        "5ZLM",
+        "7Y8B",
+        "7Y8C"
+      ],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P07798",
+      "name": "Ferritin, middle subunit",
+      "organism": "Aquarana catesbeiana",
+      "pdb_ids": [
+        "1MFR",
+        "3KA3",
+        "3KA4",
+        "3KA6",
+        "3KA8",
+        "3KA9",
+        "3RBC",
+        "3RE7",
+        "3RGD",
+        "3SE1",
+        "3SH6",
+        "3SHX",
+        "4DAS",
+        "4LPJ",
+        "4LPM",
+        "4LPN",
+        "4LQH",
+        "4LQJ",
+        "4LQV",
+        "4LYU",
+        "4LYX",
+        "4MJY",
+        "4MKU",
+        "4ML5",
+        "4MN9",
+        "4MY7",
+        "4P18",
+        "5J8S",
+        "5J8W",
+        "5J93",
+        "5J9V",
+        "5JAC",
+        "5XHI",
+        "5XHM",
+        "5XHN",
+        "5XHO",
+        "6I36",
+        "6I9P",
+        "6I9T",
+        "6IAF",
+        "6IAJ",
+        "9WX5",
+        "9WY3",
+        "9X0V",
+        "9X15",
+        "9X16",
+        "9X1G",
+        "9X6R"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P08267",
+      "name": "Ferritin heavy chain",
+      "organism": "Gallus gallus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P08332",
+      "name": "Mercuric reductase",
+      "organism": "Shigella flexneri",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P08662",
+      "name": "Mercuric reductase",
+      "organism": "Serratia marcescens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P09528",
+      "name": "Ferritin heavy chain",
+      "organism": "Mus musculus",
+      "pdb_ids": [
+        "22FX",
+        "22IX",
+        "23WJ",
+        "3WNW",
+        "5OBA",
+        "5OBB",
+        "6S61",
+        "6SHT",
+        "6V21",
+        "7A4M",
+        "7KOD",
+        "7TB3",
+        "7TBH",
+        "8BK9",
+        "8BKA",
+        "8BKB",
+        "8EMQ",
+        "8EN7",
+        "8J5A",
+        "8PVC",
+        "8RQB",
+        "8T4Q",
+        "8TU7",
+        "8TU8",
+        "8TUE",
+        "9IUY",
+        "9WAL"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P0A0E4",
+      "name": "Mercuric reductase",
+      "organism": "Staphylococcus epidermidis (strain ATCC 12228 / FDA PCI 1200)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P0A0E5",
+      "name": "Mercuric reductase",
+      "organism": "Staphylococcus aureus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P0A0R1",
+      "name": "Bacterial ferritin",
+      "organism": "Neisseria meningitidis serogroup B (strain ATCC BAA-335 / MC58)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P0A0R2",
+      "name": "Bacterial ferritin",
+      "organism": "Neisseria gonorrhoeae",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P0A998",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Escherichia coli (strain K12)",
+      "pdb_ids": [
+        "1EUM",
+        "4XGS",
+        "4ZTT",
+        "9BYE"
+      ],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "P0A999",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Escherichia coli O6:H1 (strain CFT073 / ATCC 700928 / UPEC)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "P0A9A0",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Escherichia coli O157:H7",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "P0A9A1",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Shigella flexneri",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "P0ABD3",
+      "name": "Bacterioferritin",
+      "organism": "Escherichia coli (strain K12)",
+      "pdb_ids": [
+        "1BCF",
+        "1BFR",
+        "2HTN",
+        "2VXI",
+        "2Y3Q",
+        "3E1J",
+        "3E1L",
+        "3E1M",
+        "3E1N",
+        "3E1O",
+        "3E1P",
+        "3E1Q",
+        "3E2C",
+        "3GHQ",
+        "4CVP",
+        "4CVR",
+        "4CVS",
+        "4CVT",
+        "4U3G",
+        "4XKS",
+        "4XKT",
+        "4XKU",
+        "5XGO",
+        "6P8K",
+        "6P8L"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P0ABD4",
+      "name": "Bacterioferritin",
+      "organism": "Escherichia coli O6:H1 (strain CFT073 / ATCC 700928 / UPEC)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P0C6Q2",
+      "name": "Ferric vibriobactin reductase ViuB",
+      "organism": "Vibrio cholerae serotype O1 (strain ATCC 39315 / El Tor Inaba N16961)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P0CJ83",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Bacteroides fragilis (strain YCH46)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "P0DKK6",
+      "name": "Laccase-13",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P13570",
+      "name": "Bacterioferritin",
+      "organism": "Nitrobacter winogradskyi",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P13635",
+      "name": "Ceruloplasmin",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [
+        "5N0K",
+        "5N4L"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P16171",
+      "name": "Mercuric reductase",
+      "organism": "Bacillus cereus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P17239",
+      "name": "Mercuric reductase",
+      "organism": "Acidithiobacillus ferrooxidans",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P17489",
+      "name": "Laccase-1",
+      "organism": "Emericella nidulans (strain FGSC A4 / ATCC 38163 / CBS 112.46 / NRRL 194 / M139)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P17663",
+      "name": "Ferritin heavy chain B",
+      "organism": "Xenopus laevis",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P18685",
+      "name": "Ferritin heavy chain",
+      "organism": "Ovis aries",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P19130",
+      "name": "Ferritin heavy chain",
+      "organism": "Sus scrofa",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P19132",
+      "name": "Ferritin heavy chain",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P19975",
+      "name": "Ferritin-1, chloroplastic",
+      "organism": "Pisum sativum",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P19976",
+      "name": "Ferritin-1, chloroplastic",
+      "organism": "Glycine max",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P22759",
+      "name": "Bacterioferritin",
+      "organism": "Azotobacter vinelandii",
+      "pdb_ids": [
+        "1SOF",
+        "2FKZ",
+        "2FL0",
+        "9N5A"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P24602",
+      "name": "Bacterial ferritin",
+      "organism": "Synechocystis sp. (strain ATCC 27184 / PCC 6803 / Kazusa)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P25319",
+      "name": "Ferritin-1 heavy chain",
+      "organism": "Schistosoma mansoni",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P25320",
+      "name": "Ferritin-2 heavy chain",
+      "organism": "Schistosoma mansoni",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P25699",
+      "name": "Ferritin, chloroplastic",
+      "organism": "Phaseolus vulgaris",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P25915",
+      "name": "Ferritin heavy chain",
+      "organism": "Oryctolagus cuniculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P29036",
+      "name": "Ferritin-1, chloroplastic",
+      "organism": "Zea mays",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P29389",
+      "name": "Ferritin heavy chain",
+      "organism": "Cricetulus griseus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P29390",
+      "name": "Ferritin-2, chloroplastic",
+      "organism": "Zea mays",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P30341",
+      "name": "Mercuric reductase",
+      "organism": "Streptomyces lividans",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P32791",
+      "name": "Ferric/cupric reductase transmembrane component 1",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P36033",
+      "name": "Ferric/cupric reductase transmembrane component 2",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P38993",
+      "name": "Iron transport multicopper oxidase FET3",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [
+        "1ZPU"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P41822",
+      "name": "Ferritin heavy chain",
+      "organism": "Aedes aegypti",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P42577",
+      "name": "Soma ferritin",
+      "organism": "Lymnaea stagnalis",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P42578",
+      "name": "Yolk ferritin",
+      "organism": "Lymnaea stagnalis",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P43314",
+      "name": "Bacterioferritin",
+      "organism": "Mycobacterium avium",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P43315",
+      "name": "Bacterioferritin",
+      "organism": "Mycobacterium leprae (strain TN)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P43707",
+      "name": "Probable bacterial non-heme ferritin",
+      "organism": "Haemophilus influenzae (strain ATCC 51907 / DSM 11121 / KW20 / Rd)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "P45430",
+      "name": "Bacterioferritin",
+      "organism": "Mycolicibacterium paratuberculosis (strain ATCC BAA-968 / K-10)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P49944",
+      "name": "Bacterioferritin",
+      "organism": "Brucella melitensis biotype 1 (strain ATCC 23456 / CCUG 17765 / NCTC 10094 / 16M)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P49946",
+      "name": "Ferritin, heavy subunit",
+      "organism": "Salmo salar",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P49947",
+      "name": "Ferritin, middle subunit",
+      "organism": "Salmo salar",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P49948",
+      "name": "Ferritin heavy chain A",
+      "organism": "Xenopus laevis",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P52093",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Helicobacter pylori (strain ATCC 700392 / 26695)",
+      "pdb_ids": [
+        "5U1A",
+        "5U1B"
+      ],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "P53109",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P53746",
+      "name": "Ferric reductase transmembrane component 4",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P56193",
+      "name": "Laccase-1",
+      "organism": "Thanatephorus cucumeris",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P56998",
+      "name": "Bacterial ferritin",
+      "organism": "Neisseria meningitidis serogroup A / serotype 4A (strain DSM 15465 / Z2491)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P63698",
+      "name": "Bacterioferritin",
+      "organism": "Mycobacterium bovis (strain ATCC BAA-935 / AF2122/97)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P77930",
+      "name": "Bacterial ferritin",
+      "organism": "Pseudomonas putida",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P78588",
+      "name": "Probable ferric reductase transmembrane component",
+      "organism": "Candida albicans",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P78722",
+      "name": "Laccase-2",
+      "organism": "Podospora anserina",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P80145",
+      "name": "Ferritin heavy chain",
+      "organism": "Anas platyrhynchos",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P83445",
+      "name": "Ferritin-2, chloroplastic",
+      "organism": "Pisum sativum",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P84468",
+      "name": "Ferric reductase A",
+      "organism": "Paracoccus denitrificans",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P84469",
+      "name": "Ferric reductase B",
+      "organism": "Paracoccus denitrificans",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P85149",
+      "name": "Laccase-2",
+      "organism": "Cerrena unicolor",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P85308",
+      "name": "Laccase-1b",
+      "organism": "Cerrena unicolor",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P85430",
+      "name": "Laccase-2d",
+      "organism": "Cerrena unicolor",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P85835",
+      "name": "Ferritin, middle subunit",
+      "organism": "Trematomus newnesi",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P85836",
+      "name": "Ferritin, liver middle subunit",
+      "organism": "Trematomus bernacchii",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P85837",
+      "name": "Ferritin, heavy subunit",
+      "organism": "Trematomus newnesi",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P85838",
+      "name": "Ferritin, heavy subunit",
+      "organism": "Trematomus bernacchii",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P85839",
+      "name": "Ferritin, spleen middle subunit",
+      "organism": "Trematomus bernacchii",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P86327",
+      "name": "Laccase-C2",
+      "organism": "Cerrena unicolor",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P86328",
+      "name": "Laccase-C1",
+      "organism": "Cerrena unicolor",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P86351",
+      "name": "Laccase-1",
+      "organism": "Galerina sp. (strain DSM 22662 / HC1)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "P92949",
+      "name": "Ferric reduction oxidase 2",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P94188",
+      "name": "Mercuric reductase",
+      "organism": "Alcaligenes sp",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P94702",
+      "name": "Mercuric reductase",
+      "organism": "Enterobacter agglomerans",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "P9WMK6",
+      "name": "DNA-binding protein HupB",
+      "organism": "Mycobacterium tuberculosis (strain CDC 1551 / Oshkosh)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P9WMK7",
+      "name": "DNA-binding protein HupB",
+      "organism": "Mycobacterium tuberculosis (strain ATCC 25618 / H37Rv)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P9WNE4",
+      "name": "Ferritin BfrB",
+      "organism": "Mycobacterium tuberculosis (strain CDC 1551 / Oshkosh)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P9WNE5",
+      "name": "Bacterioferritin BfrB",
+      "organism": "Mycobacterium tuberculosis (strain ATCC 25618 / H37Rv)",
+      "pdb_ids": [
+        "3QD8",
+        "3UNO",
+        "7O6E",
+        "8AEY"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P9WPQ8",
+      "name": "Bacterioferritin",
+      "organism": "Mycobacterium tuberculosis (strain CDC 1551 / Oshkosh)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "P9WPQ9",
+      "name": "Bacterioferritin BfrA",
+      "organism": "Mycobacterium tuberculosis (strain ATCC 25618 / H37Rv)",
+      "pdb_ids": [
+        "2WTL",
+        "3QB9",
+        "3UOF",
+        "3UOI"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q01679",
+      "name": "Laccase",
+      "organism": "Phlebia radiata",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q02075",
+      "name": "Laccase-2",
+      "organism": "Thanatephorus cucumeris",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q02079",
+      "name": "Laccase-3",
+      "organism": "Thanatephorus cucumeris",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q02081",
+      "name": "Laccase-4",
+      "organism": "Thanatephorus cucumeris",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q02497",
+      "name": "Laccase",
+      "organism": "Trametes hirsuta",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q03966",
+      "name": "Laccase",
+      "organism": "Cryphonectria parasitica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q04800",
+      "name": "Ferric reductase transmembrane component 1",
+      "organism": "Schizosaccharomyces pombe (strain 972 / ATCC 24843)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q05B87",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Bos taurus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q07540",
+      "name": "Frataxin homolog, mitochondrial",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [
+        "2FQL",
+        "2GA5",
+        "3OEQ",
+        "3OER",
+        "4EC2",
+        "5T0V",
+        "5TRE"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q08905",
+      "name": "Ferric reductase transmembrane component 3",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q08908",
+      "name": "Ferric reductase transmembrane component 5",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q0DHL5",
+      "name": "Putative laccase-11",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q0IP28",
+      "name": "Laccase-25",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q0IQU1",
+      "name": "Laccase-22",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q0JHP8",
+      "name": "Laccase-8",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q10ND7",
+      "name": "Laccase-10",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12209",
+      "name": "Probable ferric reductase transmembrane component 8",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q12333",
+      "name": "Ferric/cupric reductase transmembrane component 7",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q12473",
+      "name": "Ferric reductase transmembrane component 6",
+      "organism": "Saccharomyces cerevisiae (strain ATCC 204508 / S288c)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q12541",
+      "name": "Laccase-1",
+      "organism": "Agaricus bisporus",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12542",
+      "name": "Laccase-2",
+      "organism": "Agaricus bisporus",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12570",
+      "name": "Laccase-1",
+      "organism": "Botrytis cinerea",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12717",
+      "name": "Laccase-5",
+      "organism": "Trametes versicolor",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12718",
+      "name": "Laccase-2",
+      "organism": "Trametes versicolor",
+      "pdb_ids": [
+        "1GYC"
+      ],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12719",
+      "name": "Laccase-4",
+      "organism": "Trametes versicolor",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12729",
+      "name": "Laccase-1",
+      "organism": "Pleurotus ostreatus",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q12739",
+      "name": "Laccase-2",
+      "organism": "Pleurotus ostreatus",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q16595",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "1EKG",
+        "1LY7",
+        "3S4M",
+        "3S5D",
+        "3S5E",
+        "3S5F",
+        "3T3J",
+        "3T3K",
+        "3T3L",
+        "3T3T",
+        "3T3X",
+        "5KZ5",
+        "6NZU",
+        "8PK8",
+        "8PK9",
+        "8RME",
+        "9HO4",
+        "9HO5",
+        "9HO6"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q16595-2",
+      "name": "Isoform 2 of Frataxin, mitochondrial",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q16595-3",
+      "name": "Isoform 3 of Frataxin, mitochondrial",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q17574",
+      "name": "Methionine synthase reductase",
+      "organism": "Caenorhabditis elegans",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q1PDH6",
+      "name": "Laccase-16",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q26061",
+      "name": "Ferritin",
+      "organism": "Pacifastacus leniusculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q2FFK2",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain USA300)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q2FWZ8",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain NCTC 8325 / PS 47)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q2MHN2",
+      "name": "Ferritin heavy chain",
+      "organism": "Felis catus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q2QUN2",
+      "name": "Laccase-24",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q2QYS3",
+      "name": "Laccase-23",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q2QZ80",
+      "name": "Laccase-21",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q2R0L0",
+      "name": "Laccase-20",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q2R0L2",
+      "name": "Laccase-19",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q2RBK2",
+      "name": "Putative laccase-17",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q2RVS1",
+      "name": "Encapsulated ferritin-like protein",
+      "organism": "Rhodospirillum rubrum (strain ATCC 11170 / ATH 1.1.1 / DSM 467 / LMG 4362 / NCIMB 8255 / S1)",
+      "pdb_ids": [
+        "5DA5",
+        "5L89",
+        "5L8B",
+        "5L8F",
+        "5L8G",
+        "6SUW",
+        "6SV1"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q2U6T7",
+      "name": "Probable cell surface ferric reductase kap2",
+      "organism": "Aspergillus oryzae (strain ATCC 42149 / RIB 40)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q2YDI9",
+      "name": "Ferritin, mitochondrial",
+      "organism": "Bos taurus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q2YU34",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain bovine RF122 / ET3-1)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q339K6",
+      "name": "Laccase-15",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q39101",
+      "name": "Ferritin-1, chloroplastic",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q3KTM0",
+      "name": "Ferric reduction oxidase 7, chloroplastic",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q3V1H3",
+      "name": "Ferroxidase HEPHL1",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q41709",
+      "name": "Ferritin-2, chloroplastic",
+      "organism": "Vigna unguiculata",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q46106",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Campylobacter jejuni subsp. jejuni serotype O:2 (strain ATCC 700819 / NCTC 11168)",
+      "pdb_ids": [
+        "1KRQ"
+      ],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q46871",
+      "name": "NADPH-dependent ferric-chelate reductase",
+      "organism": "Escherichia coli (strain K12)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q498R1",
+      "name": "Methionine synthase reductase",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q498R1-2",
+      "name": "Isoform 2 of Methionine synthase reductase",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q49YT7",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus saprophyticus subsp. saprophyticus (strain ATCC 15305 / DSM 20229 / NCIMB 8711 / NCTC 7292 / S-41)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q4JIJ2",
+      "name": "Methionine synthase reductase",
+      "organism": "Bos taurus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q4L7K6",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus haemolyticus (strain JCSC1435)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q4V8K1",
+      "name": "Metalloreductase STEAP4",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [
+        "2YJZ"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q51772",
+      "name": "Mercuric reductase",
+      "organism": "Pseudomonas fluorescens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q52109",
+      "name": "Mercuric reductase",
+      "organism": "Acinetobacter calcoaceticus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q53LU4",
+      "name": "Laccase-18",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q54465",
+      "name": "Mercuric reductase",
+      "organism": "Shewanella putrefaciens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q54C45",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Dictyostelium discoideum",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q55P57",
+      "name": "Laccase-1",
+      "organism": "Cryptococcus deneoformans (strain B-3501A)",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q56743",
+      "name": "Ferric vulnibactin reductase VuuB",
+      "organism": "Vibrio vulnificus (strain CMCP6)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q56YT0",
+      "name": "Laccase-3",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q59738",
+      "name": "Bacterioferritin",
+      "organism": "Rhodobacter capsulatus",
+      "pdb_ids": [
+        "1JGC"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q5A446",
+      "name": "Ferric/cupric reductase transmembrane component 1",
+      "organism": "Candida albicans (strain SC5314 / ATCC MYA-2876)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q5E9C8",
+      "name": "Cyanocobalamin reductase / alkylcobalamin dealkylase",
+      "organism": "Bos taurus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q5HEN0",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain COL)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q5HN41",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus epidermidis (strain ATCC 35984 / DSM 28319 / BCRC 17069 / CCUG 31568 / BM 3577 / RP62A)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q5N7A3",
+      "name": "Laccase-6",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q5N7B4",
+      "name": "Laccase-7",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q5N9W4",
+      "name": "Putative laccase-5",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q5N9X2",
+      "name": "Laccase-4",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q5R8J7",
+      "name": "Ferritin heavy chain",
+      "organism": "Pongo abelii",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q5RFU5",
+      "name": "Cyanocobalamin reductase / alkylcobalamin dealkylase",
+      "organism": "Danio rerio",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q5RKL5",
+      "name": "Metalloreductase STEAP3",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q5ZCW1",
+      "name": "Putative laccase-1",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q5ZL21",
+      "name": "Cyanocobalamin reductase / alkylcobalamin dealkylase",
+      "organism": "Gallus gallus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q61147",
+      "name": "Ceruloplasmin",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q658P3",
+      "name": "Metalloreductase STEAP3",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "2VNS",
+        "2VQ3"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q658P3-2",
+      "name": "Isoform 2 of Metalloreductase STEAP3",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q658P3-3",
+      "name": "Isoform 3 of Metalloreductase STEAP3",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q658P3-4",
+      "name": "Isoform 4 of Metalloreductase STEAP3",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q687X5",
+      "name": "Metalloreductase STEAP4",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "6HCY",
+        "6HD1"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q687X5-2",
+      "name": "Isoform 2 of Metalloreductase STEAP4",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q69L99",
+      "name": "Laccase-14",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q6BM09",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Debaryomyces hansenii (strain ATCC 36239 / CBS 767 / BCRC 21394 / JCM 1990 / NBRC 0083 / IGC 2968)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q6C188",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Yarrowia lipolytica (strain CLIB 122 / E 150)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q6CIY2",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Kluyveromyces lactis (strain ATCC 8585 / CBS 2359 / DSM 70799 / NBRC 1267 / NRRL Y-1140 / WM37)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q6G840",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain MSSA476)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q6GFG4",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain MRSA252)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q6ID18",
+      "name": "Laccase-10",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q6MZM0",
+      "name": "Ferroxidase HEPHL1",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q6Z8L2",
+      "name": "Putative laccase-9",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q70KY3",
+      "name": "Laccase-1",
+      "organism": "Melanocarpus albomyces",
+      "pdb_ids": [
+        "1GW0",
+        "2IH8",
+        "2IH9",
+        "2Q9O",
+        "3DKH",
+        "3FU7",
+        "3FU8",
+        "3FU9",
+        "3QPK"
+      ],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q754F4",
+      "name": "Probable metalloreductase AIM14",
+      "organism": "Eremothecium gossypii (strain ATCC 10895 / CBS 109.51 / FGSC 9923 / NRRL Y-1056)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q75CQ8",
+      "name": "Probable ferric reductase transmembrane component",
+      "organism": "Eremothecium gossypii (strain ATCC 10895 / CBS 109.51 / FGSC 9923 / NRRL Y-1056)",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q7A0H5",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain MW2)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q7A4R2",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain N315)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q7KRU8",
+      "name": "Ferritin heavy chain",
+      "organism": "Drosophila melanogaster",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q7SXA6",
+      "name": "Ferritin heavy chain, oocyte isoform",
+      "organism": "Xenopus laevis",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q7XE50",
+      "name": "Putative laccase-16",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q7Z144",
+      "name": "MMACHC-like protein",
+      "organism": "Caenorhabditis elegans",
+      "pdb_ids": [
+        "5UJC"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q84J37",
+      "name": "Laccase-15",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q8BWB6",
+      "name": "Metalloreductase STEAP2",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8C1A3",
+      "name": "Methionine synthase reductase",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8CI59",
+      "name": "Metalloreductase STEAP3",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8CI59-2",
+      "name": "Isoform 2 of Metalloreductase STEAP3",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8CNP5",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus epidermidis (strain ATCC 12228 / FDA PCI 1200)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q8FW95",
+      "name": "Bacterioferritin",
+      "organism": "Brucella suis biovar 1 (strain 1330)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q8H1T3",
+      "name": "Ferritin-2, chloroplastic",
+      "organism": "Nicotiana tabacum",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q8HXX9",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Macaca fascicularis",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q8MIP0",
+      "name": "Ferritin heavy chain",
+      "organism": "Equus caballus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q8N4E7",
+      "name": "Ferritin, mitochondrial",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "1R03",
+        "5Z8J",
+        "5Z8S",
+        "5Z8U",
+        "5Z91",
+        "7O63",
+        "7O64",
+        "7O65",
+        "7O66",
+        "7O67",
+        "7O68",
+        "7O69",
+        "7O6A",
+        "7O6C",
+        "7O6D",
+        "7OWY",
+        "9EQ8",
+        "9EQ9",
+        "9EQA",
+        "9EQB",
+        "9HYC",
+        "9I1A",
+        "9I1D",
+        "9I1F"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q8NFT2",
+      "name": "Metalloreductase STEAP2",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "7TAI",
+        "9PGW",
+        "9PGX",
+        "9PGY"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8NFT2-2",
+      "name": "Isoform 2 of Metalloreductase STEAP2",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8NFT2-3",
+      "name": "Isoform 3 of Metalloreductase STEAP2",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8RWS6",
+      "name": "Ferric reduction oxidase 6",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8RX97",
+      "name": "Ferritin-1, chloroplastic",
+      "organism": "Nicotiana tabacum",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q8RYM9",
+      "name": "Laccase-2",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q8U1L4",
+      "name": "Ferritin-like-encapsulin shell fusion protein",
+      "organism": "Pyrococcus furiosus (strain ATCC 43587 / DSM 3638 / JCM 8422 / Vc1)",
+      "pdb_ids": [
+        "2E0Z",
+        "5N5E"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q8VY13",
+      "name": "Ferric reduction oxidase 8, mitochondrial",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q8VZA1",
+      "name": "Laccase-11",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q8W110",
+      "name": "Ferric reduction oxidase 4",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q920H8",
+      "name": "Hephaestin",
+      "organism": "Rattus norvegicus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q923B6",
+      "name": "Metalloreductase STEAP4",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q93PP9",
+      "name": "Bacterioferritin",
+      "organism": "Desulfovibrio desulfuricans (strain ATCC 27774 / DSM 6949 / MB)",
+      "pdb_ids": [
+        "1NF4",
+        "1NF6",
+        "1NFV"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q941X2",
+      "name": "Laccase-3",
+      "organism": "Oryza sativa subsp. japonica",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q948P5",
+      "name": "Ferritin-4, chloroplastic",
+      "organism": "Glycine max",
+      "pdb_ids": [
+        "3A68",
+        "3A9Q"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q948P6",
+      "name": "Ferritin-3, chloroplastic",
+      "organism": "Glycine max",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q94FY2",
+      "name": "Ferritin, chloroplastic",
+      "organism": "Malus baccata var. xiaojinensis",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q94IC4",
+      "name": "Ferritin-2, chloroplastic",
+      "organism": "Glycine max",
+      "pdb_ids": [
+        "6J4J",
+        "6J4M"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q95MP7",
+      "name": "Ferritin heavy chain",
+      "organism": "Canis lupus familiaris",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q96540",
+      "name": "Ferritin-1, chloroplastic",
+      "organism": "Brassica napus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q96UM2",
+      "name": "Laccase-3",
+      "organism": "Botrytis cinerea",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q96WM9",
+      "name": "Laccase-2",
+      "organism": "Botrytis cinerea",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q99044",
+      "name": "Laccase-1",
+      "organism": "Trametes villosa",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q99046",
+      "name": "Laccase-2",
+      "organism": "Trametes villosa",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q99049",
+      "name": "Laccase-3",
+      "organism": "Trametes villosa",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q99055",
+      "name": "Laccase-4",
+      "organism": "Trametes villosa",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q99056",
+      "name": "Laccase-5",
+      "organism": "Trametes villosa",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q99SZ3",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Staphylococcus aureus (strain Mu50 / ATCC 700699)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q9BQS7",
+      "name": "Hephaestin",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9BQS7-2",
+      "name": "Isoform 2 of Hephaestin",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9BQS7-3",
+      "name": "Isoform 3 of Hephaestin",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9BQS7-4",
+      "name": "Isoform 4 of Hephaestin",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9CZD0",
+      "name": "Cyanocobalamin reductase / alkylcobalamin dealkylase",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q9D5H4",
+      "name": "Ferritin, mitochondrial",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9FJD5",
+      "name": "Laccase-17",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9FLB5",
+      "name": "Laccase-12",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9FLW2",
+      "name": "Ferric reduction oxidase 5",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q9FLW2-2",
+      "name": "Isoform 2 of Ferric reduction oxidase 5",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q9FY79",
+      "name": "Laccase-14",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9HWF9",
+      "name": "Bacterial ferritin",
+      "organism": "Pseudomonas aeruginosa (strain ATCC 15692 / DSM 22644 / CIP 104116 / JCM 14847 / LMG 12228 / 1C / PRS 101 / PAO1)",
+      "pdb_ids": [
+        "3R2H",
+        "3R2K",
+        "3R2L",
+        "3R2M",
+        "3R2O",
+        "3R2R",
+        "3R2S",
+        "9BXP"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9HY79",
+      "name": "Bacterioferritin BfrB",
+      "organism": "Pseudomonas aeruginosa (strain ATCC 15692 / DSM 22644 / CIP 104116 / JCM 14847 / LMG 12228 / 1C / PRS 101 / PAO1)",
+      "pdb_ids": [
+        "3IS7",
+        "3IS8",
+        "3ISE",
+        "3ISF",
+        "4E6K",
+        "4TO9",
+        "4TOA",
+        "4TOB",
+        "4TOC",
+        "4TOD",
+        "4TOE",
+        "4TOF",
+        "4TOG",
+        "4TOH",
+        "5D8O",
+        "5D8P",
+        "5D8Q",
+        "5D8R",
+        "5D8S",
+        "5D8X",
+        "5D8Y",
+        "6NLF",
+        "6NLG",
+        "6NLI",
+        "6NLJ",
+        "6NLK",
+        "6NLL",
+        "6NLM",
+        "6NLN",
+        "7K5E",
+        "7K5F",
+        "7K5G",
+        "7K5H",
+        "9NHR",
+        "9NHT"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9LFD1",
+      "name": "Laccase-9",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9LFD2",
+      "name": "Laccase-8",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9LFD2-2",
+      "name": "Isoform 2 of Laccase-8",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9LMM2",
+      "name": "Probable ferric reduction oxidase 1",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q9LMS3",
+      "name": "Laccase-1",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9LYN2",
+      "name": "Ferritin-3, chloroplastic",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9LYQ2",
+      "name": "Laccase-13",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9S2N0",
+      "name": "Bacterioferritin",
+      "organism": "Streptomyces coelicolor (strain ATCC BAA-471 / A3(2) / M145)",
+      "pdb_ids": [
+        "5XX9",
+        "6K3O",
+        "6K43",
+        "6K4M",
+        "7Y6F",
+        "7Y6G",
+        "7Y6P",
+        "8JAX",
+        "8JB0"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9S756",
+      "name": "Ferritin-4, chloroplastic",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9SIY8",
+      "name": "Laccase-5",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9SR40",
+      "name": "Laccase-7",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9SRL5",
+      "name": "Ferritin-2, chloroplastic",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9TY03",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Caenorhabditis elegans",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9UBK8",
+      "name": "Methionine synthase reductase",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "2QTL",
+        "2QTZ"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q9UBK8-1",
+      "name": "Isoform A of Methionine synthase reductase",
+      "organism": "Homo sapiens",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q9W385",
+      "name": "Frataxin homolog, mitochondrial",
+      "organism": "Drosophila melanogaster",
+      "pdb_ids": [
+        "7N9I"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9XB18",
+      "name": "DNA-binding protein HupB",
+      "organism": "Mycobacterium bovis (strain ATCC BAA-935 / AF2122/97)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9XT27",
+      "name": "Ceruloplasmin",
+      "organism": "Ovis aries",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9XT73",
+      "name": "Ferritin heavy chain",
+      "organism": "Trichosurus vulpecula",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9Y4U1",
+      "name": "Cyanocobalamin reductase / alkylcobalamin dealkylase",
+      "organism": "Homo sapiens",
+      "pdb_ids": [
+        "3SBY",
+        "3SBZ",
+        "3SC0",
+        "3SOM",
+        "5UOS",
+        "7WUZ",
+        "9MRS"
+      ],
+      "classes": [
+        "metal_nadp"
+      ]
+    },
+    {
+      "accession": "Q9Z0Z4",
+      "name": "Hephaestin",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9Z0Z4-2",
+      "name": "Isoform 2 of Hephaestin",
+      "organism": "Mus musculus",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9ZHC5",
+      "name": "DNA-binding protein HupB",
+      "organism": "Mycolicibacterium smegmatis (strain ATCC 700084 / mc(2)155)",
+      "pdb_ids": [],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "Q9ZLI1",
+      "name": "Bacterial non-heme ferritin",
+      "organism": "Helicobacter pylori (strain J99 / ATCC 700824)",
+      "pdb_ids": [
+        "3BVE",
+        "3BVF",
+        "3BVI",
+        "3BVK",
+        "3BVL",
+        "3EGM",
+        "5C6F"
+      ],
+      "classes": [
+        "ferroxidase_bacterial"
+      ]
+    },
+    {
+      "accession": "Q9ZPY2",
+      "name": "Laccase-6",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9ZPY2-2",
+      "name": "Isoform 2 of Laccase-6",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "Q9ZR07",
+      "name": "Frataxin, mitochondrial",
+      "organism": "Arabidopsis thaliana",
+      "pdb_ids": [
+        "9JB5"
+      ],
+      "classes": [
+        "ferroxidase"
+      ]
+    },
+    {
+      "accession": "S8FGV1",
+      "name": "Laccase-2",
+      "organism": "Fomitopsis schrenkii",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "S8FIE4",
+      "name": "Laccase-1",
+      "organism": "Fomitopsis schrenkii",
+      "pdb_ids": [],
+      "classes": [
+        "multicopper_oxidase"
+      ]
+    },
+    {
+      "accession": "V5XKC3",
+      "name": "Ferric vulnibactin reductase VuuB",
+      "organism": "Vibrio vulnificus",
+      "pdb_ids": [],
+      "classes": [
+        "metal_nadp"
+      ]
+    }
+  ],
+  "note": "Assembled from EC classes rather than from a curated list, because no PAZy equivalent exists for metals. Every entry here is reviewed in Swiss-Prot and none has been tested against a fragment in tissue -- these are candidates, at literature level, exactly as the polymer arm would label them."
+}

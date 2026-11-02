@@ -25,6 +25,8 @@ dissolution problem second, which inverts the polymer arm's priorities.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 # Evidence classes, matching the rest of the engine. Nothing in this module is
@@ -59,6 +61,24 @@ REFS = {
         "X-ray microanalysis; three were ferromagnetic and were taken forward "
         "for composition and cytotoxicity against a human cell line. Ferrous "
         "fragments in the head are not a hypothetical case.",
+    ),
+    "ferritin": _ref(
+        "9003196", "10.1074/jbc.272.5.2846",
+        "Human ferritin heavy chain: ferroxidase activity and iron deposition",
+        1997,
+        "Human ferritin heavy chain catalyses 4 Fe(2+) + O2 + 4 H(+) -> "
+        "4 Fe(3+) + 2 H2O and deposits the product as ferric hydroxide inside a "
+        "24-subunit shell about 12 nm across. UniProt's own summary is that it "
+        "stores iron 'in a soluble, non-toxic form' -- oxidation and capture in "
+        "one human protein, with 145 solved structures (P02794).",
+    ),
+    "ceruloplasmin": _ref(
+        "9159481", "10.1073/pnas.93.9.4280",
+        "Ceruloplasmin, the human plasma multicopper ferroxidase",
+        1996,
+        "The circulating human ferroxidase, a multicopper oxidase that acts on "
+        "both iron and copper. Endogenous, which is why the copper route starts "
+        "here rather than at a fungal laccase (P00450).",
     ),
     "cyc2": _ref(
         "39937138", "10.1128/aem.01886-24",
@@ -311,6 +331,67 @@ ENZYMES: dict[str, dict[str, Any]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# The candidate set, assembled from EC classes by tools/fetch_metal_candidates.py
+# because no PAZy equivalent exists for metals. 344 reviewed entries, of which
+# 23 are human.
+#
+# Ranking here is not the polymer arm's weighted score, and should not pretend
+# to be: there are no kinetic measurements to weigh. It is a sort on the three
+# things that decide whether a protein could ever be given to a patient --
+# whether it is human, whether its structure is solved, and whether it both
+# oxidises and stores. Those are facts about the entry, not estimates.
+# ---------------------------------------------------------------------------
+CANDIDATES_PATH = Path(__file__).resolve().parent.parent / "data" / "metal_candidates.json"
+
+
+def load_candidates() -> dict[str, Any]:
+    if not CANDIDATES_PATH.exists():
+        return {"candidates": [], "queries": {}, "fetched_at": None}
+    return json.loads(CANDIDATES_PATH.read_text())
+
+
+def rank_candidates(element: str, limit: int = 8) -> list[dict[str, Any]]:
+    """Candidates for this element, most usable first.
+
+    'Usable' means something specific and checkable: a human protein needs no
+    immunosuppression argument, a solved structure means engineering can start
+    from coordinates rather than a prediction, and a ferritin removes the
+    diffusion gap between oxidation and capture by doing both inside one shell.
+    """
+    wanted = {"Fe": {"ferroxidase", "ferroxidase_bacterial"},
+              "Cu": {"multicopper_oxidase"},
+              "Mn": {"multicopper_oxidase"}}.get(element, set())
+    if not wanted:
+        return []
+    # Ceruloplasmin is filed under ferroxidase but is a multicopper oxidase
+    # that handles both metals, so it belongs in the copper list too. Named
+    # explicitly rather than by widening the class set, which would have
+    # dragged every ferritin into a copper answer.
+    SPANS_BOTH = {"P00450"}
+
+    out = []
+    for c in load_candidates().get("candidates", []):
+        if not wanted.intersection(c.get("classes") or []) \
+                and c["accession"] not in SPANS_BOTH:
+            continue
+        # Isoform records duplicate their parent and add nothing to choose by.
+        if "-" in c["accession"]:
+            continue
+        human = c["organism"] == "Homo sapiens"
+        name = (c.get("name") or "").lower()
+        stores = "ferritin" in name
+        out.append({
+            **c,
+            "human": human,
+            "stores_as_well_as_oxidises": stores,
+            "structures": len(c.get("pdb_ids") or []),
+        })
+    out.sort(key=lambda c: (not c["human"], not c["stores_as_well_as_oxidises"],
+                            -c["structures"], c["accession"]))
+    return out[:limit]
+
+
 def resolve(material: str) -> str | None:
     key = (material or "").strip().lower()
     key = ALIASES.get(key, key)
@@ -388,9 +469,11 @@ def route(material: str) -> dict[str, Any] | None:
                 }
                 for e in enzymes
             ],
-            "why": "This is where a named, characterised enzyme exists. It is "
-                   "also where the engineering problem is, because the one for "
-                   "iron comes from an organism that lives at pH 2.",
+            "why": "This is the stage with real candidates behind it, and the "
+                   "only one that does. Ranked on what decides whether a "
+                   "protein could reach a patient: human origin, a solved "
+                   "structure, and whether it stores what it oxidises.",
+            "ranked": rank_candidates(m["element"]),
         },
         {
             "n": 3,
@@ -430,58 +513,109 @@ def route(material: str) -> dict[str, Any] | None:
 
 
 def engineering_targets(material: str) -> list[dict[str, Any]]:
-    """What would have to change in the enzyme for this to work at 37 C, pH 7.4.
+    """What would have to change for this to work in tissue.
 
-    The polymer arm asks a lab to shift an optimum by 0.6 pH units. For iron
-    the same question is five units, and pretending otherwise would be the most
-    misleading thing this module could do. These are directions with a stated
-    basis, not predictions.
+    These were written when Cyc2 was the only candidate I could name, and they
+    read accordingly: move an optimum five pH units, re-tune a heme pocket,
+    fight an acidophile's chemistry into a neutral body. Querying EC 1.16.3
+    instead of recalling the literature produced a better lead and most of that
+    work disappeared with it.
+
+    Human ferritin oxidises Fe(II) and stores the Fe(III) inside its own shell,
+    at the pH of human cytosol, with 145 solved structures. It is already the
+    fusion of oxidation and capture that the Cyc2 route listed as an
+    aspiration, and being human it needs no argument about immunogenicity. So
+    the remaining targets are about delivery and capacity, not about dragging
+    an enzyme across five pH units.
     """
     key = resolve(material)
-    if key is None or METALS[key]["route"] != "two_stage":
+    if key is None or METALS[key]["route"] == "none":
         return []
-    if METALS[key]["element"] != "Fe":
-        return [{
-            "target": "Measure before engineering",
-            "detail": "The copper route rests on a class rather than on one "
-                      "characterised protein, so the first task is picking the "
-                      "member, not modifying it.",
-            "basis": SPECIFIED,
-        }]
-    return [
-        {
-            "target": "Move the active pH from 2 to 7.4",
-            "detail": "Cyc2's surface and heme environment evolved for an "
-                      "acidophile. Neutralising the net surface charge and "
-                      "re-tuning the residues around the heme is the main body "
-                      "of work, and site-directed mutagenesis on this protein "
-                      "has already mapped which residues matter.",
-            "basis": LITERATURE,
-            "ref": REFS["cyc2"],
-        },
-        {
-            "target": "Re-tune the heme redox potential for neutral pH",
-            "detail": "The Fe(II)/Fe(III) couple shifts with pH, so a potential "
-                      "tuned for pH 2 is mismatched at 7.4. This is a heme-"
-                      "pocket problem and is the kind of change directed "
-                      "evolution handles better than design.",
-            "basis": SPECIFIED,
-        },
-        {
-            "target": "Beat the abiotic reaction, or stop trying to",
-            "detail": "At pH 7.4 Fe(II) autoxidises in air within minutes. If "
-                      "the uncatalysed rate already exceeds what the enzyme adds, "
-                      "the enzyme is the wrong component and the effort belongs "
-                      "in the chelator instead. This is a measurement, and it "
-                      "should be made before any mutagenesis.",
-            "basis": SPECIFIED,
-        },
-        {
-            "target": "Fuse the oxidase to the chelator",
-            "detail": "Oxidation and capture happening at the same site would "
-                      "stop Fe(III) diffusing into tissue between the two "
-                      "stages. A fusion or a co-localised scaffold is the "
-                      "obvious form; neither has been tried for this.",
-            "basis": SPECIFIED,
-        },
-    ]
+    element = METALS[key]["element"]
+
+    if element == "Fe":
+        return [
+            {
+                "target": "Load ferritin where the fragment is",
+                "detail": "Ferritin works inside cells; the fragment corrodes "
+                          "outside them. The protein does not need changing so "
+                          "much as placing -- in the carrier, at the surface, "
+                          "with its pores facing the metal. Ferritin nanocages "
+                          "are already an established delivery vehicle, which "
+                          "is the reason to think this is formulation rather "
+                          "than protein engineering.",
+                "basis": LITERATURE,
+                "ref": REFS["ferritin"],
+            },
+            {
+                "target": "Match capacity to the fragment, by mass balance",
+                "detail": "A 24-subunit shell holds on the order of thousands "
+                          "of iron atoms. The fragment's mass gives the moles "
+                          "of iron exactly, as it does for a polymer, so the "
+                          "number of shells needed is arithmetic rather than an "
+                          "estimate. This is the calculation to do first, "
+                          "because if it comes out absurd the route is dead "
+                          "before any biology is attempted.",
+                "basis": SPECIFIED,
+            },
+            {
+                "target": "Decide whether the enzyme is needed at all",
+                "detail": "At pH 7.4 Fe(II) autoxidises in air within minutes. "
+                          "If the uncatalysed reaction already outpaces the "
+                          "enzyme, ferritin's value is entirely in the storing "
+                          "and none of it in the oxidising -- which would make "
+                          "this a chelation problem with a protein-shaped "
+                          "container, and would simplify the programme. "
+                          "Measure before engineering.",
+                "basis": SPECIFIED,
+            },
+            {
+                "target": "Keep the shell from unloading in tissue",
+                "detail": "Ferritin releases iron on demand in a cell; here it "
+                          "must not. Stabilising the loaded shell, or clearing "
+                          "it before it is asked to release, is the safety "
+                          "question that replaces the old pH problem.",
+                "basis": SPECIFIED,
+            },
+            {
+                "target": "Keep Cyc2 as the rate option, not the lead",
+                "detail": "If measurement shows oxidation really is the "
+                          "bottleneck, Cyc2 oxidises iron far faster than a "
+                          "ferroxidase does -- and then its five-unit pH gap "
+                          "has to be paid for. It is the fallback, and the "
+                          "reason to keep the mutagenesis literature to hand.",
+                "basis": LITERATURE,
+                "ref": REFS["cyc2"],
+            },
+        ]
+
+    if element == "Cu":
+        return [
+            {
+                "target": "Start from ceruloplasmin, not from a laccase",
+                "detail": "Ceruloplasmin is the human plasma multicopper "
+                          "oxidase and already handles copper in circulation, "
+                          "so the safety case starts from an endogenous "
+                          "protein. The fungal laccases have more structures "
+                          "and more activity, and would need everything "
+                          "ceruloplasmin does not.",
+                "basis": LITERATURE,
+                "ref": REFS["ceruloplasmin"],
+            },
+            {
+                "target": "Capture before oxidation, for copper especially",
+                "detail": "Free copper is more redox-active than free iron, so "
+                          "the ion released by a jacketed fragment is more "
+                          "dangerous than iron's. Nothing about the dissolution "
+                          "stage should be attempted until the chelator is "
+                          "demonstrated.",
+                "basis": SPECIFIED,
+            },
+        ]
+
+    return [{
+        "target": "Measure before engineering",
+        "detail": "This metal has a route but no characterised lead, so the "
+                  "first task is finding the protein, not modifying one.",
+        "basis": SPECIFIED,
+    }]

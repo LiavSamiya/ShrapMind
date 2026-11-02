@@ -2,3 +2,5 @@
 # M-CSA), PAZy, CAZy. Everything here uses urllib from the standard library,
 # so the file is deliberately empty of pins -- it exists to mark the boundary
 # and to hold any pin a future fetcher needs, not to install anything today.
+# fetch_metal_candidates.py reaches the EBI Proteins API and UniProt; both
+# are served over urllib from the standard library.

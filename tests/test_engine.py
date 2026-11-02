@@ -621,12 +621,54 @@ def test_the_iron_enzyme_declares_its_five_unit_pH_gap():
 def test_iron_engineering_includes_the_option_of_abandoning_the_enzyme():
     """At pH 7.4 Fe(II) autoxidises in minutes. If the uncatalysed rate already
     beats the enzyme, the enzyme is the wrong component — and a plan that
-    cannot reach that conclusion is advocacy, not engineering."""
+    cannot reach that conclusion is advocacy, not engineering.
+
+    Asserted on the reasoning rather than on the heading, because the heading
+    has already been rewritten once: this test caught the rewrite and should
+    not have, since the target survived it under another name.
+    """
     from f2c import metals
 
     targets = metals.engineering_targets("steel")
-    assert any("abiotic" in t["target"].lower() or "stop trying" in t["target"].lower()
-               for t in targets)
+    assert any("autoxidises" in t["detail"] and "uncatalysed" in t["detail"]
+               for t in targets), (
+        "the plan must be able to conclude that the enzyme is unnecessary"
+    )
+
+
+def test_the_iron_lead_is_human_and_stores_what_it_oxidises():
+    """Querying EC 1.16.3 beat recalling the literature. Cyc2 needs five pH
+    units of engineering; human ferritin already oxidises Fe(II) and keeps the
+    product inside its own shell at cytosolic pH."""
+    from f2c import metals
+
+    lead = metals.rank_candidates("Fe")[0]
+    assert lead["accession"] == "P02794"
+    assert lead["human"] is True
+    assert lead["stores_as_well_as_oxidises"] is True
+    assert lead["structures"] > 100
+
+
+def test_copper_does_not_inherit_the_iron_candidates():
+    """Ferritin is not a copper enzyme. An earlier version widened the class
+    filter and handed every ferritin back as a copper answer."""
+    from f2c import metals
+
+    cu = {c["accession"] for c in metals.rank_candidates("Cu")}
+    assert "P02794" not in cu, "ferritin must not appear in a copper answer"
+    assert "P00450" in cu, "ceruloplasmin spans both metals and belongs here"
+
+
+def test_every_ranked_candidate_is_reviewed_and_unmeasured():
+    """These came from Swiss-Prot by EC class, not from a curated activity
+    list. None has been tested against a fragment, and the module must not
+    acquire a score that implies otherwise."""
+    from f2c import metals
+
+    for element in ("Fe", "Cu"):
+        for c in metals.rank_candidates(element):
+            assert "score" not in c
+            assert c["accession"] and c["organism"]
 
 
 def test_metal_aliases_resolve_the_words_a_clinician_would_write():

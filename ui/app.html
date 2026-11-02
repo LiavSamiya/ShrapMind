@@ -748,6 +748,21 @@ function renderMetal() {
           <div class="what">${esc(s.what)}</div>
           <div class="sub">${esc(s.why)}</div>
           ${s.open ? `<div class="sub" style="color:var(--watch)">Unsolved: ${esc(s.open)}</div>` : ""}
+          ${(s.ranked || []).length ? `<div class="sub" style="margin-top:.7rem">
+            ${s.ranked.length} reviewed candidates from the EC class, most usable first.
+            Human origin, a solved structure, and storing what it oxidises are what
+            "usable" means here — there are no kinetic measurements to weigh.</div>
+            <div class="tablewrap"><table style="margin-top:.5rem">
+            <thead><tr><th>Protein</th><th>Organism</th><th>Structures</th><th></th></tr></thead>
+            <tbody>${s.ranked.map(c => `<tr>
+              <td><a href="https://www.uniprot.org/uniprotkb/${esc(c.accession)}"
+                target="_blank" rel="noopener">${esc(c.name)}</a></td>
+              <td style="font-style:italic">${esc(c.organism)}</td>
+              <td class="num">${c.structures}</td>
+              <td>${c.human ? '<span class="ev ev-measured">human</span> ' : ""}${
+                c.stores_as_well_as_oxidises
+                  ? '<span class="ev ev-derived">oxidises + stores</span>' : ""}</td>
+            </tr>`).join("")}</tbody></table></div>` : ""}
           ${(s.candidates || []).map(c => `<div class="cand">
             <div class="cn">${esc(c.name)}</div>
             <div class="co">${esc(c.organism)}</div>
