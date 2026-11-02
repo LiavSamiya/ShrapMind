@@ -251,10 +251,25 @@ def score(protein: Protein) -> ScoredCandidate:
                         f"{substrate.LABEL[strongest]}"
                     ),
                     measured=f"{len(kinetics)} constants, best class: {strongest}",
-                    target="kcat and Km against the solid polymer at 37 C in serum",
+                    # Deliberately not "kcat and Km on the solid polymer". Those
+                    # constants assume a dissolved substrate at a known molar
+                    # concentration, and a fragment has a surface, not a [S] --
+                    # asking for them on a solid is asking for a number that
+                    # cannot be defined. The quantity that does exist is an
+                    # interfacial one: how much enzyme adsorbs, and how many
+                    # bonds each adsorbed molecule cuts before it leaves.
+                    target=(
+                        "interfacial rate on the solid at 37 C in serum: surface-"
+                        "specific turnover, adsorbed enzyme density, and bonds cut "
+                        "per adsorption event -- not Michaelis-Menten constants, "
+                        "which a solid substrate does not admit"
+                    ),
                     engineering_target=(
-                        "measure turnover on the fragment itself; a chromogenic ester "
-                        "shows the enzyme is an active hydrolase, not that it erodes a solid"
+                        "measure erosion of the fragment itself. A chromogenic ester "
+                        "shows the enzyme is an active hydrolase, not that it erodes a "
+                        "solid. Single-molecule fluorescence on probe-doped polymer "
+                        "nanoparticles already resolves this for PET (PMID 42706806) "
+                        "and is the nearest published method to borrow"
                     ),
                     evidence=kinetics[0].evidence,
                 )
