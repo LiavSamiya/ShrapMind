@@ -56,6 +56,11 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;
   padding-block:.8rem .55rem}
 .masthead h1{font-size:1.1rem;letter-spacing:-.005em}
 .masthead .tag{font-size:.84rem;color:var(--ink-3)}
+.toindex{margin-right:auto;font:inherit;font-size:.82rem;color:var(--accent);
+  background:none;border:0;border-bottom:1px solid currentColor;padding:0;
+  cursor:pointer;white-space:nowrap}
+.toindex:hover{color:var(--ink)}
+.toindex:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .inputs{display:grid;gap:.7rem 1rem;padding-bottom:.9rem;
   grid-template-columns:repeat(auto-fit,minmax(8rem,1fr))}
 .field{display:flex;flex-direction:column;gap:.22rem;min-width:0}
@@ -253,6 +258,7 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
   <div class="masthead">
     <h1>ShrapMind</h1>
     <span class="tag">Which enzyme acts on this fragment, and how far that is from working in tissue</span>
+    <button type="button" id="toIndex" class="toindex">All pages in this project &darr;</button>
   </div>
   <div class="views" role="tablist">
     <button type="button" role="tab" data-view="polymer" aria-selected="true">Polymer fragments</button>
@@ -1180,6 +1186,11 @@ function boot() {
     b.addEventListener("click", () => setView(b.dataset.view));
   }
   addEventListener("hashchange", () => setView(location.hash.slice(1)));
+
+  $("#toIndex").addEventListener("click", () => {
+    $("#index").scrollIntoView({ behavior:
+      matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  });
 
   const w = DATA.warehouse;
   $("#meta").innerHTML = `${w.proteins} enzymes with demonstrated activity,
