@@ -56,6 +56,18 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;
   padding-block:.8rem .55rem}
 .masthead h1{font-size:1.1rem;letter-spacing:-.005em}
 .masthead .tag{font-size:.84rem;color:var(--ink-3)}
+/* The publish skeleton carries a [hidden] reset; a local file does not, so
+   display:flex beats the attribute and the banner showed on both views when
+   opened from disk. Stating it here makes the two environments agree. */
+.armbanner[hidden]{display:none}
+.armbanner{display:flex;flex-wrap:wrap;gap:.3rem .7rem;align-items:baseline;
+  margin-top:.9rem;padding:.7rem .9rem;border:1px solid var(--watch);
+  border-radius:5px;background:var(--sunk)}
+.armbanner .pin{font-family:var(--font-data);font-size:.68rem;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--watch);border:1px solid currentColor;
+  border-radius:2px;padding:1px 5px;white-space:nowrap}
+.armbanner .bt{font-weight:600;font-size:.92rem}
+.armbanner .bb{color:var(--ink-2);font-size:.9rem;flex:1 1 20rem;min-width:0}
 .toindex{margin-right:auto;font:inherit;font-size:.82rem;color:var(--accent);
   background:none;border:0;border-bottom:1px solid currentColor;padding:0;
   cursor:pointer;white-space:nowrap}
@@ -262,8 +274,13 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
     <button type="button" id="toIndex" class="toindex">All pages in this project &darr;</button>
   </div>
   <div class="views" role="tablist">
-    <button type="button" role="tab" data-view="polymer" aria-selected="true">Polymer fragments</button>
-    <button type="button" role="tab" data-view="metal" aria-selected="false">Metal fragments</button>
+    <button type="button" role="tab" data-view="metal" aria-selected="true">Metal fragments</button>
+    <button type="button" role="tab" data-view="polymer" aria-selected="false">Polymer &mdash; earlier direction</button>
+  </div>
+  <div class="armbanner" id="armBanner" hidden>
+    <span class="pin">earlier direction</span>
+    <span class="bt"></span>
+    <span class="bb"></span>
   </div>
   <div class="inputs" id="metalInputs" hidden>
     <div class="field">
@@ -317,12 +334,12 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
 
 <section class="wrap" id="index">
   <h2>Every page in this project</h2>
-  <p class="lede">Nine pages were published over three weeks and nothing
+  <p class="lede">Ten pages were published over three weeks and nothing
     linked them, so each was reachable only by whoever held its URL. This is
-    the entry point. Nothing was deleted: the earlier direction is listed
-    with the current one, marked as what it is.</p>
+    the entry point. Nothing was deleted, but the project moved from polymer
+    fragments to metals, and every page says which arm it belongs to.</p>
 
-  <p class="grp">Current &mdash; the five live pages</p>
+  <p class="grp">Current &mdash; the metal arm</p>
   <ul>
     <li class="here">
       <span class="t plain">ShrapMind</span><span class="pin live">you are here</span>
@@ -331,21 +348,16 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
         tissue. Two arms: polymer and metal.</div>
     </li>
     <li>
-      <a class="t" href="https://claude.ai/artifact/9NDiDW7T9dgooUJEGD9jYt" target="_blank"
-         rel="noopener">Fragment-to-Catalyst Safety Review</a><span class="pin live">live</span>
-      <div class="d">The other half of the same question: not whether an enzyme
-        works, but what else it does. 505 enzymes screened against ten
-        materials, five refused for digesting host protein, and the
-        mechanism behind every hazard verdict this engine reports.</div>
-    </li>
-    <li>
-      <a class="t" href="https://claude.ai/artifact/5eHNCDQXRmxf82gyNiDsSg" target="_blank"
-         rel="noopener" dir="rtl">פרוטוקול הנדסת אנזים</a><span class="pin live">live</span>
-      <div class="d">Three questions answered as three outputs: which residues
-        in a given enzyme respond to a move toward tissue pH, the DNA sequence
-        that expresses a designed variant, and the bench protocol that tests
-        whether it worked. Includes the 810-base construct for TfH H208A,
-        generated and translation-checked rather than written out. In Hebrew.</div>
+      <a class="t" href="https://claude.ai/artifact/HeCKs9GsXQ4SqaZWYLhunm" target="_blank"
+         rel="noopener">Ferroxidase Bench Protocol</a><span class="pin live">live</span>
+      <div class="d">The metal arm at the bench. Which residues in human
+        ferritin respond to the pH a corroding fragment creates around itself,
+        the 576-base construct that expresses it, and seven stages ordered so
+        the cheapest experiment that can kill the route runs first &mdash;
+        three of them need no protein at all. Also in
+        <a href="https://claude.ai/artifact/5eHNCDQXRmxf82gyNiDsSg"
+           target="_blank" rel="noopener" dir="rtl">עברית</a>, built from the
+        same numbers in the same run.</div>
     </li>
     <li>
       <a class="t" href="https://claude.ai/artifact/7vSe3aYcf4KM8KQKTzbfD5" target="_blank"
@@ -367,8 +379,17 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
     </li>
   </ul>
 
-  <p class="grp">Superseded &mdash; kept, not deleted</p>
+  <p class="grp">Earlier direction &mdash; polymer fragments, kept not deleted</p>
   <ul>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/9NDiDW7T9dgooUJEGD9jYt" target="_blank"
+         rel="noopener">Fragment-to-Catalyst Safety Review</a><span class="pin old">polymer era</span>
+      <div class="d">Written for the polymer arm, and kept because its
+        findings hold and because the screen it argued for is now a gate in
+        the engine the metal arm uses. 505 enzymes against ten materials, six
+        refused for digesting host protein. Nothing in it describes the
+        current product.</div>
+    </li>
     <li>
       <a class="t" href="https://claude.ai/artifact/TmWMoL2bKvSPyrL63t9JVf" target="_blank"
          rel="noopener">TfH Catalytic Site</a><span class="pin old">folded in</span>
@@ -1200,9 +1221,13 @@ function metalTimeline(sizeMm, volumeFraction) {
   };
 }
 
-let VIEW = "polymer";
+let VIEW = "metal";
 function setView(v) {
-  VIEW = v === "metal" ? "metal" : "polymer";
+  /* Metal is the product; polymer is the arm the project came from. The
+     default used to be polymer and nothing in the page said the difference,
+     which is how a whole bench protocol got written for the wrong arm weeks
+     after the decision. DATA.scope.active_arm carries it now. */
+  VIEW = v === "polymer" ? "polymer" : "metal";
   for (const b of document.querySelectorAll(".views button")) {
     b.setAttribute("aria-selected", String(b.dataset.view === VIEW));
   }
@@ -1210,6 +1235,8 @@ function setView(v) {
   $("#metalInputs").hidden = VIEW !== "metal";
   if (location.hash.slice(1) !== VIEW) location.hash = VIEW;
   VIEW === "metal" ? renderMetal() : render();
+  const old = $("#armBanner");
+  if (old) old.hidden = VIEW === (DATA.scope?.active_arm || "metal");
 }
 
 function boot() {
@@ -1243,6 +1270,13 @@ function boot() {
   }
   addEventListener("hashchange", () => setView(location.hash.slice(1)));
 
+  const sb = DATA.scope_banner?.en;
+  if (sb) {
+    $("#armBanner .pin").textContent = sb.label;
+    $("#armBanner .bt").textContent = sb.title;
+    $("#armBanner .bb").textContent = sb.body;
+  }
+
   $("#toIndex").addEventListener("click", () => {
     $("#index").scrollIntoView({ behavior:
       matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -1253,7 +1287,7 @@ function boot() {
     ${w.reviewed} Swiss-Prot reviewed, ${w.with_temperature} with a temperature optimum.
     Of ${DATA.kinetics_total || 289} catalytic constants, none was measured on a solid
     polymer. Built ${esc((DATA.generated_at || "").slice(0, 10))}.`;
-  setView(location.hash.slice(1) || "polymer");
+  setView(location.hash.slice(1) || (DATA.scope?.active_arm || "metal"));
 }
 
 boot();

@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from . import formulate, goals, hostsafety, metals, pipeline, substrate
+from . import formulate, goals, hostsafety, metals, pipeline, scope, substrate
 from .engine import decide
 from .formulate import REPEAT_UNIT_G_PER_MOL, capture_requirement
 from .rank import BODY_PH, BODY_TEMPERATURE_C, WEIGHTS, _summarise
@@ -306,6 +306,12 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
         # memory in each page. A page that states 5/6/33/461 while the
         # warehouse says 6/10/32/457 is a page nobody can trust on the
         # numbers it got right.
+        # Which arm is live. The interface reads this instead of deciding for
+        # itself, after a full bench protocol was written for the polymer arm
+        # weeks after the project moved to metals.
+        "scope": scope.summary(),
+        "arms": {k: scope.arm(k) for k in decisions},
+        "scope_banner": {"en": scope.banner("en"), "he": scope.banner("he")},
         "host_safety": hostsafety.summary(proteins),
         "host_safety_classes": [
             {k: c[k] for k in ("prefix", "severity", "class_name",

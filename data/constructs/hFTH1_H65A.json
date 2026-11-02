@@ -1,0 +1,52 @@
+{
+  "target": "hFTH1",
+  "uniprot": "P02794",
+  "organism": "Homo sapiens",
+  "ec": [],
+  "wild_type_length": 183,
+  "mutations": [
+    {
+      "mutation": "H65A",
+      "uniprot_position": 66,
+      "wild_type": "H",
+      "mutant": "A",
+      "wild_type_verified": true
+    }
+  ],
+  "signal_peptide_removed": 0,
+  "tag": {
+    "name": "his6_n",
+    "protein": "HHHHHH",
+    "note": "Hexahistidine for IMAC. On the N terminus it is cleavable only if a protease site is added; here it is left fused, which is fine for an assay and not for anything injected."
+  },
+  "protein_expressed": "HHHHHHMTTASTSQVRQNYHQDSEAAINRQINLELYASYVYLSMSYYFDRDDVALKNFAKYFLHQSHEEREAAEKLMKLQNQRGGRIFLQDIKKPDCDDWESGLNAMECALHLEKNVNQSLLELHKLATDKNDPHLCDFIETHYLNEQVKAIKELGDHVTNLRKMGAPESGLAEYLFDKHTLGDSDNES",
+  "protein_length": 189,
+  "dna_length_bp": 576,
+  "gc_percent": 48.8,
+  "gc_window_min": 40.0,
+  "gc_window_max": 58.3,
+  "codon_swaps_from_preferred": [
+    {
+      "position": 109,
+      "residue": "K",
+      "preferred": "AAA",
+      "used": "AAG",
+      "why": "preferred codon created a forbidden motif or a GC-extreme window"
+    }
+  ],
+  "constraint_violations": [],
+  "restriction_sites_checked": [
+    "BamHI",
+    "BsaI",
+    "BsmBI",
+    "EcoRI",
+    "HindIII",
+    "NcoI",
+    "NdeI",
+    "NotI",
+    "SalI",
+    "XhoI"
+  ],
+  "what_this_is": "A synthesisable open reading frame. Reverse translation is mechanical, so this is a faithful encoding of the designed protein and nothing more -- it carries every uncertainty the design carries.",
+  "what_this_is_not": "Not evidence the protein folds, is soluble, is active, or is safe. For this target none of those is known at 37 C in tissue, and ordering DNA does not change that."
+}

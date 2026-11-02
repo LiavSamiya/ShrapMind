@@ -33,7 +33,8 @@ engine rather than existing only as a message in a chat.
 | ShrapMind (entry point) | `XQgkTkYvMmCjTXCqcXUr9H` | `ui/app.html` → `tools/build_app.py` → `ui/shrapmind.html` |
 | Fragment-to-Catalyst Safety Review | `9NDiDW7T9dgooUJEGD9jYt` | `ui/safety-review.src.html` → `tools/build_safety_review.py` → `ui/safety-review.html` |
 | ביקורת ארכיטקטורת ההידרוג'ל | `7vSe3aYcf4KM8KQKTzbfD5` | `ui/carrier-review.html` |
-| פרוטוקול הנדסת אנזים | `5eHNCDQXRmxf82gyNiDsSg` | `ui/protocol.src.html` → `tools/build_protocol.py` → `ui/protocol.html` |
+| Ferroxidase Bench Protocol | `HeCKs9GsXQ4SqaZWYLhunm` | `ui/protocol.en.src.html` → `tools/build_protocol.py` |
+| פרוטוקול פרוקסידאז | `5eHNCDQXRmxf82gyNiDsSg` | `ui/protocol.src.html` → `tools/build_protocol.py` |
 | Shrapnel — team workspace | `R8WfMNJXNCrfk7jiMiAYMj` | not in this repo; holds its own live database written by the team |
 | TfH Catalytic Site | `TmWMoL2bKvSPyrL63t9JVf` | superseded — its viewer is inline in `ui/app.html` |
 | Shrapnel · רקע לבדיקה | `5c9UekC5TgCLZ15cQ5ueEn` | earlier work |
@@ -98,3 +99,46 @@ own, so a round trip proves something.
 ionisation, weighted by distance from the catalytic site measured at the atoms
 that carry the charge. It is a shortlist to hand to PROPKA or constant-pH MD,
 not a substitute for one, and it says so in its own output.
+
+
+## Which arm is live
+
+The project moved from polymer fragments to metals. `f2c/scope.py` holds that
+as data: `ACTIVE_ARM`, a per-material `arm()`, and the banner text the
+interface shows above anything from the earlier direction. The interface reads
+it instead of deciding for itself.
+
+This exists because a complete bench protocol was written around TfH, a PET
+cutinase, weeks after the decision — correct work aimed at the arm the project
+had left. A note in a page would not have prevented it; a default view and a
+constant will.
+
+Nothing polymer is deleted, and a test enforces that. The substrate
+classifier, the catalytic-evidence signal and the host-safety screen were all
+built in the polymer arm and all three now serve the metal one.
+
+## The gap register
+
+`f2c/gaps.py` records what the project does not know — eleven entries, graded
+by consequence rather than by difficulty, each with what would close it and
+who is placed to close it. Both protocol pages render it.
+
+It is code rather than prose because a gap mentioned in a chat message is a
+gap that disappears, and because neither of the team's two feasibility
+documents raises a single item on the list. That is not a criticism of either:
+a document answers the question it set out to answer, and these fall between
+them.
+
+The entry to read first is `premise`. Every other gap assumes the product
+works on the right problem.
+
+## Building the protocol
+
+    python -m tools.design_construct --target hFTH1 --uniprot P02794 \
+        --mutate H65A --offset 1
+    python -m tools.build_protocol
+
+One builder emits both languages from one set of numbers, so the Hebrew and
+English pages cannot disagree with each other or with the engine. The
+ferroxidase site is verified against 1FHA on every build and the build fails
+rather than publishing if any of the seven residues is wrong.

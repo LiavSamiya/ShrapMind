@@ -1382,29 +1382,33 @@ def test_the_built_protocol_has_no_unfilled_tokens():
     )
 
 
-def test_the_protocol_does_not_claim_a_settled_temperature_optimum():
-    """TfH's four reported optima are 25, 25, 50 and 55 -- a median of 37.5.
+def test_a_scattered_literature_is_bracketed_rather_than_picked_from():
+    """The principle an earlier version of this test guarded, in its new home.
 
-    A draft of the protocol asserted that TfH's problem was temperature rather
-    than pH. The warehouse does not support that, and the page now states the
-    scatter instead. This test exists because the claim was written and had to
-    be caught.
+    That version checked that the protocol page showed all four of TfH's
+    disagreeing temperature optima instead of choosing one -- a real catch,
+    because a draft had claimed temperature was the problem. The protocol is
+    now about the metal arm and TfH is gone from it, but the principle is the
+    same and the metal arm has its own scattered literature: corrosion rate.
+
+    The engine must present it as a range it cannot narrow, not as a figure.
     """
-    from pathlib import Path
-    from f2c import warehouse
-    prot = {p.name: p for p in warehouse.load()}["TfH"]
-    vals = sorted(o.value for o in prot.observations
-                  if o.metric == "temperature_optimum_c" and o.value)
-    assert len(vals) > 1 and max(vals) - min(vals) > 20, (
-        "fixture gone: this test is about a disagreeing literature"
+    from f2c import metals
+    rates = metals.CORROSION_RATES_MM_PER_YEAR
+    assert len(rates) >= 3, "a single rate would be a claim, not a bracket"
+    assert max(rates.values()) / min(rates.values()) > 10, (
+        "the spread is the finding; collapsing it would hide the uncertainty"
     )
-    page = (Path(__file__).resolve().parent.parent / "ui" / "protocol.html").read_text()
-    assert ", ".join(f"{v:g}" for v in vals) in page, (
-        "the page must show every reported optimum, not pick one"
+    t = metals.timeline("steel", 0.8, 0.20)
+    assert len(t["rows"]) == len(rates), (
+        "every rate in the bracket must reach the output, not just the "
+        "convenient one"
     )
-
-
-# --- carbon steel is not stainless steel ------------------------------------
+    assert t["what_is_unmeasured"], (
+        "the arm must say what the bracket does not cover"
+    )
+    # And the caveat has to name the optimistic reading as optimistic.
+    assert "optimistic" in t["caveat"].lower()
 
 def test_stainless_is_a_separate_material_with_no_route():
     """The engine treated "steel" as one material. It is two.
@@ -1456,3 +1460,111 @@ def test_no_quantity_is_computed_for_a_metal_with_no_route():
     # The same calls must still work for carbon steel.
     assert metals.chelator_demand("steel", 50.0, 0.20)["computable"]
     assert metals.hydrogen_evolution("steel", 50.0, 0.20)["computable"]
+
+
+# --- which arm is live ------------------------------------------------------
+
+def test_the_active_arm_is_metals():
+    """Held as data, after a whole bench protocol was written for the wrong arm.
+
+    The project moved from polymer fragments to metals, and a protocol built
+    around a PET cutinase was produced weeks later -- correct work aimed at
+    the arm the project had left. The distinction is now structural.
+    """
+    from f2c import scope
+    assert scope.ACTIVE_ARM == scope.METAL
+    for m in ("steel", "stainless", "iron", "copper", "lead"):
+        assert scope.arm(m) == scope.METAL and scope.is_active(m), m
+    for m in ("PET", "PLA", "PA", "PUR", "PE", "PVC"):
+        assert scope.arm(m) == scope.POLYMER, m
+        assert not scope.is_active(m), m
+
+
+def test_minerals_are_current_scope_even_though_nothing_works_on_them():
+    """A surgeon asking about a glass fragment is asking a current question.
+
+    The refusal -- no pathway, for chemical reasons -- is part of what the
+    product has to say, so minerals must not be filed with the earlier
+    direction.
+    """
+    from f2c import scope
+    for m in ("glass", "ceramic", "silica", "stone"):
+        assert scope.arm(m) == scope.MINERAL, m
+        assert scope.is_active(m), m
+
+
+def test_every_material_the_engine_knows_is_assigned_an_arm():
+    import json
+    from pathlib import Path
+    from f2c import scope
+    payload = Path(__file__).resolve().parent.parent / "ui" / "decisions.json"
+    d = json.loads(payload.read_text())
+    for key in d["decisions"]:
+        assert d["arms"][key] == scope.arm(key), key
+    # And the interface is told which one to open on.
+    assert d["scope"]["active_arm"] == scope.ACTIVE_ARM
+
+
+def test_nothing_polymer_is_deleted():
+    """The decision was to focus, not to discard.
+
+    The polymer arm is where the substrate classifier, the
+    catalytic-evidence signal and the host-safety screen were built, and all
+    three now serve the metal arm.
+    """
+    import json
+    from pathlib import Path
+    from f2c import scope
+    payload = Path(__file__).resolve().parent.parent / "ui" / "decisions.json"
+    d = json.loads(payload.read_text())
+    polymer = [k for k, v in d["arms"].items() if v == scope.POLYMER]
+    assert len(polymer) >= 10, "polymer materials were removed from the engine"
+    selected = [k for k in polymer
+                if d["decisions"][k]["verdict"] == "enzyme_selected"]
+    assert selected, "the polymer arm must still produce its decisions"
+
+
+# --- the gap register -------------------------------------------------------
+
+def test_every_gap_states_what_would_close_it():
+    """A gap without a next step is a complaint."""
+    from f2c import gaps
+    assert len(gaps.GAPS) >= 10
+    ids = [g["id"] for g in gaps.GAPS]
+    assert len(ids) == len(set(ids)), "duplicate gap id"
+    for g in gaps.GAPS:
+        for field in ("title", "what_is_missing", "why_it_matters",
+                      "what_would_close_it", "whose"):
+            assert g.get(field), f"{g['id']} missing {field}"
+        assert g["severity"] in gaps.SEVERITY_ORDER, g["id"]
+        # Both languages, since the register renders in both protocols.
+        assert g.get("title_he") and g.get("what_is_missing_he"), g["id"]
+
+
+def test_gaps_sort_worst_first():
+    from f2c import gaps
+    rank = {s: i for i, s in enumerate(gaps.SEVERITY_ORDER)}
+    order = [rank[g["severity"]] for g in gaps.by_severity()]
+    assert order == sorted(order)
+    assert gaps.by_severity(gaps.BLOCKS_INJECTION), (
+        "endotoxin must be recorded as blocking injection"
+    )
+
+
+def test_both_protocol_languages_are_built_and_agree():
+    """One builder, two pages, one set of numbers."""
+    from pathlib import Path
+    import re
+    ui = Path(__file__).resolve().parent.parent / "ui"
+    he = (ui / "protocol.html").read_text()
+    en = (ui / "protocol.en.html").read_text()
+    for text, name in ((he, "he"), (en, "en")):
+        assert not re.findall(r"\{\{[A-Z_]+\}\}", text), f"{name} has tokens"
+        # The construct must appear in both, identically.
+        assert "ATGCATCATCATCATCATCAC" in text, name
+        assert "P02794" in text and "1FHA" in text, name
+    # And neither may still be about the polymer arm.
+    for text, name in ((he, "he"), (en, "en")):
+        assert "Q6A0I4" not in text, (
+            f"{name} still references the polymer-arm enzyme"
+        )

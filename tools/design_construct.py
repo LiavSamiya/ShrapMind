@@ -238,10 +238,67 @@ def apply_mutations(sequence: str, mutations: list[str], offset: int = 0
     return "".join(seq), applied
 
 
+
+class _Fetched:
+    """A sequence from UniProt, shaped like a warehouse Protein.
+
+    The warehouse is PAZy, which is a plastics database and holds no
+    ferroxidase. The metal arm's lead -- human H ferritin -- therefore has to
+    come from UniProt directly. It is cached on disk with its accession so the
+    construct can be traced back to a record rather than to a paste.
+    """
+
+    def __init__(self, accession: str, name: str, sequence: str,
+                 organism: str, ec: list[str]):
+        self.uniprot_accession = accession
+        self.name = name
+        self.sequence = sequence
+        self.organism = organism
+        self.ec_numbers = ec
+
+
+def _load_target(name: str, accession: str | None):
+    if accession is None:
+        from f2c import warehouse
+        proteins = {p.name: p for p in warehouse.load()}
+        prot = proteins.get(name)
+        if prot is None:
+            raise SystemExit(
+                f"{name!r} is not in the warehouse. If it is a metal-arm "
+                f"candidate, pass --uniprot: the warehouse is PAZy and holds "
+                f"no ferroxidase.")
+        if not prot.sequence:
+            raise SystemExit(f"{name!r} has no sequence recorded")
+        return prot
+
+    import urllib.request
+    cache = ROOT / "data" / "sequences" / f"{accession}.fasta"
+    if not cache.exists():
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        url = f"https://rest.uniprot.org/uniprotkb/{accession}.fasta"
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "shrapmind (liav.s123@gmail.com)"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            cache.write_bytes(resp.read())
+    lines = cache.read_text().splitlines()
+    header = lines[0] if lines else ""
+    seq = "".join(l.strip() for l in lines[1:] if l and not l.startswith(">"))
+    if not seq:
+        raise SystemExit(f"{accession}: UniProt returned no sequence")
+    organism = "?"
+    if "OS=" in header:
+        organism = header.split("OS=")[1].split(" OX=")[0].strip()
+    return _Fetched(accession, name, seq, organism, [])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--target", default="TfH",
-                    help="enzyme name as the warehouse records it")
+                    help="enzyme name as the warehouse records it, or a label "
+                         "for a sequence fetched with --uniprot")
+    ap.add_argument("--uniprot", default=None, metavar="ACC",
+                    help="fetch this accession from UniProt instead of "
+                         "reading the warehouse; cached under data/sequences")
     ap.add_argument("--mutate", action="append", default=[],
                     help="substitution, e.g. H208A; repeatable")
     ap.add_argument("--numbering", choices=("uniprot", "structure"),
@@ -255,14 +312,7 @@ def main() -> int:
     ap.add_argument("--out", default="data/constructs")
     args = ap.parse_args()
 
-    from f2c import warehouse
-    proteins = {p.name: p for p in warehouse.load()}
-    prot = proteins.get(args.target)
-    if prot is None:
-        raise SystemExit(f"{args.target!r} is not in the warehouse")
-    if not prot.sequence:
-        raise SystemExit(f"{args.target!r} has no sequence recorded")
-
+    prot = _load_target(args.target, args.uniprot)
     wt = prot.sequence
     offset = args.offset if args.numbering == "structure" else 0
     mutated, applied = apply_mutations(wt, args.mutate, offset)

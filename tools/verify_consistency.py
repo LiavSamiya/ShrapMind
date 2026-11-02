@@ -176,25 +176,41 @@ CHECKS: list[dict[str, Any]] = [
          __import__("f2c.metals", fromlist=["x"])._penetration_fraction(0.20)
          * 100, 2)},
 
-    # --- protocol (Hebrew) -----------------------------------------------
+    # --- protocol, both languages ----------------------------------------
+    # The protocol moved from TfH to human H ferritin when the project
+    # confirmed it was focusing on metals. These are the ferritin figures.
     {"page": "protocol", "what": "construct length, bp",
-     "claimed": 810, "truth": lambda d: _construct()["dna_length_bp"]},
-    {"page": "protocol", "what": "titratable residues in 4CG1",
-     "claimed": 65, "truth": lambda d: _ph("narrow")["titratable_total"]},
-    {"page": "protocol", "what": "responsive, pH 8 to 7.4",
-     "claimed": 8, "truth": lambda d: _ph("narrow")["responsive_in_span"]},
-    {"page": "protocol", "what": "responsive, pH 2 to 7.4",
-     "claimed": 31, "truth": lambda d: _ph("wide")["responsive_in_span"]},
-    {"page": "protocol", "what": "theoretical pI of TfH",
-     "claimed": 7.96, "truth": lambda d: _pi()["pI"]},
+     "claimed": 576, "truth": lambda d: _construct()["dna_length_bp"]},
+    {"page": "protocol", "what": "titratable residues in 1FHA chain A",
+     "claimed": 69, "truth": lambda d: _ph("acid")["titratable_total"]},
+    {"page": "protocol", "what": "responsive, pH 7.4 to 5.5",
+     "claimed": 41, "truth": lambda d: _ph("acid")["responsive_in_span"]},
+    {"page": "protocol", "what": "responsive, pH 7.4 to 7.2",
+     "claimed": 13, "truth": lambda d: _ph("home")["responsive_in_span"]},
+    {"page": "protocol", "what": "His65 protonated at pH 5.5, %",
+     "claimed": 76, "truth": lambda d: round(_his65()["charged_fraction_at_to"] * 100)},
+    {"page": "protocol", "what": "His65 protonated at pH 7.4, %",
+     "claimed": 4, "truth": lambda d: round(_his65()["charged_fraction_at_from"] * 100)},
     {"page": "protocol", "what": "top-ranked pH-sensitive residue",
-     "claimed": "HIS208",
-     "truth": lambda d: _ph("narrow")["shortlist"][0]["residue"]},
+     "claimed": "HIS65",
+     "truth": lambda d: _ph("acid")["shortlist"][0]["residue"]},
+    {"page": "protocol", "what": "theoretical pI of ferritin H",
+     "claimed": 5.18, "truth": lambda d: _pi()["pI"]},
     {"page": "protocol", "what": "codons moved off the preferred choice",
-     "claimed": 2,
+     "claimed": 1,
      "truth": lambda d: len(_construct()["codon_swaps_from_preferred"])},
-    {"page": "protocol", "what": "reported temperature optima for TfH",
-     "claimed": "25, 25, 50, 55", "truth": lambda d: _topts()},
+    {"page": "protocol", "what": "ferritin needed for a 50 mg fragment, mg",
+     "claimed": 92,
+     "truth": lambda d: round(__import__("f2c.metals", fromlist=["x"])
+                              .capacity("steel", 50.0)["ferritin_mg"])},
+    {"page": "protocol", "what": "H2 released by a 20% debulk, mL",
+     "claimed": 4.5,
+     "truth": lambda d: round(__import__("f2c.metals", fromlist=["x"])
+                              .hydrogen_evolution("steel", 50.0, 0.20)
+                              ["h2_ml_at_37c"], 1)},
+    {"page": "protocol", "what": "gaps recorded",
+     "claimed": 11,
+     "truth": lambda d: __import__("f2c.gaps", fromlist=["x"]).summary()["total"]},
 
     # --- carrier-review (Hebrew) -----------------------------------------
     {"page": "carrier-review", "what": "DFO for a 20% debulk of 50 mg, mg",
@@ -218,33 +234,32 @@ _PH_CACHE: dict[str, Any] = {}
 
 
 def _ph(which: str) -> dict[str, Any]:
-    """The pH-site analysis the protocol page quotes."""
+    """The pH-site analysis both protocol pages quote."""
     if which not in _PH_CACHE:
         from f2c import phsites
-        pdb = ROOT / "data" / "raw" / "structures" / "4cg1_trimmed.pdb"
-        spans = {"narrow": (8.0, 7.4), "wide": (2.0, 7.4)}
+        pdb = ROOT / "data" / "raw" / "structures" / "1fha.pdb"
+        spans = {"acid": (7.4, 5.5), "home": (7.4, 7.2)}
         a, b = spans[which]
-        _PH_CACHE[which] = phsites.analyse(pdb, [130, 176, 208],
-                                           pH_from=a, pH_to=b)
+        _PH_CACHE[which] = phsites.analyse(
+            pdb, [27, 34, 61, 62, 65, 107, 141], chain="A",
+            pH_from=a, pH_to=b)
     return _PH_CACHE[which]
 
 
+def _his65() -> dict[str, Any]:
+    return next(x for x in _ph("acid")["rows"] if x["residue"] == "HIS65")
+
+
 def _pi() -> dict[str, Any]:
-    from f2c import phsites, warehouse
-    seq = {p.name: p for p in warehouse.load()}["TfH"].sequence
+    from f2c import phsites
+    fa = ROOT / "data" / "sequences" / "P02794.fasta"
+    seq = "".join(l.strip() for l in fa.read_text().splitlines()[1:]
+                  if not l.startswith(">"))
     return phsites.isoelectric_point(seq)
 
 
-def _topts() -> str:
-    from f2c import warehouse
-    prot = {p.name: p for p in warehouse.load()}["TfH"]
-    vals = sorted(o.value for o in prot.observations
-                  if o.metric == "temperature_optimum_c" and o.value)
-    return ", ".join(f"{v:g}" for v in vals)
-
-
 def _construct() -> dict[str, Any]:
-    path = ROOT / "data" / "constructs" / "TfH_H208A.json"
+    path = ROOT / "data" / "constructs" / "hFTH1_H65A.json"
     if not path.exists():
         raise SystemExit("run tools.design_construct first")
     return json.loads(path.read_text())

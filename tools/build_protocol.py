@@ -1,10 +1,16 @@
-"""Fill the lab protocol's figures and sequence from the design tools.
+"""Fill the metal-arm lab protocol, in both languages, from the design tools.
 
-Same reasoning as tools/build_safety_review.py: a protocol that quotes a
-sequence by hand is a protocol whose sequence will not match the construct
-anyone actually orders. The prose lives in ui/protocol.src.html; every number,
-table and base pair in it is substituted from f2c/phsites.py and
-tools/design_construct.py at build time.
+Two sources, one builder, one set of numbers. `ui/protocol.src.html` is the
+Hebrew prose and `ui/protocol.en.src.html` the English; every figure, table
+and base pair in either is a token substituted here, and both pages are
+emitted from one run so they cannot disagree with each other or with the
+engine.
+
+The target is human H ferritin, which is what the engine selects for iron.
+An earlier version of this protocol was built around TfH, a PET cutinase --
+correct bench work aimed at the wrong arm, since the team decided to focus on
+metals. The polymer version is gone; what survived is the tooling, which was
+never specific to either.
 
     python -m tools.build_protocol
 """
@@ -20,199 +26,299 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-SRC = ROOT / "ui" / "protocol.src.html"
-OUT = ROOT / "ui" / "protocol.html"
-STRUCTURE = ROOT / "data" / "raw" / "structures" / "4cg1_trimmed.pdb"
+SOURCES = {
+    "he": (ROOT / "ui" / "protocol.src.html", ROOT / "ui" / "protocol.html"),
+    "en": (ROOT / "ui" / "protocol.en.src.html",
+           ROOT / "ui" / "protocol.en.html"),
+}
+CSS = ROOT / "ui" / "protocol.css"
+STRUCTURE = ROOT / "data" / "raw" / "structures" / "1fha.pdb"
 
-TARGET = "TfH"
-SITE = [130, 176, 208]          # structure numbering, verified on every build
-SIGNAL_PEPTIDE = 40
-MUTATION = "H208A"
-# TfH's reported optimum, from the warehouse rather than from memory; the
-# protocol runs its second temperature series here.
-FALLBACK_TOPT = 65
+# Human H ferritin. The engine reached it by querying EC 1.16.3 rather than by
+# recalling the literature, and it is the arm's lead because it fuses
+# oxidation and storage in one human protein.
+TARGET = "hFTH1"
+ACCESSION = "P02794"
+CHAIN = "A"
+MUTATION = "H65A"
+# The di-iron ferroxidase centre, in 1FHA numbering. Verified against the
+# structure on every build rather than trusted.
+SITE = [27, 34, 61, 62, 65, 107, 141]
+EXPECTED = {27: "GLU", 34: "TYR", 61: "GLU", 62: "GLU",
+            65: "HIS", 107: "GLU", 141: "GLN"}
+# Mature ferritin has its initiator methionine removed, so the structure is
+# UniProt minus one.
+OFFSET = 1
+
+# The pH span that matters for a metal fragment is not assay-to-tissue. Iron
+# corrosion acidifies its own surface through Fe(II) hydrolysis, so the enzyme
+# meets a microenvironment below tissue pH, and 5.5 is the figure used for a
+# corroding steel surface. The second span is ferritin's own cytosol, as a
+# control on the method.
+ACID_SPAN = (7.4, 5.5)
+HOME_SPAN = (7.4, 7.2)
+
+FRAGMENT_MG = 50.0
+DEBULK = 0.20
+
+LABELS = {
+    "he": {
+        "sites_caption": (
+            "שיירים מתכיילים לפי עדיפות, מתוך {n} בשרשרת A. עמודת Δיוניזציה "
+            "השנייה היא ה-pH הביתי של פריטין, כבקרה על השיטה."),
+        "cols": ("שייר", "pKa מודל", "מרחק (Å)", "Δיון 7.4→5.5",
+                 "Δיון 7.4→7.2", "priority", "באתר"),
+        "yes": "כן", "dash": "—",
+        "construct_caption": "מפרט הקונסטרקט, כפי שהכלי מדווח אותו.",
+        "construct_cols": ("שדה", "ערך"),
+        "fields": ("אנזים", "מחלקת EC", "אורך פראי", "מוטציות", "תגית",
+                   "חלבון מבוטא", "אורך DNA", "תכולת GC", "קודונים שהוזזו",
+                   "אתרי חיתוך שנבדקו", "הפרות אילוץ"),
+        "none": "אין",
+        "seq_foot": (
+            "מתחיל ב-<code>ATG</code>, ואחריו תגית הקסאהיסטידין, ואחריו החלבון "
+            "המלא. מסתיים בשני קודוני עצירה בפאזה. הרצף עובר תרגום חוזר מול "
+            "טבלת קודונים סטנדרטית שנבנית בנפרד בחבילת הבדיקות, ולא מול "
+            "הטבלה שהכלי עצמו משתמש בה."),
+        "gaps_caption": (
+            "מרשם הפערים. אף אחד משני מסמכי ההיתכנות של הצוות לא מעלה אף "
+            "פריט ברשימה."),
+        "gaps_cols": ("חומרה", "תחום", "מה חסר", "מה יסגור את זה", "אצל מי"),
+        "severity": {"blocks_injection": "חוסם הזרקה",
+                     "blocks_trial": "חוסם ניסוי",
+                     "blocks_claim": "חוסם טענה",
+                     "incomplete": "חלקי"},
+        "area": {"clinical": "קליני", "protein": "חלבון",
+                 "formulation": "פורמולציה", "metal": "מתכת"},
+    },
+    "en": {
+        "sites_caption": (
+            "Titratable residues by priority, of {n} in chain A. The second "
+            "ionisation column is ferritin's own cytosolic pH, as a control "
+            "on the method."),
+        "cols": ("Residue", "Model pKa", "Distance (Å)", "Δion 7.4→5.5",
+                 "Δion 7.4→7.2", "Priority", "In site"),
+        "yes": "yes", "dash": "—",
+        "construct_caption": "The construct as the tool reports it.",
+        "construct_cols": ("Field", "Value"),
+        "fields": ("Enzyme", "EC class", "Wild-type length", "Mutations",
+                   "Tag", "Expressed protein", "DNA length", "GC content",
+                   "Codons moved", "Restriction sites checked",
+                   "Constraint violations"),
+        "none": "none",
+        "seq_foot": (
+            "Begins with <code>ATG</code>, then the hexahistidine tag, then "
+            "the full protein. Ends in two in-frame stop codons. The sequence "
+            "passes a back-translation check against a standard codon table "
+            "built separately in the test suite, not against the table the "
+            "tool itself uses."),
+        "gaps_caption": (
+            "The gap register. Neither of the team's two feasibility "
+            "documents raises a single item on this list."),
+        "gaps_cols": ("Severity", "Area", "What is missing",
+                      "What would close it", "Whose"),
+        "severity": {"blocks_injection": "blocks injection",
+                     "blocks_trial": "blocks trial",
+                     "blocks_claim": "blocks claim",
+                     "incomplete": "incomplete"},
+        "area": {"clinical": "clinical", "protein": "protein",
+                 "formulation": "formulation", "metal": "metal"},
+    },
+}
+
+PILL = {"blocks_injection": "b", "blocks_trial": "s",
+        "blocks_claim": "s", "incomplete": "n"}
 
 
 def esc(s: object) -> str:
     return html.escape(str(s), quote=True)
 
 
-def table_sites(narrow: dict, wide: dict) -> str:
+def verify_site() -> None:
+    """Fail the build if the ferroxidase centre is not where it should be.
+
+    Same contract tools/build_structure.py holds for the TfH triad: a page
+    that names catalytic residues must not be buildable from a structure in
+    which they are something else.
+    """
+    from f2c import phsites
+    residues = {r.number: r.name
+                for r in phsites.parse_pdb(STRUCTURE, chain=CHAIN)}
+    wrong = {n: residues.get(n) for n, want in EXPECTED.items()
+             if residues.get(n) != want}
+    if wrong:
+        raise SystemExit(
+            f"ferroxidase site does not verify in {STRUCTURE.name}: {wrong}. "
+            f"Expected {EXPECTED}.")
+
+
+def table_sites(acid: dict, home: dict, L: dict) -> str:
     rows = []
-    for x in narrow["shortlist"][:8]:
-        wide_row = next((w for w in wide["rows"] if w["residue"] == x["residue"]),
-                        None)
-        cat = "כן" if x["is_catalytic"] else "—"
+    for x in acid["shortlist"][:8]:
+        h = next((w for w in home["rows"] if w["residue"] == x["residue"]), None)
         rows.append(
             f'<tr><td class="name">{esc(x["residue"])}</td>'
             f'<td class="num">{x["model_pKa"]:.1f}</td>'
-            f'<td class="num">{"—" if x["distance_to_site_a"] is None else x["distance_to_site_a"]}</td>'
+            f'<td class="num">{L["dash"] if x["distance_to_site_a"] is None else x["distance_to_site_a"]}</td>'
             f'<td class="num">{x["ionisation_change"]:.3f}</td>'
-            f'<td class="num">{0.0 if wide_row is None else wide_row["ionisation_change"]:.3f}</td>'
+            f'<td class="num">{0.0 if h is None else h["ionisation_change"]:.3f}</td>'
             f'<td class="num">{x["priority"]:.4f}</td>'
-            f'<td class="num">{cat}</td></tr>')
-    return (
-        '<div class="scroll"><table>'
-        '<caption>שיירים מתכיילים לפי עדיפות, מתוך '
-        f'{narrow["titratable_total"]} במבנה. עמודת Δיוניזציה השנייה מראה מה '
-        'היה קורה במעבר מ-pH 2, לשם השוואה.</caption>'
-        '<thead><tr><th>שייר</th><th>pKa מודל</th><th>מרחק (Å)</th>'
-        '<th>Δיון 8→7.4</th><th>Δיון 2→7.4</th><th>priority</th>'
-        '<th>קטליטי</th></tr></thead>'
-        f'<tbody>{"".join(rows)}</tbody></table></div>')
+            f'<td class="num">{L["yes"] if x["is_catalytic"] else L["dash"]}</td></tr>')
+    head = "".join(f"<th>{esc(c)}</th>" for c in L["cols"])
+    return ('<div class="scroll"><table><caption>'
+            + esc(L["sites_caption"].format(n=acid["titratable_total"]))
+            + f'</caption><thead><tr>{head}</tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table></div>')
 
 
-def table_construct(report: dict) -> str:
-    muts = ", ".join(m["mutation"] for m in report["mutations"]) or "—"
-    rows = [
-        ("אנזים", f'{report["target"]} · {report["uniprot"]} · '
-                  f'{report["organism"]}'),
-        ("מחלקת EC", ", ".join(report["ec"]) or "—"),
-        ("אורך פראי", f'{report["wild_type_length"]} שיירים'),
-        ("פפטיד איתות שנחתך", f'{report["signal_peptide_removed"]} שיירים'),
-        ("מוטציות", muts),
-        ("תגית", f'{report["tag"]["protein"]} בקצה N'),
-        ("חלבון מבוטא", f'{report["protein_length"]} שיירים'),
-        ("אורך DNA", f'{report["dna_length_bp"]} בסיסים'),
-        ("תכולת GC", f'{report["gc_percent"]}% · חלונות '
-                     f'{report["gc_window_min"]}–{report["gc_window_max"]}%'),
-        ("קודונים שהוזזו", str(len(report["codon_swaps_from_preferred"]))),
-        ("אתרי חיתוך שנבדקו", ", ".join(report["restriction_sites_checked"])),
-        ("הפרות אילוץ", ", ".join(report["constraint_violations"]) or "אין"),
-    ]
-    body = "".join(
-        f'<tr><td class="name">{esc(k)}</td><td>{esc(v)}</td></tr>'
-        for k, v in rows)
-    return ('<div class="scroll"><table>'
-            '<caption>מפרט הקונסטרקט, כפי שהכלי מדווח אותו.</caption>'
-            '<thead><tr><th>שדה</th><th>ערך</th></tr></thead>'
+def table_construct(r: dict, L: dict) -> str:
+    muts = ", ".join(m["mutation"] for m in r["mutations"]) or L["dash"]
+    values = (
+        f'{r["target"]} · {r["uniprot"]} · {r["organism"]}',
+        ", ".join(r["ec"]) or "EC 1.16.3.1",
+        f'{r["wild_type_length"]}',
+        muts,
+        f'{r["tag"]["protein"]} (N)',
+        f'{r["protein_length"]}',
+        f'{r["dna_length_bp"]} bp',
+        f'{r["gc_percent"]}% · {r["gc_window_min"]}–{r["gc_window_max"]}%',
+        str(len(r["codon_swaps_from_preferred"])),
+        ", ".join(r["restriction_sites_checked"]),
+        ", ".join(r["constraint_violations"]) or L["none"],
+    )
+    body = "".join(f'<tr><td class="name">{esc(k)}</td><td>{esc(v)}</td></tr>'
+                   for k, v in zip(L["fields"], values))
+    head = "".join(f"<th>{esc(c)}</th>" for c in L["construct_cols"])
+    return ('<div class="scroll"><table><caption>'
+            + esc(L["construct_caption"])
+            + f'</caption><thead><tr>{head}</tr></thead>'
             f'<tbody>{body}</tbody></table></div>')
 
 
-def sequence_block(report: dict, dna: str) -> str:
-    lines = []
-    for i in range(0, len(dna), 60):
-        lines.append(f"{i + 1:>4}  {dna[i:i + 60]}")
-    muts = ", ".join(m["mutation"] for m in report["mutations"]) or "wild type"
-    return (
-        '<div class="seq">'
-        f'<div class="head"><span>{esc(report["target"])} {esc(muts)}</span>'
-        f'<span>{report["dna_length_bp"]} bp</span>'
-        f'<span>GC {report["gc_percent"]}%</span>'
-        '<span>E. coli codon-optimised</span></div>'
-        f'<pre>{esc(chr(10).join(lines))}</pre>'
-        '<div class="foot">מתחיל ב-<code>ATG</code>, ואחריו תגית '
-        'הקסאהיסטידין, ואחריו החלבון הבוגר ללא פפטיד האיתות. מסתיים בשני קודוני '
-        'עצירה בפאזה, כך שקריאת-יתר בודדת עדיין נעצרת. '
-        'הרצף עובר תרגום חוזר מול טבלת קודונים סטנדרטית שנבנית בנפרד בחבילת '
-        'הבדיקות, ולא מול הטבלה שהכלי עצמו משתמש בה.</div></div>')
+def sequence_block(r: dict, dna: str, L: dict) -> str:
+    lines = [f"{i + 1:>4}  {dna[i:i + 60]}" for i in range(0, len(dna), 60)]
+    muts = ", ".join(m["mutation"] for m in r["mutations"]) or "wild type"
+    return ('<div class="seq">'
+            f'<div class="head"><span>{esc(r["target"])} {esc(muts)}</span>'
+            f'<span>{r["dna_length_bp"]} bp</span>'
+            f'<span>GC {r["gc_percent"]}%</span>'
+            '<span>E. coli codon-optimised</span></div>'
+            f'<pre>{esc(chr(10).join(lines))}</pre>'
+            f'<div class="foot">{L["seq_foot"]}</div></div>')
 
 
-def _disulfide_uniprot(sequence: str) -> str:
-    """Where the structure's SSBOND lands in UniProt numbering.
-
-    Read from the PDB rather than asserted. TfH carries one disulfide, which
-    is the reason the expression host cannot be an ordinary BL21: the E. coli
-    cytoplasm is reducing and will not form it.
-    """
-    pairs = []
-    for line in STRUCTURE.with_name("4cg1.pdb").read_text().splitlines():
-        if line.startswith("SSBOND"):
-            try:
-                pairs.append((int(line[17:21]), int(line[31:35])))
-            except ValueError:
-                continue
-    if not pairs:
-        return "—"
-    return "; ".join(f"Cys{a + SIGNAL_PEPTIDE} ו-Cys{b + SIGNAL_PEPTIDE}"
-                     for a, b in pairs)
+def table_gaps(lang: str, L: dict) -> str:
+    from f2c import gaps
+    suffix = "_he" if lang == "he" else ""
+    rows = []
+    for g in gaps.by_severity():
+        title = g.get(f"title{suffix}") or g["title"]
+        missing = g.get(f"what_is_missing{suffix}") or g["what_is_missing"]
+        rows.append(
+            f'<tr><td><span class="pill {PILL[g["severity"]]}">'
+            f'{esc(L["severity"][g["severity"]])}</span></td>'
+            f'<td class="num">{esc(L["area"][g["area"]])}</td>'
+            f'<td><strong>{esc(title)}</strong><br>{esc(missing)}</td>'
+            f'<td>{esc(g["what_would_close_it"])}</td>'
+            f'<td class="num">{esc(g["whose"])}</td></tr>')
+    head = "".join(f"<th>{esc(c)}</th>" for c in L["gaps_cols"])
+    return ('<div class="scroll"><table><caption>'
+            + esc(L["gaps_caption"])
+            + f'</caption><thead><tr>{head}</tr></thead>'
+            f'<tbody>{"".join(rows)}</tbody></table></div>')
 
 
 def main() -> int:
-    from f2c import phsites, warehouse
+    from f2c import gaps, metals, phsites
 
     if not STRUCTURE.exists():
-        print(f"missing {STRUCTURE} -- run `python -m tools.build_structure`",
+        print(f"missing {STRUCTURE}; fetch 1FHA from RCSB", file=sys.stderr)
+        return 1
+    verify_site()
+
+    acid = phsites.analyse(STRUCTURE, SITE, chain=CHAIN,
+                           pH_from=ACID_SPAN[0], pH_to=ACID_SPAN[1])
+    home = phsites.analyse(STRUCTURE, SITE, chain=CHAIN,
+                           pH_from=HOME_SPAN[0], pH_to=HOME_SPAN[1])
+
+    fasta_seq = ROOT / "data" / "sequences" / f"{ACCESSION}.fasta"
+    if not fasta_seq.exists():
+        print(f"missing {fasta_seq}; run tools.design_construct --uniprot "
+              f"{ACCESSION}", file=sys.stderr)
+        return 1
+    seq = "".join(l.strip() for l in fasta_seq.read_text().splitlines()[1:]
+                  if not l.startswith(">"))
+    pi = phsites.isoelectric_point(seq)
+
+    stem = f"{TARGET}_{MUTATION}"
+    cj = ROOT / "data" / "constructs" / f"{stem}.json"
+    cf = ROOT / "data" / "constructs" / f"{stem}.fasta"
+    if not cj.exists():
+        print(f"missing {cj}; run tools.design_construct --target {TARGET} "
+              f"--uniprot {ACCESSION} --mutate {MUTATION} --offset {OFFSET}",
               file=sys.stderr)
         return 1
+    report = json.loads(cj.read_text())
+    dna = "".join(l for l in cf.read_text().split(">")[2].splitlines()[1:])
 
-    proteins = {p.name: p for p in warehouse.load()}
-    prot = proteins.get(TARGET)
-    if prot is None or not prot.sequence:
-        print(f"{TARGET} not in the warehouse", file=sys.stderr)
-        return 1
+    his = next(x for x in acid["rows"] if x["residue"] == "HIS65")
+    cap = metals.capacity("steel", FRAGMENT_MG)
+    chel = metals.chelator_demand("steel", FRAGMENT_MG, DEBULK)
+    h2 = metals.hydrogen_evolution("steel", FRAGMENT_MG, DEBULK)
 
-    narrow = phsites.analyse(STRUCTURE, SITE, pH_from=8.0, pH_to=7.4)
-    wide = phsites.analyse(STRUCTURE, SITE, pH_from=2.0, pH_to=7.4)
-    if narrow["site_residues_missing_from_structure"]:
-        print("catalytic residues absent from the structure: "
-              f"{narrow['site_residues_missing_from_structure']}", file=sys.stderr)
-        return 1
-    pi = phsites.isoelectric_point(prot.sequence)
-
-    construct = ROOT / "data" / "constructs" / f"{TARGET}_{MUTATION}.json"
-    fasta = ROOT / "data" / "constructs" / f"{TARGET}_{MUTATION}.fasta"
-    if not construct.exists():
-        print(f"missing {construct} -- run `python -m tools.design_construct "
-              f"--target {TARGET} --mutate {MUTATION} "
-              f"--remove-signal-peptide {SIGNAL_PEPTIDE}`", file=sys.stderr)
-        return 1
-    report = json.loads(construct.read_text())
-    dna = "".join(l for l in fasta.read_text().split(">")[2].splitlines()[1:])
-
-    # Molecular weight of the expressed chain, so the gel band has a number.
-    avg = {"A": 71.08, "R": 156.19, "N": 114.10, "D": 115.09, "C": 103.14,
-           "Q": 128.13, "E": 129.12, "G": 57.05, "H": 137.14, "I": 113.16,
-           "L": 113.16, "K": 128.17, "M": 131.19, "F": 147.18, "P": 97.12,
-           "S": 87.08, "T": 101.10, "W": 186.21, "Y": 163.18, "V": 99.13}
-    mw = sum(avg.get(a, 110.0) for a in report["protein_expressed"]) + 18.02
-
-    # Every reported optimum, not the first one above a threshold. TfH's four
-    # measurements run 25, 25, 50, 55 -- a median of 37.5, which is body
-    # temperature. Quoting one of them as "the" optimum would have put an
-    # unsupported claim in a bench protocol, which is the failure this project
-    # exists to prevent, committed by this project.
-    topts = sorted(o.value for o in prot.observations
-                   if o.metric == "temperature_optimum_c" and o.value)
-    topt = max(topts) if topts else FALLBACK_TOPT
-    mid = len(topts) // 2
-    topt_median = (topts[mid] if len(topts) % 2
-                   else (topts[mid - 1] + topts[mid]) / 2) if topts else topt
-
-    subs = {
+    common = {
+        "{{STYLE}}": f"<style>\n{CSS.read_text()}</style>",
         "{{BUILT}}": _dt.date.today().isoformat(),
         "{{DNA_BP}}": report["dna_length_bp"],
-        "{{TITRATABLE}}": narrow["titratable_total"],
-        "{{NARROW_N}}": narrow["responsive_in_span"],
-        "{{WIDE_N}}": wide["responsive_in_span"],
+        "{{TITRATABLE}}": acid["titratable_total"],
+        "{{ACID_N}}": acid["responsive_in_span"],
+        "{{HOME_N}}": home["responsive_in_span"],
+        "{{HIS65_FROM}}": f'{his["charged_fraction_at_from"] * 100:.0f}',
+        "{{HIS65_TO}}": f'{his["charged_fraction_at_to"] * 100:.0f}',
         "{{PI}}": pi["pI"],
         "{{NET_CHARGE}}": pi["net_charge_at_7_4"],
         "{{SWAPS}}": len(report["codon_swaps_from_preferred"]),
-        "{{CYS_UNIPROT}}": _disulfide_uniprot(prot.sequence),
-        "{{KDA}}": round(mw / 1000, 1),
-        "{{TOPT}}": int(topt),
-        "{{TOPT_VALUES}}": ", ".join(f"{v:g}" for v in topts) or "—",
-        "{{TOPT_SPREAD}}": f"{(max(topts) - min(topts)):g}" if topts else "—",
-        "{{TOPT_MEDIAN}}": f"{topt_median:g}",
-        "{{TABLE_SITES}}": table_sites(narrow, wide),
-        "{{TABLE_CONSTRUCT}}": table_construct(report),
-        "{{SEQUENCE_BLOCK}}": sequence_block(report, dna),
+        "{{FRAGMENT_MG}}": f"{FRAGMENT_MG:g}",
+        "{{FERRITIN_MG}}": f'{cap["ferritin_mg"]:.0f}',
+        "{{FERRITIN_RATIO}}": f'{cap["ratio_to_fragment"]:.1f}',
+        "{{DFO_MG}}": f'{chel["dfo_free_base_mg"]:.0f}',
+        "{{H2_ML}}": f'{h2["h2_ml_at_37c"]:.1f}',
+        "{{GAP_TOTAL}}": gaps.summary()["total"],
     }
 
-    text = SRC.read_text()
-    for token, value in subs.items():
-        text = text.replace(token, str(value))
-    left = sorted(set(re.findall(r"\{\{[A-Z_]+\}\}", text)))
-    if left:
-        print(f"unsubstituted token(s): {left}", file=sys.stderr)
-        return 1
+    for lang, (src, out) in SOURCES.items():
+        if not src.exists():
+            print(f"missing {src}", file=sys.stderr)
+            return 1
+        L = LABELS[lang]
+        subs = dict(common)
+        subs["{{OTHER_URL}}"] = SOURCES["en" if lang == "he" else "he"][1].name
+        subs["{{TABLE_SITES}}"] = table_sites(acid, home, L)
+        subs["{{TABLE_CONSTRUCT}}"] = table_construct(report, L)
+        subs["{{SEQUENCE_BLOCK}}"] = sequence_block(report, dna, L)
+        subs["{{TABLE_GAPS}}"] = table_gaps(lang, L)
 
-    OUT.write_text(text)
-    print(f"wrote {OUT} ({len(text) // 1024} KB)")
-    for k in ("{{DNA_BP}}", "{{TITRATABLE}}", "{{NARROW_N}}", "{{WIDE_N}}",
-              "{{PI}}", "{{KDA}}", "{{TOPT}}", "{{TOPT_VALUES}}",
-              "{{TOPT_MEDIAN}}", "{{SWAPS}}"):
-        print(f"  {k.strip('{}'):12s} {subs[k]}")
+        text = src.read_text()
+        for token, value in subs.items():
+            text = text.replace(token, str(value))
+        left = sorted(set(re.findall(r"\{\{[A-Z_]+\}\}", text)))
+        if left:
+            print(f"{lang}: unsubstituted token(s): {left}", file=sys.stderr)
+            return 1
+        out.write_text(text)
+        print(f"wrote {out} ({len(text) // 1024} KB)")
+
+    print(f"  target        {TARGET} / {ACCESSION} / 1FHA chain {CHAIN}")
+    print(f"  ferroxidase   {', '.join(f'{v}{k}' for k, v in EXPECTED.items())}")
+    print(f"  His65         {common['{{HIS65_FROM}}']}% -> "
+          f"{common['{{HIS65_TO}}']}% protonated across pH 7.4 to 5.5")
+    print(f"  responsive    {acid['responsive_in_span']} of "
+          f"{acid['titratable_total']} (vs {home['responsive_in_span']} at "
+          f"ferritin's own pH)")
+    print(f"  construct     {report['dna_length_bp']} bp, "
+          f"{report['gc_percent']}% GC, "
+          f"{len(report['codon_swaps_from_preferred'])} swaps")
+    print(f"  gaps recorded {gaps.summary()['total']}")
     return 0
 
 

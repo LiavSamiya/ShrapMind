@@ -1,0 +1,576 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Ferroxidase Bench Protocol</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Heebo:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+<style>
+/* Layout: a bench protocol, read right to left. Stages are numbered because
+   they really are a sequence with real day counts, and each carries its own
+   checkpoint -- a step you cannot verify is a step that fails silently. */
+:root{
+  --paper:#f8f8fa;
+  --raised:#ffffff;
+  --sunk:#eeeef3;
+  --ink:#16161d;
+  --ink-2:#4c4c5a;
+  --ink-3:#7d7d8c;
+  --rule:#e1e1e8;
+  --rule-2:#edeef2;
+  --accent:#4b3f8c;          /* indigo: the one strong colour */
+  --time:#8a5a1c;            /* timing chips */
+  --stop:#9a3730;
+  --ok:#2a6a4c;
+  --font-display:"Rubik",system-ui,sans-serif;
+  --font-ui:"Heebo",ui-sans-serif,system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#131319; --raised:#1b1b23; --sunk:#22222c;
+    --ink:#e9e9ef; --ink-2:#a9a9b8; --ink-3:#7e7e8d;
+    --rule:#2d2d38; --rule-2:#242430;
+    --accent:#9b8ce0; --time:#d8a455; --stop:#e07f76; --ok:#5bbd91;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131319; --raised:#1b1b23; --sunk:#22222c;
+  --ink:#e9e9ef; --ink-2:#a9a9b8; --ink-3:#7e7e8d;
+  --rule:#2d2d38; --rule-2:#242430;
+  --accent:#9b8ce0; --time:#d8a455; --stop:#e07f76; --ok:#5bbd91;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--font-ui);font-size:16.5px;line-height:1.68;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:50rem;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 80px}
+h1,h2,h3,h4{font-family:var(--font-display);text-wrap:balance;font-weight:600}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+
+header{padding-block:44px 26px;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--font-data);font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+h1{font-size:clamp(1.9rem,5.4vw,2.6rem);font-weight:700;line-height:1.18;
+   margin:0 0 14px;letter-spacing:-.01em}
+.standfirst{font-size:1.1rem;color:var(--ink-2);margin:0;max-width:38rem}
+.meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:22px;
+  font-family:var(--font-data);font-size:11.5px;color:var(--ink-3)}
+
+section{padding-block:42px 0}
+h2{font-size:1.52rem;margin:0 0 6px;padding-bottom:8px;
+   border-bottom:1px solid var(--rule)}
+.sec-sub{color:var(--ink-3);font-size:.92rem;margin:0 0 22px;
+  font-family:var(--font-data)}
+h3{font-size:1.14rem;margin:30px 0 8px}
+p{margin:0 0 15px}
+strong{font-weight:700}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+code{font-family:var(--font-data);font-size:.87em;background:var(--rule-2);
+  padding:1px 5px;border-radius:3px}
+
+/* answer box, for the three questions */
+.answer{background:var(--raised);border:1px solid var(--rule);
+  border-inline-end:4px solid var(--accent);padding:22px;margin:24px 0}
+.answer .q{font-family:var(--font-data);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
+.answer .a{font-family:var(--font-display);font-size:1.3rem;font-weight:600;
+  line-height:1.35;margin:0 0 12px}
+.answer p:last-child{margin-bottom:0}
+
+/* stages */
+ol.stages{list-style:none;counter-reset:st;padding:0;margin:26px 0}
+ol.stages>li{counter-increment:st;position:relative;
+  padding-block:0 28px;padding-inline:54px 0;border-inline-end:2px solid var(--rule);margin-inline-end:16px}
+ol.stages>li:last-child{border-inline-end-color:transparent;padding-bottom:0}
+ol.stages>li::before{content:counter(st);position:absolute;inset-inline-end:-18px;top:0;
+  width:34px;height:34px;border-radius:50%;background:var(--accent);
+  color:#fff;font-family:var(--font-data);font-size:14px;font-weight:500;
+  display:grid;place-items:center}
+:root[data-theme="dark"] ol.stages>li::before,
+:root:not([data-theme="light"]) ol.stages>li::before{color:#16161d}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) ol.stages>li::before{color:#fff}}
+ol.stages h3{margin:3px 0 4px;font-size:1.14rem}
+.chip{display:inline-block;font-family:var(--font-data);font-size:10.5px;
+  letter-spacing:.05em;text-transform:uppercase;border:1px solid currentColor;
+  border-radius:2px;padding:2px 7px;margin-inline-start:.4rem;white-space:nowrap}
+.chip.t{color:var(--time)}
+.chip.s{color:var(--ink-3)}
+
+/* step lists inside a stage */
+ol.steps{padding-inline-start:22px;padding-inline-end:0;margin:12px 0 0}
+ol.steps li{margin-bottom:10px}
+ul.plain{padding-inline-start:20px;padding-inline-end:0;margin:0 0 15px}
+ul.plain li{margin-bottom:8px}
+
+.check{background:var(--sunk);border-radius:4px;padding:13px 16px;
+  margin:14px 0 0;font-size:14.8px;color:var(--ink-2)}
+.check b{color:var(--ok);font-weight:700}
+.stopbox{border-inline-end:3px solid var(--stop);padding-block:2px;padding-inline:14px 0;
+  margin:14px 0;font-size:15px}
+.stopbox b{color:var(--stop)}
+
+.scroll{overflow-x:auto;min-width:0;max-width:100%;margin:20px 0;
+  border:1px solid var(--rule)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:32rem}
+caption{text-align:start;font-size:12px;color:var(--ink-3);padding:10px 12px;
+  border-bottom:1px solid var(--rule);background:var(--rule-2)}
+th{text-align:start;font-family:var(--font-data);font-size:10.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:500;padding:9px 12px;border-bottom:1px solid var(--rule);
+  white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-family:var(--font-data);font-variant-numeric:tabular-nums;
+  text-align:left;direction:ltr;white-space:nowrap}
+td.name{font-weight:600;white-space:nowrap}
+
+/* the sequence block */
+.seq{background:var(--raised);border:1px solid var(--rule);border-radius:4px;
+  margin:18px 0;overflow:hidden}
+.seq .head{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;
+  padding:12px 15px;border-bottom:1px solid var(--rule);background:var(--rule-2);
+  font-family:var(--font-data);font-size:11.5px;color:var(--ink-3)}
+.seq pre{margin:0;padding:14px 15px;overflow-x:auto;direction:ltr;text-align:left;
+  font-family:var(--font-data);font-size:12.5px;line-height:1.75;
+  color:var(--ink);white-space:pre}
+.seq .foot{padding:11px 15px;border-top:1px solid var(--rule);
+  font-size:13.5px;color:var(--ink-2)}
+
+.note{font-size:14.8px;color:var(--ink-2);background:var(--sunk);
+  padding:15px 17px;margin:22px 0;border-radius:3px}
+.note b{color:var(--ink)}
+
+footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);
+  font-size:13.5px;color:var(--ink-3)}
+footer p{margin:0 0 9px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</style>
+
+<div class="wrap" dir="ltr">
+
+<header>
+  <p class="eyebrow">ShrapMind · Metal arm · Bench protocol</p>
+  <h1>Ferroxidase Bench Protocol</h1>
+  <p class="standfirst">
+    Three questions, three outputs: which residues in the enzyme respond to
+    the pH a corroding fragment creates around itself, how that design becomes
+    a DNA sequence you can order, and what to do at the bench — in an order
+    where the cheapest experiment that can kill the route comes first.
+  </p>
+  <div class="meta">
+    <span>Human H ferritin · UniProt P02794 · PDB 1FHA</span>
+    <span>Built 2026-11-02</span>
+    <span>From <code>f2c/phsites.py</code>, <code>f2c/metals.py</code>, <code>tools/design_construct.py</code></span>
+    <span><a href="protocol.html">עברית</a></span>
+  </div>
+</header>
+
+<section>
+  <h2>The short answers</h2>
+  <p class="sec-sub">First, because two of the three questions were whether this is possible at all</p>
+
+  <div class="answer">
+    <p class="q">Can you produce a DNA sequence that expresses the protein?</p>
+    <p class="a">Yes, and it is arithmetic rather than research.</p>
+    <p>A protein sequence plus a codon table plus a constraint set gives a
+      synthesisable gene. The output below is 576 real bases encoding
+      human H ferritin, which passes a back-translation check against a
+      standard codon table built independently of the one the tool uses. What
+      this does <strong>not</strong> mean: that the protein folds, assembles,
+      is active against a fragment, or is safe. Reverse translation is
+      mechanical, so it carries every uncertainty the design carries — no more
+      and no less.</p>
+  </div>
+
+  <div class="answer">
+    <p class="q">Can you find the pH-sensitive sites in an existing enzyme?</p>
+    <p class="a">Yes, and for a metal fragment the question is sharper than it first looks.</p>
+    <p>A side chain responds to a pH change only if its pKa lies
+      <em>between</em> the two values. The usual framing — assay pH versus
+      tissue pH — is the wrong span here. <strong>A corroding iron surface
+      acidifies its own microenvironment</strong>, through Fe(II) hydrolysis,
+      so the enzyme does not meet tissue at 7.4. It meets something closer to
+      5.5, and that is the span this analysis uses.</p>
+  </div>
+
+  <div class="finding" style="background:var(--raised);border:1px solid var(--rule);border-inline-end:4px solid var(--stop);padding:22px;margin:24px 0">
+    <p class="a" style="font-family:var(--font-display);font-size:1.3rem;font-weight:600;line-height:1.35;margin:0 0 12px">
+      The reaction disables the enzyme that is supposed to manage it.</p>
+    <p style="margin:0 0 12px">His65 is the catalytic histidine of ferritin's
+      di-iron ferroxidase centre. Across pH 7.4 to 5.5 it goes from
+      <strong>4% protonated to 76%</strong>. Over the
+      same span 41 of 69 titratable residues in the chain
+      respond, against 13 across ferritin's own cytosolic range, which
+      is the control on the method.</p>
+    <p style="margin:0">So dissolving the iron acidifies the surface, and the
+      acidified surface protonates the active site of the enzyme placed there
+      to oxidise that iron. Neither the team's clinical review nor the carrier
+      document states this feedback, and it is not a subtle effect — it is the
+      difference between a histidine that is almost entirely neutral and one
+      that is mostly charged.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Part A — computational analysis</h2>
+  <p class="sec-sub">Day 0, before anything is ordered</p>
+
+  <p>Both steps come from code in the repository and are reproducible from
+    scratch. The ferroxidase centre — Glu27, Tyr34, Glu61, Glu62, His65,
+    Glu107, Gln141 — is verified against the structure on every build, and the
+    build fails if any of the seven is something else.</p>
+
+  <div class="scroll"><table><caption>Titratable residues by priority, of 69 in chain A. The second ionisation column is ferritin&#x27;s own cytosolic pH, as a control on the method.</caption><thead><tr><th>Residue</th><th>Model pKa</th><th>Distance (Å)</th><th>Δion 7.4→5.5</th><th>Δion 7.4→7.2</th><th>Priority</th><th>In site</th></tr></thead><tbody><tr><td class="name">HIS65</td><td class="num">6.0</td><td class="num">0.0</td><td class="num">0.722</td><td class="num">0.021</td><td class="num">0.7215</td><td class="num">yes</td></tr><tr><td class="name">HIS57</td><td class="num">6.0</td><td class="num">5.52</td><td class="num">0.722</td><td class="num">0.021</td><td class="num">0.3898</td><td class="num">—</td></tr><tr><td class="name">HIS105</td><td class="num">6.0</td><td class="num">7.48</td><td class="num">0.722</td><td class="num">0.021</td><td class="num">0.2720</td><td class="num">—</td></tr><tr><td class="name">HIS60</td><td class="num">6.0</td><td class="num">7.8</td><td class="num">0.722</td><td class="num">0.021</td><td class="num">0.2522</td><td class="num">—</td></tr><tr><td class="name">HIS136</td><td class="num">6.0</td><td class="num">8.41</td><td class="num">0.722</td><td class="num">0.021</td><td class="num">0.2157</td><td class="num">—</td></tr><tr><td class="name">HIS151</td><td class="num">6.0</td><td class="num">10.21</td><td class="num">0.722</td><td class="num">0.021</td><td class="num">0.1079</td><td class="num">—</td></tr><tr><td class="name">GLU27</td><td class="num">4.2</td><td class="num">0.0</td><td class="num">0.047</td><td class="num">0.000</td><td class="num">0.0471</td><td class="num">yes</td></tr><tr><td class="name">GLU61</td><td class="num">4.2</td><td class="num">0.0</td><td class="num">0.047</td><td class="num">0.000</td><td class="num">0.0471</td><td class="num">yes</td></tr></tbody></table></div>
+
+  <p>The deciding column is <span class="mono">priority</span>: ionisation
+    change multiplied by proximity to the site. A residue has to be both
+    responsive and near; either alone is not a lead. Distance is measured from
+    the atoms that carry the charge rather than from the alpha carbon, because
+    what couples a titratable residue to catalysis is where its proton sits.
+    Note how the ranking is dominated by histidine and not by the four
+    glutamates that actually coordinate the iron: Glu at pKa 4.2 is fully
+    ionised at both ends of this span and does not respond at all.</p>
+
+  <div class="stopbox">
+    <p><b>What this table is not.</b> These are model pKa values in water, not
+      computed ones. A buried or metal-coordinated side chain can shift by
+      several units, and in a di-iron centre that shift is large and is
+      precisely the question. The table is a <strong>shortlist to hand to a
+      real calculation</strong> — PROPKA, H++ or constant-pH MD — and not a
+      substitute for one.</p>
+  </div>
+
+  <h3>One piece of good news</h3>
+  <p>Ferritin's theoretical isoelectric point is <strong>5.18</strong>, with
+    a net charge of -11.1 at pH 7.4. That is comfortably away from
+    tissue pH, so the colloidal-stability problem that would afflict a protein
+    near its pI does not apply here. For an injected depot that is one fewer
+    formulation obstacle, and it is worth stating because the engine flags the
+    opposite case elsewhere.</p>
+</section>
+
+<section>
+  <h2>Part B — what you order</h2>
+  <p class="sec-sub">The output that was asked for: a DNA sequence</p>
+
+  <p>Mature ferritin has its initiator methionine removed, so structure
+    numbering is UniProt minus one: His65 in 1FHA is His66 in P02794. The tool
+    verifies the wild-type residue at every mutated position before touching
+    it. <strong>A mutation written against the wrong numbering is the
+    commonest way a construct fails, and it fails after you have paid for
+    it.</strong></p>
+
+  <div class="seq"><div class="head"><span>hFTH1 H65A</span><span>576 bp</span><span>GC 48.8%</span><span>E. coli codon-optimised</span></div><pre>   1  ATGCATCATCATCATCATCACATGACCACCGCGAGCACCAGCCAGGTGCGTCAGAACTAT
+  61  CATCAGGATAGCGAAGCGGCGATCAACCGTCAGATCAACCTGGAACTGTATGCGAGCTAT
+ 121  GTGTATCTGAGCATGAGCTATTATTTTGATCGTGATGATGTGGCGCTGAAAAACTTTGCG
+ 181  AAATATTTTCTGCATCAGAGCCATGAAGAACGTGAAGCGGCGGAAAAACTGATGAAACTG
+ 241  CAGAACCAGCGTGGCGGCCGTATCTTTCTGCAGGATATCAAAAAACCGGATTGCGATGAT
+ 301  TGGGAAAGCGGCCTGAACGCGATGGAATGCGCGCTGCATCTGGAAAAGAACGTGAACCAG
+ 361  AGCCTGCTGGAACTGCATAAACTGGCGACCGATAAAAACGATCCGCATCTGTGCGATTTT
+ 421  ATCGAAACCCATTATCTGAACGAACAGGTGAAAGCGATCAAAGAACTGGGCGATCATGTG
+ 481  ACCAACCTGCGTAAAATGGGCGCGCCGGAAAGCGGCCTGGCGGAATATCTGTTTGATAAA
+ 541  CATACCCTGGGCGATAGCGATAACGAAAGCTAATGA</pre><div class="foot">Begins with <code>ATG</code>, then the hexahistidine tag, then the full protein. Ends in two in-frame stop codons. The sequence passes a back-translation check against a standard codon table built separately in the test suite, not against the table the tool itself uses.</div></div>
+
+  <div class="scroll"><table><caption>The construct as the tool reports it.</caption><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td class="name">Enzyme</td><td>hFTH1 · P02794 · Homo sapiens</td></tr><tr><td class="name">EC class</td><td>EC 1.16.3.1</td></tr><tr><td class="name">Wild-type length</td><td>183</td></tr><tr><td class="name">Mutations</td><td>H65A</td></tr><tr><td class="name">Tag</td><td>HHHHHH (N)</td></tr><tr><td class="name">Expressed protein</td><td>189</td></tr><tr><td class="name">DNA length</td><td>576 bp</td></tr><tr><td class="name">GC content</td><td>48.8% · 40.0–58.3%</td></tr><tr><td class="name">Codons moved</td><td>1</td></tr><tr><td class="name">Restriction sites checked</td><td>BamHI, BsaI, BsmBI, EcoRI, HindIII, NcoI, NdeI, NotI, SalI, XhoI</td></tr><tr><td class="name">Constraint violations</td><td>none</td></tr></tbody></table></div>
+
+  <div class="note">
+    <b>Two things that make this construct easier than it could have been.</b>
+    1FHA carries no <span class="mono">SSBOND</span> record, so there is no
+    disulfide and an ordinary <span class="mono">BL21(DE3)</span> cytoplasm
+    will do — a thermophilic cutinase considered earlier needed a
+    disulfide-competent strain. And ferritin is human, cytosolic and
+    self-assembling: no signal peptide to trim, no metal cofactor to mature,
+    no maturation operon. Only 1 codon had to move off the preferred
+    choice to clear the restriction sites.
+  </div>
+
+  <div class="stopbox">
+    <p><b>Why this is not the hydrogenase.</b> The strongest lead in the metal
+      arm is the secreted [NiFe] hydrogenase that oxidises Fe(0) on contact
+      (<a href="https://doi.org/10.1038/s41598-018-33541-5" target="_blank"
+          rel="noopener">PMID 30310166</a>), and it is not what this protocol
+      expresses. A [NiFe] hydrogenase is a two-subunit metalloenzyme that
+      needs its whole <span class="mono">hyp</span> maturation machinery, a
+      maturation protease, nickel loading and anaerobic handling throughout.
+      You cannot order the gene and express it. Ferritin can be made this
+      month; the hydrogenase is a project, and stage 7 below is the cheap test
+      that decides whether it is worth starting.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Part C — the protocol</h2>
+  <p class="sec-sub">Seven stages, ordered so the cheapest experiment that can kill the route comes first</p>
+
+  <p>The ordering is the argument. Three of these stages need no protein at
+    all, and one of them can end the programme — so they come before any
+    expression work, not after it.</p>
+
+  <ol class="stages">
+    <li>
+      <h3>Which steel is it<span class="chip t">2 days</span><span class="chip s">no protein</span></h3>
+      <p>Fragment composition is an inclusion criterion, not something to
+        discover afterwards. Carbon steel rusts and keeps rusting; stainless
+        grows a chromium oxide film that is dense, adherent and self-healing,
+        and <strong>the entire route stops working against it</strong>.
+        Deferoxamine is selective for Fe(III) and does not lift Cr₂O₃. Ball
+        bearings packed into a device are often stainless, and a radiograph
+        does not tell them apart.</p>
+      <ol class="steps">
+        <li>XRF or SEM-EDS on every retrieved fragment available. Record iron,
+          chromium, nickel, manganese.</li>
+        <li>Chromium at or above about 10.5% means the fragment is outside
+          this route.</li>
+        <li>Record nickel too. It is released by dissolution, the chelator
+          does not capture it, and the engine has no mass balance for it.</li>
+      </ol>
+      <div class="check"><b>Checkpoint.</b> A composition, in percent, for
+        every coupon used downstream. Coupons for the later stages must match
+        the fragments the product is aimed at, not whatever steel the stores
+        happen to hold.</div>
+    </li>
+
+    <li>
+      <h3>Does it dissolve at all, without an enzyme<span class="chip t">21 days</span><span class="chip s">no protein · this gates everything</span></h3>
+      <p>This is the number nobody has measured, and the whole arm rests on
+        it. Every corrosion rate the engine quotes comes from the
+        biodegradable-implant literature and describes iron corroding on its
+        own. What a chelator adds is unmeasured.</p>
+      <ol class="steps">
+        <li>Carbon-steel coupons of known surface area, in PBS at pH 7.4 and
+          37 °C, under air.</li>
+        <li>Four arms: buffer alone; DFO at 1 mM; ascorbate at 1 mM; DFO plus
+          ascorbate. The combination is there because ligand-promoted and
+          reductive dissolution are reported to act synergistically on iron
+          oxide (<a href="https://doi.org/10.1021/acs.est.5b01191"
+                    target="_blank" rel="noopener">PMID 25965980</a>), with
+          ascorbate alone doing nothing in air.</li>
+        <li>Measure released iron by ferrozine assay at days 1, 3, 7, 14, 21,
+          and mass loss gravimetrically at the end.</li>
+        <li>Report <strong>micrometres of penetration per year</strong>, so
+          the result drops straight into the engine's timeline in the unit it
+          already uses.</li>
+      </ol>
+      <div class="check"><b>Checkpoint, and the first stop decision.</b> At
+        the fastest rate anyone has reported, a 20% debulk of a 0.8 mm
+        fragment takes about eight weeks. If the measured chelated rate is no
+        better than the unchelated one, <strong>the chemistry does not work
+        and no enzyme repairs that</strong> — which is why this costs a few
+        hundred dollars and runs before anything else.</div>
+    </li>
+
+    <li>
+      <h3>Does the surface acidify<span class="chip t">3 days</span><span class="chip s">no protein</span></h3>
+      <p>The computational finding above predicts that the reaction creates
+        the pH that disables the enzyme. It is a prediction from model pKa
+        values, and it is cheap to test directly.</p>
+      <ol class="steps">
+        <li>A pH microelectrode positioned at the coupon surface, or a
+          ratiometric fluorescent pH probe imaged across the diffusion
+          layer.</li>
+        <li>Record the surface pH in each of the four arms from stage 2, since
+          the chelator changes the speciation and may change the pH with
+          it.</li>
+      </ol>
+      <div class="check"><b>Checkpoint.</b> A number for the surface pH. If it
+        sits near 7.4, the feedback loop is not real and stage 4 can be run at
+        tissue pH alone, which halves it. If it sits near 5.5, the enzyme has
+        to work at that pH and the engineering target is defined.</div>
+    </li>
+
+    <li>
+      <h3>Expression and purification<span class="chip t">5 days</span></h3>
+      <ol class="steps">
+        <li><span class="mono">BL21(DE3)</span> is sufficient — no disulfide,
+          no cofactor maturation. Induce with 0.2 mM
+          <span class="mono">IPTG</span> and shift to 18 °C overnight.</li>
+        <li><span class="mono">IMAC</span> on <span class="mono">Ni-NTA</span>.
+          <strong>Use a nickel-free alternative if possible</strong>, or strip
+          and dialyse exhaustively: this protein's entire function is binding
+          metal ions, and an IMAC column is a metal-loading step.</li>
+        <li><strong>Endotoxin depletion</strong> — polymyxin-B affinity or
+          anion exchange, with LAL as a release test. Absent from the first
+          draft of this protocol; nothing downstream can enter an animal
+          without it.</li>
+        <li><span class="mono">SEC</span>. Ferritin is a 24-mer of about
+          480 kDa and should run as one large, well-resolved peak; a monomer
+          peak means the cage did not assemble.</li>
+        <li>Iron-free the preparation before any assay. Apoferritin is the
+          starting material, and a protein that arrives part-loaded gives an
+          activity reading that is partly its own history.</li>
+      </ol>
+      <div class="check"><b>Checkpoint.</b> One peak at the 24-mer position by
+        SEC, and iron below detection by ferrozine. Native PAGE or TEM confirms
+        the cage if SEC is ambiguous.</div>
+    </li>
+
+    <li>
+      <h3>The central measurement: ferroxidase activity against pH<span class="chip t">2 days</span><span class="chip s">this is the experiment</span></h3>
+      <ol class="steps">
+        <li>Buffer series at matched ionic strength spanning 5.0 to 7.5 — MES
+          below 6.5, HEPES above — because the span that matters is the one
+          stage 3 measured, not the one a textbook assay uses.</li>
+        <li>Add Fe(II) under air and follow Fe(III) formation at 305 nm, or
+          follow the oxo-bridged intermediate at 650 nm. Run a no-enzyme
+          control in every buffer: <strong>Fe(II) autoxidises on its own, and
+          the rate is itself strongly pH dependent</strong>, so the uncatalysed
+          background is not a constant that can be subtracted once.</li>
+        <li>Define the unit before the first reading: one micromole of Fe(II)
+          oxidised per minute at 37 °C, per milligram of protein by A280. An
+          undefined unit is how a number loses its provenance.</li>
+        <li>Add a dynamic light scattering read per buffer — the samples are
+          already prepared, and it shows whether the cage survives the acid
+          end.</li>
+      </ol>
+      <div class="check"><b>Checkpoint, and the real question.</b> The ratio of
+        enzymatic to uncatalysed rate, at each pH. If ferritin adds little over
+        autoxidation at 7.4, its value is storage and not oxidation — which
+        simplifies the programme enormously, because then this is a chelation
+        problem with a protein-shaped container. If the ratio collapses below
+        pH 6.5, the His65 prediction is confirmed and the engineering target is
+        a ferroxidase that works at the surface pH.</div>
+    </li>
+
+    <li>
+      <h3>The mutant as a control<span class="chip t">1 day</span></h3>
+      <p>H65A removes the catalytic histidine. It is not a therapeutic
+        candidate — it is <strong>the control that proves the signal is the
+        ferroxidase site</strong> rather than iron binding to the protein
+        surface, or autoxidation catalysed non-specifically by any protein.</p>
+      <ol class="steps">
+        <li>Same assay, pH 7.4 and the stage 3 surface pH, matched loading by
+          A280.</li>
+        <li>Alongside: no enzyme, heat-denatured ferritin, and an equal mass of
+          bovine serum albumin.</li>
+      </ol>
+      <div class="check"><b>Checkpoint.</b> H65A should approach the
+        no-enzyme rate. If BSA also accelerates, what is being measured is
+        surface catalysis by protein in general and not ferritin.</div>
+    </li>
+
+    <li>
+      <h3>Conditional: is the hydrogenase route worth starting<span class="chip t">1 week</span><span class="chip s">gate, not a build</span></h3>
+      <p>The strongest lead in this arm acts on metallic Fe(0) directly, which
+        is the one step ferritin cannot do — ferritin handles the ion after
+        something else has released it. But both source organisms are strict
+        anaerobes and tissue is oxygenated, so <strong>the first experiment is
+        not expression, it is survival</strong>.</p>
+      <ol class="steps">
+        <li>Obtain a commercial O₂-tolerant [NiFe] hydrogenase, or spent
+          medium from a <span class="mono">Methanococcus maripaludis</span>
+          culture following the cell-free preparation
+          (<a href="https://doi.org/10.1128/mBio.00496-15" target="_blank"
+              rel="noopener">PMID 25900658</a>).</li>
+        <li>Measure residual activity after exposure to air at the dissolved
+          oxygen tension of subcutaneous tissue, sampled over minutes to
+          hours.</li>
+        <li>In parallel, measure hydrogen evolution from a steel coupon. The
+          mass balance says a 20% debulk of a 50 mg fragment
+          releases <strong>4.5 mL of H₂</strong>, inside a closed
+          fibrotic capsule. Whether it accumulates or diffuses away is a
+          measurement, and it has never been made.</li>
+      </ol>
+      <div class="check"><b>Checkpoint.</b> If residual activity is minutes,
+        the route needs an O₂-tolerant hydrogenase from
+        <span class="mono">Ralstonia</span> or
+        <span class="mono">Aquifex</span> and becomes a protein-engineering
+        programme with a known starting point. If it is hours, it is the
+        strongest thing in this arm and deserves the maturation work.</div>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>Stop decisions</h2>
+  <p class="sec-sub">Set in advance, because once you have seen the data it is too late</p>
+
+  <div class="scroll">
+    <table>
+      <caption>What halts the route and what continues it.</caption>
+      <thead><tr><th>Stage</th><th>Result</th><th>Decision</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Fragments are stainless</td>
+            <td><strong>Stop for those fragments.</strong> Not a tuning
+              problem. Narrow the indication to carbon steel and say so.</td></tr>
+        <tr><td class="num">2</td><td>Chelated rate no better than unchelated</td>
+            <td><strong>Stop.</strong> The chemistry does not work and no
+              enzyme repairs it. This is the cheapest way to learn it.</td></tr>
+        <tr><td class="num">2</td><td>Rate implies more than ten carrier placements</td>
+            <td>Continue, but the indication changes: repeat injection beside
+              a nerve is a different clinical proposition from one.</td></tr>
+        <tr><td class="num">3</td><td>Surface pH near 7.4</td>
+            <td>Good news. Drop the acid arm of stage 5 and the pH engineering
+              with it.</td></tr>
+        <tr><td class="num">5</td><td>Enzymatic rate close to autoxidation</td>
+            <td>Ferritin's value is capture, not catalysis. Reframe as a
+              chelation product and stop calling it an enzyme therapy.</td></tr>
+        <tr><td class="num">6</td><td>BSA accelerates as much as ferritin</td>
+            <td><strong>Stop.</strong> The assay is measuring protein surfaces,
+              not a ferroxidase.</td></tr>
+        <tr><td class="num">7</td><td>Hydrogenase inactivated in minutes under air</td>
+            <td>Do not begin the maturation work. Revisit only with an
+              O₂-tolerant enzyme.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <b>What the mass balance already fixes, whatever the bench finds.</b> For
+    a 50 mg carbon-steel fragment, full capture needs
+    92 mg of ferritin — 1.8× the fragment's own
+    mass — and a 20% debulk needs about 98 mg of deferoxamine, because
+    DFO binds Fe(III) one ion per molecule. Neither number depends on any rate,
+    and no improvement in the enzyme changes either. They are the arithmetic
+    the formulation has to fit inside.
+  </div>
+</section>
+
+<section>
+  <h2>What is still missing</h2>
+  <p class="sec-sub">11 gaps, held as data in <code>f2c/gaps.py</code></p>
+
+  <p>This register came out of reading the whole project as a biologist would,
+    and it lives in code because a gap mentioned in conversation is a gap that
+    disappears. <strong>Neither of the team's two feasibility documents raises
+    a single item on it</strong> — which is not a criticism of either, since a
+    document answers the question it set out to answer. These fall between
+    them.</p>
+
+  <div class="scroll"><table><caption>The gap register. Neither of the team&#x27;s two feasibility documents raises a single item on this list.</caption><thead><tr><th>Severity</th><th>Area</th><th>What is missing</th><th>What would close it</th><th>Whose</th></tr></thead><tbody><tr><td><span class="pill b">blocks injection</span></td><td class="num">protein</td><td><strong>No endotoxin removal step anywhere in the protocol</strong><br>Protein expressed in E. coli carries lipopolysaccharide. The FDA limit for parenteral products is 5 EU per kg per hour. The protocol purifies by IMAC and SEC and then stops.</td><td>Add a polymyxin-B or anion-exchange depletion step after IMAC, and a LAL assay as a release test with a stated limit. Both are routine.</td><td class="num">whoever runs the purification</td></tr><tr><td><span class="pill s">blocks trial</span></td><td class="num">clinical</td><td><strong>What happens to the enzyme after it has worked</strong><br>Whether the protein stays in the depot, how much reaches circulation, and how it is cleared. Not addressed anywhere.</td><td>Label the enzyme and follow it. Standard, and it belongs in the first animal study rather than after one.</td><td class="num">whoever designs the first in vivo study</td></tr><tr><td><span class="pill s">blocks trial</span></td><td class="num">clinical</td><td><strong>A retained fragment is a contaminated foreign body</strong><br>No consideration of existing bacterial colonisation, biofilm on the fragment surface, or tetanus status. The safety review mentions non-sterile fragments for wood; the metal arm does not carry it.</td><td>Culture retrieved fragments; state antibiotic cover and tetanus status as enrolment criteria.</td><td class="num">clinical lead</td></tr><tr><td><span class="pill s">blocks trial</span></td><td class="num">formulation</td><td><strong>How many milligrams of enzyme go into the depot</strong><br>The engine computes ferritin mass, deferoxamine mass and even hydrogen volume from the fragment. It does not compute an enzyme dose, because a dose needs a rate and no rate has been measured on a solid substrate at body conditions.</td><td>Stage 7 of the protocol -- rate per unit surface area on real substrate. The dose follows from it arithmetically, as the chelator mass already does.</td><td class="num">follows from the bench work; nothing to do before it</td></tr><tr><td><span class="pill s">blocks trial</span></td><td class="num">clinical</td><td><strong>Nobody has shown that removing volume relieves the symptom</strong><br>The whole product rests on one assumption: that making a fragment smaller reduces the pressure on the nerve beside it. No source in this project supports it -- not the engine, not the clinical feasibility review, not the carrier document.</td><td>A literature search of the surgical series: in retained-fragment cases where symptoms resolved after removal, was the mechanism decompression or neurolysis? Surgeons have this data. It is a reading task, not an experiment.</td><td class="num">clinical lead, before the pitch</td></tr><tr><td><span class="pill s">blocks trial</span></td><td class="num">clinical</td><td><strong>No way to tell, in a living subject, whether it worked</strong><br>The project has no in vivo measurement. The carrier document notes that ZIF-8 nanoparticles are echogenic; nothing in the engine turns that into a readout, and fragment volume change of a few percent is below what routine imaging resolves.</td><td>Measure the released iron instead of the remaining fragment. Serum ferritin and transferrin saturation, or urinary ferrioxamine, are the products of the reaction and they are assayed routinely. The output is easier to see than the input.</td><td class="num">clinical lead with the chemist</td></tr><tr><td><span class="pill s">blocks claim</span></td><td class="num">metal</td><td><strong>The alloying elements are not modelled</strong><br>METAL_FRACTION assumes steel is 98% iron without saying which steel. Fragmentation steel carries manganese and silicon, and sometimes nickel and chromium below the stainless threshold. Nickel and chromium are recognised contact allergens.</td><td>XRF or SEM-EDS on retrieved fragments gives the composition directly, and the mass balance then runs per element.</td><td class="num">anyone with access to retrieved fragments</td></tr><tr><td><span class="pill s">blocks claim</span></td><td class="num">protein</td><td><strong>Activity is measured without a defined unit</strong><br>The protocol follows nitrophenol release but never defines U/mg. Without it, two preparations, two days or two laboratories cannot be compared.</td><td>Define one micromole of nitrophenol released per minute at 37 C and pH 7.4 as one unit, and report per milligram of protein by A280 with the computed extinction coefficient.</td><td class="num">trivial; do it before the first assay, not after</td></tr><tr><td><span class="pill n">incomplete</span></td><td class="num">formulation</td><td><strong>The pI finding is flagged and not acted on</strong><br>TfH&#x27;s theoretical pI is 7.96, within one unit of tissue pH, where colloidal stability is at its minimum. The protocol notes it at the size-exclusion step and does nothing further.</td><td>Dynamic light scattering across the buffer series already being prepared for the pH profile. One extra read per sample.</td><td class="num">add it to stage 4; nearly free</td></tr><tr><td><span class="pill n">incomplete</span></td><td class="num">clinical</td><td><strong>Every calculation is for one fragment</strong><br>Mass balance, chelator demand, placement count and hydrogen volume are all computed per fragment. A blast patient has many, sometimes of more than one material.</td><td>Arithmetic. Sum the per-fragment demands and report the aggregate against a per-dose ceiling, which is a short change to the engine.</td><td class="num">engine; cheap</td></tr><tr><td><span class="pill n">incomplete</span></td><td class="num">formulation</td><td><strong>No stability, storage or freeze-thaw data</strong><br>Lyophilisation, excipients, freeze-thaw cycles, shelf life. A protein that loses 40% of its activity on first thaw is not a product.</td><td>Falls out of the stability arm of the protocol at no extra cost once that is running.</td><td class="num">later; noted so it is not discovered late</td></tr></tbody></table></div>
+
+  <div class="stopbox">
+    <p><b>The one that can invalidate the others.</b> The whole product rests
+      on the assumption that making a fragment smaller reduces the pressure on
+      the nerve beside it, and no source anywhere in this project supports it.
+      If the pressure comes from the contracting fibrotic capsule rather than
+      from the fragment's bulk, debulking solves the wrong problem and no
+      amount of enzyme engineering repairs that. Surgeons have the data to
+      answer it. It is a reading task, not an experiment, and it should be
+      settled before the pitch rather than during the questions.</p>
+  </div>
+</section>
+
+<footer>
+  <p><strong>How to reproduce.</strong>
+    <code>python -m tools.design_construct --target hFTH1 --uniprot P02794
+    --mutate H65A --offset 1</code> then
+    <code>python -m tools.build_protocol</code>, which emits this page and its
+    Hebrew counterpart from one run so the two cannot disagree. The structure
+    is verified on every build: if any of the seven ferroxidase residues is
+    not what it should be, the build fails rather than publishing.</p>
+  <p>Research prototype. Not a medical device, not a clinical decision aid,
+    and not validated for use in a person or an animal. This is bench work on
+    purified protein and steel coupons; it is not an animal study design, and
+    that would need ethics approvals which are not part of this document.</p>
+  <p><a href="https://claude.ai/artifact/XQgkTkYvMmCjTXCqcXUr9H">ShrapMind</a>
+    — the engine, and the directory of every page in this project.</p>
+</footer>
+
+</div>
