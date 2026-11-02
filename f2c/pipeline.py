@@ -114,6 +114,27 @@ REFS = {
         "gel can keep an enzyme working in a hostile compartment -- the gut, "
         "not tissue at 37 C in serum.",
     ),
+    "interfacial_kinetics": _ref(
+        "42706806", "10.1002/smll.75670",
+        "Single-molecule detection of enzymatic PET hydrolysis using "
+        "fluorogenic probe-doped PET nanoparticles",
+        2026,
+        "Resolves PET hydrolysis at a solid interface one molecule at a time: "
+        "enzymes cut several bonds per adsorption event, with an effective "
+        "reaction distance near 2 nm. Cutting frequency tracks surface-chain "
+        "mobility near the glass transition while the bulk rate keeps rising "
+        "-- the physics that makes 37 C hard, and the method for measuring it.",
+    ),
+    "conformational_selection": _ref(
+        "39036936", "10.1002/cbic.202400456",
+        "Conformational selection in enzyme-catalyzed depolymerization of "
+        "bio-based polyesters",
+        2024,
+        "Gauche and trans chain conformers, which belong to crystalline and "
+        "amorphous regions, bind PETase with different affinity. Degradation "
+        "efficiency tracked the conformational match between polymer and "
+        "enzyme regardless of the reaction temperature used.",
+    ),
 }
 
 # Where the concept brief and the cited papers part company. Named here so the
@@ -305,6 +326,76 @@ def residue() -> dict[str, Any]:
     }
 
 
+def missing_experiment() -> dict[str, Any]:
+    """The one measurement the whole engine points at, and why it is absent.
+
+    "Nobody has measured this" invites the obvious reply that it must then be
+    impossible or uninteresting. It is neither, and the reasons are specific
+    enough to state: the field that studies these enzymes is optimising for
+    recycling, where 37 C has no commercial value; the kinetic framework it
+    uses assumes a dissolved substrate and does not transfer to a solid; and
+    the surface physics near the glass transition is genuinely unfavourable at
+    body temperature.
+
+    The same literature supplies the method and one reason for optimism, so
+    both are recorded here rather than left as encouragement.
+    """
+    return {
+        "question": (
+            "Does a PET hydrolase cut any bonds at all on a solid fragment at "
+            "37 C in serum, at the crystallinity of real debris?"
+        ),
+        "why_it_is_a_gate": (
+            "It is a yes/no question that costs months, and everything "
+            "downstream is wasted effort if the answer is no. A programme that "
+            "spends its first year on protein engineering before asking it "
+            "finds out in its third."
+        ),
+        "what_not_to_ask_for": (
+            "kcat and Km. They assume a dissolved substrate at a known molar "
+            "concentration, and a fragment has a surface rather than a [S]. "
+            "The quantity that exists is interfacial: rate per unit area, "
+            "adsorbed enzyme density, and bonds cut per adsorption event."
+        ),
+        "method_exists": {
+            "what": (
+                "Single-molecule fluorescence on probe-doped polymer "
+                "nanoparticles already resolves interfacial PET hydrolysis, "
+                "including semi-processive cutting within one adsorption event "
+                "and an effective reaction distance near 2 nm."
+            ),
+            "evidence": LITERATURE,
+            "ref": REFS["interfacial_kinetics"],
+        },
+        "why_unstudied": [
+            "The field's incentive is recycling, not medicine. PET hydrolase "
+            "work targets 60-70 C, near the polymer's glass transition, where "
+            "chains are mobile. 37 C has no commercial value for recycling, so "
+            "it is not a gap in knowledge so much as a gap in the question.",
+            "Michaelis-Menten does not transfer to a solid, so the field "
+            "measures on soluble model esters where it does. Interfacial "
+            "kinetics is a different methodological tradition.",
+            "The physics at 37 C is genuinely unfavourable: cutting frequency "
+            "tracks surface-chain mobility near the glass transition, and below "
+            "it the chains are not moving. A negative result there is also not "
+            "a publication anyone chases.",
+        ],
+        "reason_for_optimism": {
+            "what": (
+                "Degradation efficiency across a set of bio-polyesters tracked "
+                "the conformational match between polymer chain and enzyme "
+                "'regardless of the actual reaction temperature employed'. If "
+                "conformational fit matters more than thermal energy, the "
+                "barrier at 37 C may be lower than the glass-transition "
+                "argument alone suggests. That is the hypothesis the "
+                "experiment tests."
+            ),
+            "evidence": LITERATURE,
+            "ref": REFS["conformational_selection"],
+        },
+    }
+
+
 def indication() -> dict[str, Any]:
     """Why leaving a fragment alone is itself a decision with a cost.
 
@@ -346,6 +437,7 @@ def indication() -> dict[str, Any]:
 def build(material_key: str, products: list[str]) -> dict[str, Any]:
     return {
         "indication": indication(),
+        "missing_experiment": missing_experiment(),
         "cocktail": cocktail(material_key, products),
         "carrier": carrier(),
         "host_response": host_response(),

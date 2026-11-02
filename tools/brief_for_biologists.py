@@ -17,7 +17,7 @@ import sys
 
 from f2c import substrate, warehouse
 from f2c.engine import decide
-from f2c.pipeline import CAVEATS, REFS, carrier, indication
+from f2c.pipeline import CAVEATS, REFS, carrier, indication, missing_experiment
 from f2c.schema import MaterialSpec
 
 CASE = dict(polymer="PET", mass_mg=50.0, crystallinity_pct=55.0, particle_size_mm=0.8)
@@ -173,6 +173,27 @@ def build() -> str:
         for extra in c.get("also", []):
             add(f"מקור תומך: [PMID {extra['pmid']}]"
                 f"(https://pubmed.ncbi.nlm.nih.gov/{extra['pmid']}/) — {extra['title']}\n")
+
+    # ---- the gate ---------------------------------------------------------
+    me = missing_experiment()
+    add("## שלב 0 — הניסוי שמכריע אם יש היתכנות\n")
+    add("> זו שאלת כן/לא שעולה חודשים, והיא היחידה שעומדת בין הרעיון "
+        "להיתכנות. היא נכנסה לגאנט כרבעון הראשון.\n")
+    add(f"**השאלה:** {me['question']}\n")
+    add(f"**למה שער ולא משימה:** {me['why_it_is_a_gate']}\n")
+    add(f"**מה לא לבקש:** {me['what_not_to_ask_for']}\n")
+    add(f"**השיטה כבר קיימת:** {me['method_exists']['what']}\n")
+    add(f"[PMID {me['method_exists']['ref']['pmid']}]"
+        f"(https://pubmed.ncbi.nlm.nih.gov/{me['method_exists']['ref']['pmid']}/)\n")
+    add("### למה אף אחד לא מדד את זה עד היום\n")
+    add("שאלה שתישאל בפיץ', ויש לה תשובה טובה — זה לא חור בידע, זה חור "
+        "בשאלה.\n")
+    for reason in me["why_unstudied"]:
+        add(f"- {reason}")
+    add("")
+    add(f"**וסימן לכיוון ההפוך:** {me['reason_for_optimism']['what']}\n")
+    add(f"[PMID {me['reason_for_optimism']['ref']['pmid']}]"
+        f"(https://pubmed.ncbi.nlm.nih.gov/{me['reason_for_optimism']['ref']['pmid']}/)\n")
 
     # ---- what we need from them ------------------------------------------
     add("## מה אני צריך מכם\n")
