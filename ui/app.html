@@ -221,6 +221,31 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
 .mis .mk{font-weight:600;color:var(--watch)}
 .mis .md{color:var(--ink-2)}
 .nope{background:var(--sunk);border-radius:5px;padding:1rem 1.1rem;color:var(--ink-2)}
+/* ---- The directory ---------------------------------------------------
+   Seven pages were published for this project over three weeks, and
+   nothing linked them, so each was findable only by whoever had its URL.
+   This section is the single entry point. It is static markup rather than
+   rendered from DATA, because a directory that depends on the engine
+   loading is not a directory. It sits outside the view switcher so it is
+   present whichever arm is open. */
+#index{border-top:1px solid var(--rule);margin-top:3rem;padding-top:1.6rem}
+#index h2{font-family:var(--font-display);font-size:1.3rem;margin:0 0 .3rem}
+#index .lede{color:var(--ink-2);margin:0 0 1.3rem;max-width:44rem;font-size:.95rem}
+#index .grp{font-family:var(--font-data);font-size:.72rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-3);margin:1.4rem 0 .6rem}
+#index ul{list-style:none;margin:0;padding:0;display:grid;gap:1px;
+  background:var(--rule-2);border:1px solid var(--rule-2);border-radius:6px}
+#index li{background:var(--raised);padding:.85rem 1rem}
+#index li.here{background:var(--sunk)}
+#index a.t{font-weight:600;color:var(--accent);text-decoration-thickness:1px;
+  text-underline-offset:2px}
+#index .t.plain{font-weight:600;color:var(--ink)}
+#index .d{color:var(--ink-2);font-size:.92rem;margin-top:.2rem}
+#index .pin{font-family:var(--font-data);font-size:.68rem;letter-spacing:.06em;
+  text-transform:uppercase;border:1px solid currentColor;border-radius:2px;
+  padding:1px 5px;margin-left:.45rem;vertical-align:1px;white-space:nowrap}
+#index .pin.live{color:var(--ok)}
+#index .pin.old{color:var(--ink-3)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -282,6 +307,70 @@ footer{border-top:1px solid var(--rule);padding-block:1.2rem 2.5rem;
 </div></header>
 
 <main class="wrap" id="main"></main>
+
+<section class="wrap" id="index">
+  <h2>Every page in this project</h2>
+  <p class="lede">Seven pages were published over three weeks and nothing
+    linked them, so each was reachable only by whoever held its URL. This is
+    the entry point. Nothing was deleted: the earlier direction is listed
+    with the current one, marked as what it is.</p>
+
+  <p class="grp">Current &mdash; the three live pages</p>
+  <ul>
+    <li class="here">
+      <span class="t plain">ShrapMind</span><span class="pin live">you are here</span>
+      <div class="d">The engine. Which enzyme acts on a given fragment, what its
+        constant was actually measured on, and the distance from there to
+        tissue. Two arms: polymer and metal.</div>
+    </li>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/9NDiDW7T9dgooUJEGD9jYt" target="_blank"
+         rel="noopener">Fragment-to-Catalyst Safety Review</a><span class="pin live">live</span>
+      <div class="d">The other half of the same question: not whether an enzyme
+        works, but what else it does. 505 enzymes screened against ten
+        materials, five refused for digesting host protein, and the
+        mechanism behind every hazard verdict this engine reports.</div>
+    </li>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/R8WfMNJXNCrfk7jiMiAYMj" target="_blank"
+         rel="noopener">Shrapnel &mdash; team workspace</a><span class="pin live">live</span>
+      <div class="d">The team's own page, with its own database: questions,
+        answers, knowledge base, ideas and tasks. It stays separate because
+        its content is written by the team, not generated here &mdash; folding it
+        into this page would discard what is in it.</div>
+    </li>
+  </ul>
+
+  <p class="grp">Superseded &mdash; kept, not deleted</p>
+  <ul>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/TmWMoL2bKvSPyrL63t9JVf" target="_blank"
+         rel="noopener">TfH Catalytic Site</a><span class="pin old">folded in</span>
+      <div class="d">The standalone 4CG1 structure viewer. Its 3Dmol viewer is
+        now inline in the polymer arm above, so this page shows nothing the
+        engine does not.</div>
+    </li>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/5c9UekC5TgCLZ15cQ5ueEn" target="_blank"
+         rel="noopener">Shrapnel &middot; <span dir="rtl">רקע לבדיקה</span></a><span class="pin old">earlier</span>
+      <div class="d">Background assembled before the enzyme direction was
+        chosen.</div>
+    </li>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/HPveDZ1o2N1QZhYgWbJhKR" target="_blank"
+         rel="noopener" dir="rtl">מפת סיכון לרסיסים</a><span class="pin old">earlier</span>
+      <div class="d">An earlier direction for the same clinical problem:
+        mapping which retained fragments are dangerous rather than acting on
+        them. Replaced by this one, and listed because the clinical framing
+        it sets out is still the framing used here.</div>
+    </li>
+    <li>
+      <a class="t" href="https://claude.ai/artifact/UYLYujtA7eAyvUjKD7Er2P" target="_blank"
+         rel="noopener" dir="rtl">פיץ׳ מפת סיכון לרסיסים</a><span class="pin old">earlier</span>
+      <div class="d">The pitch for that earlier direction.</div>
+    </li>
+  </ul>
+</section>
 
 <footer class="wrap" id="meta"></footer>
 
