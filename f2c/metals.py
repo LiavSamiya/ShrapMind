@@ -64,25 +64,31 @@ REFS = {
         "fragments in the head are not a hypothetical case.",
     ),
     "ferritin": _ref(
-        "9003196", "10.1074/jbc.272.5.2846",
-        "Human ferritin heavy chain: ferroxidase activity and iron deposition",
+        "9003196", "10.1021/bi961830l",
+        "Dinuclear center of ferritin: studies of iron binding and oxidation "
+        "show differences in the two iron sites",
         1997,
-        "Human ferritin heavy chain catalyses 4 Fe(2+) + O2 + 4 H(+) -> "
-        "4 Fe(3+) + 2 H2O and deposits the product as ferric hydroxide inside a "
-        "24-subunit shell about 12 nm across. UniProt's own summary is that it "
-        "stores iron 'in a soluble, non-toxic form' -- oxidation and capture in "
-        "one human protein, with 145 solved structures (P02794).",
+        "Studies the dinuclear ferroxidase centre itself and shows the two "
+        "iron sites behave differently during binding and oxidation. The "
+        "mechanism, in other words, not the summary. The stoichiometry "
+        "(4 Fe(2+) + O2 + 4 H(+) -> 4 Fe(3+) + 2 H2O), the 24-subunit 12 nm "
+        "shell and the phrase 'stores iron in a soluble, non-toxic form' are "
+        "UniProt P02794's annotations, and are cited to UniProt rather than to "
+        "this paper.",
     ),
     "ceruloplasmin": _ref(
-        "9159481", "10.1073/pnas.93.9.4280",
-        "Ceruloplasmin, the human plasma multicopper ferroxidase",
-        1996,
-        "The circulating human ferroxidase, a multicopper oxidase that acts on "
-        "both iron and copper. Endogenous, which is why the copper route starts "
-        "here rather than at a fungal laccase (P00450).",
+        "21315066", "10.1016/j.cca.2011.02.003",
+        "Association of haptoglobin phenotypes with ceruloplasmin ferroxidase "
+        "activity in beta-thalassemia major",
+        2011,
+        "Measures ceruloplasmin's ferroxidase activity in patients, which "
+        "establishes the activity rather than explaining it. For the protein's "
+        "identity as the human plasma multicopper oxidase the source is "
+        "UniProt P00450, not a paper -- and saying so is more honest than "
+        "attaching a citation that does not carry the claim.",
     ),
     "cyc2": _ref(
-        "39937138", "10.1128/aem.01886-24",
+        "39937138", "10.1002/smll.202408837",
         "Site-directed mutagenesis of the Cyc2 outer membrane protein from "
         "Acidithiobacillus ferrooxidans",
         2025,
@@ -92,7 +98,7 @@ REFS = {
         "protein, not just an observed activity.",
     ),
     "cyc2_activity": _ref(
-        "23980744", "10.1007/s00253-013-5120-6",
+        "23980744", "10.1002/bab.1110",
         "Increases of ferrous iron oxidation activity by overexpression of Cyc2 "
         "in Acidithiobacillus ferrooxidans",
         2013,
@@ -100,7 +106,7 @@ REFS = {
         "ties the rate to this protein rather than to the organism as a whole.",
     ),
     "mnxg": _ref(
-        "18165363", "10.1128/AEM.01915-07",
+        "18165363", "10.1128/AEM.01240-07",
         "Direct identification of a bacterial manganese(II) oxidase, the "
         "multicopper oxidase MnxG",
         2008,
@@ -145,17 +151,22 @@ REFS = {
         "makes is reoxidised immediately. Measured on goethite at pH 6, not on "
         "metallic iron.",
     ),
-    "no_siderophore_on_metal": _ref(
-        "", "",
-        "Searched: siderophore or chelator against zerovalent / metallic iron",
-        2026,
-        "PubMed returns nothing for chelator-driven dissolution of metallic "
-        "iron. The oxide case is well studied and the metal case is not, which "
-        "is the honest boundary of this route and the reason stage 1 starts at "
-        "the fragment's existing rust layer rather than at the metal.",
+    "ligand_dissolution": _ref(
+        "25965980", "10.1021/acs.est.5b01191",
+        "Synergistic effect of reductive and ligand-promoted dissolution of "
+        "goethite",
+        2015,
+        "The mechanism stage 1 was missing. Dissolution of an iron oxide is "
+        "driven by taking the product away: the rate coefficient tracks the "
+        "stability constant of the Fe(III)-ligand complex, so the chelator sets "
+        "the rate. Desferrioxamine B and ascorbate together dissolve faster "
+        "than the sum of either alone, and the synergy is strongest under "
+        "oxygen. Ascorbate by itself does nothing in air, because the Fe(II) it "
+        "makes is reoxidised immediately. Measured on goethite at pH 6, not on "
+        "metallic iron.",
     ),
     "mic_electron_transfer": _ref(
-        "27134022", "10.1146/annurev-micro-102215-095418",
+        "27134022", "10.1016/bs.ampbs.2016.02.002",
         "Mechanisms of bacterial extracellular electron exchange",
         2016,
         "Reviews how organisms move electrons across the cell envelope to and "
@@ -164,7 +175,7 @@ REFS = {
         "can be injected.",
     ),
     "tungsten_alloy": _ref(
-        "29051474", "10.1007/s12011-017-1144-6",
+        "29051474", "10.3390/toxics3040499",
         "The role of the component metals in the toxicity of military-grade "
         "tungsten alloy",
         2015,
@@ -812,7 +823,15 @@ def route(material: str) -> dict[str, Any] | None:
                     ],
                 },
             ],
-            "refs": [REFS["ligand_dissolution"], REFS["no_siderophore_on_metal"]],
+            "refs": [REFS["ligand_dissolution"]],
+            # Not a reference: PubMed returns nothing for a chelator against
+            # metallic iron. A negative result has no DOI, and dressing it as
+            # a citation produced two dead links.
+            "searched_and_found_nothing": (
+                "PubMed returns no results for chelator-driven dissolution of "
+                "metallic iron. The oxide case is well studied and the metal "
+                "case is not, which is the honest boundary of this route."
+            ),
         },
         {
             "n": 2,
