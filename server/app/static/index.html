@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShrapMind Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Same instrument language as the engine's own page: paper, one accent,
+   measurement-first. A reviewer should be able to tell at a glance what the
+   engine is claiming and what it admits it does not know. */
+:root{
+  --paper:#f7f6f3; --panel:#fffffe; --ink:#1b1c1a; --ink-2:#55564f; --ink-3:#87887f;
+  --rule:#ddddd4; --rule-2:#eceae2; --accent:#1f5f52;
+  --ok:#2f6b3a; --warn:#8a5a12; --stop:#8c3327; --unknown:#6b6c78;
+  --font-ui:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#13140f; --panel:#1b1d17; --ink:#eceade; --ink-2:#aeafa2; --ink-3:#7d7e73;
+  --rule:#32342a; --rule-2:#23251d; --accent:#63c3ad;
+  --ok:#6fbb7c; --warn:#d7a04a; --stop:#e07a6c; --unknown:#9c9daa;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#13140f; --panel:#1b1d17; --ink:#eceade; --ink-2:#aeafa2; --ink-3:#7d7e73;
+  --rule:#32342a; --rule-2:#23251d; --accent:#63c3ad;
+  --ok:#6fbb7c; --warn:#d7a04a; --stop:#e07a6c; --unknown:#9c9daa;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--font-ui);
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:70rem;margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px))}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--rule)}
+.masthead{display:flex;align-items:baseline;gap:.9rem;flex-wrap:wrap;padding-block:.75rem}
+h1{margin:0;font-size:1.02rem;font-weight:600;letter-spacing:-.01em}
+.sub{font-size:.82rem;color:var(--ink-3)}
+.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.status{margin-inline-start:auto;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.chip{font-family:var(--font-data);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;
+  padding:.18rem .5rem;border:1px solid var(--rule);border-radius:2px;color:var(--ink-2);white-space:nowrap}
+.chip.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.chip.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+nav{display:flex;gap:.3rem;padding-bottom:.6rem;flex-wrap:wrap}
+nav button{font:inherit;font-size:.82rem;padding:.3rem .7rem;border:1px solid var(--rule);
+  border-radius:2px;background:transparent;color:var(--ink-2);cursor:pointer}
+nav button[aria-selected="true"]{background:var(--panel);border-color:var(--accent);color:var(--accent)}
+main{padding-block:1.4rem 3rem}
+h2{font-size:.78rem;font-family:var(--font-data);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+.item{background:var(--panel);border:1px solid var(--rule);border-radius:3px;
+  padding:1rem;margin-bottom:.9rem}
+.item h3{margin:0;font-size:1.15rem;font-weight:600}
+.item .case{font-family:var(--font-data);font-size:.8rem;color:var(--ink-2);margin-top:.2rem}
+.why{font-size:.9rem;color:var(--ink-2);margin-top:.6rem}
+.gaps{margin-top:.7rem;padding-top:.6rem;border-top:1px solid var(--rule-2)}
+.gap{border-left:3px solid var(--warn);padding-left:.7rem;margin-bottom:.5rem}
+.gap .g1{font-size:.88rem;font-weight:500}
+.gap .g2{font-size:.83rem;color:var(--ink-2)}
+.gap .act{font-size:.83rem;margin-top:.15rem}
+.act b{color:var(--accent);font-weight:500}
+form{margin-top:.85rem;padding-top:.75rem;border-top:1px solid var(--rule-2);
+  display:flex;flex-direction:column;gap:.55rem}
+.verdicts{display:flex;gap:.35rem;flex-wrap:wrap}
+.verdicts label{font-size:.82rem;padding:.3rem .65rem;border:1px solid var(--rule);
+  border-radius:2px;cursor:pointer;color:var(--ink-2)}
+.verdicts input{position:absolute;opacity:0;width:0}
+.verdicts input:checked + span{color:var(--accent);font-weight:500}
+.verdicts label:has(input:checked){border-color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.verdicts label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+textarea,input[type=text],input[type=number]{font:inherit;font-size:.9rem;padding:.45rem .55rem;
+  border:1px solid var(--rule);border-radius:2px;background:var(--paper);color:var(--ink);width:100%}
+textarea{min-height:68px;resize:vertical;font-family:var(--font-ui)}
+label.f{font-family:var(--font-data);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);display:block;margin-bottom:.2rem}
+.grow{flex:1;min-width:11rem}
+button.send{font:inherit;font-size:.88rem;font-weight:500;padding:.45rem 1.1rem;border-radius:2px;
+  border:1px solid var(--accent);background:var(--accent);color:var(--panel);cursor:pointer;width:fit-content}
+button.send:disabled{opacity:.45;cursor:default}
+.hint{font-size:.8rem;color:var(--ink-3)}
+.empty{padding:2.4rem 1rem;text-align:center;color:var(--ink-3)}
+.empty strong{display:block;color:var(--ink);font-size:1.05rem;font-weight:600;margin-bottom:.3rem}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--rule-2)}
+th{font-family:var(--font-data);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500}
+td.num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.note{background:var(--panel);border:1px solid var(--rule);border-radius:3px;padding:.7rem .9rem;
+  margin-bottom:.6rem}
+.note .meta{font-family:var(--font-data);font-size:.72rem;color:var(--ink-3)}
+.banner{border:1px dashed var(--rule);border-radius:3px;padding:.7rem .9rem;margin-bottom:1rem;
+  font-size:.86rem;color:var(--ink-2)}
+.banner b{color:var(--warn)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="masthead">
+    <h1>ShrapMind &mdash; review queue</h1>
+    <span class="sub">Nothing the engine proposes is presented as settled until a biologist answers it</span>
+    <span class="status" id="status"></span>
+  </div>
+  <nav role="tablist">
+    <button role="tab" data-tab="queue" aria-selected="true">Queue</button>
+    <button role="tab" data-tab="experiments" aria-selected="false">Bench queue</button>
+    <button role="tab" data-tab="approved" aria-selected="false">Approved</button>
+    <button role="tab" data-tab="notes" aria-selected="false">Past objections</button>
+  </nav>
+</div></header>
+
+<main class="wrap" id="main"></main>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const VERDICTS = [
+  ["agree",            "Agree"],
+  ["needs_experiment", "Needs an experiment"],
+  ["unconvinced",      "Unconvinced"],
+  ["disagree",         "Disagree"],
+  ["out_of_scope",     "Out of scope"],
+];
+
+let TAB = "queue";
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error((await r.text()) || r.statusText);
+  return r.json();
+}
+
+async function header() {
+  let h;
+  try { h = await api("/api/health"); }
+  catch { $("#status").innerHTML = '<span class="chip warn">backend unreachable</span>'; return; }
+  const bits = [`<span class="chip">${h.pending} pending</span>`];
+  // The embedder is not a detail: "similar case" means something different
+  // depending on which one is running, and the reviewer is the one who has to
+  // know that when they read a match.
+  bits.push(h.embedding === "semantic"
+    ? '<span class="chip ok">semantic embedding</span>'
+    : '<span class="chip warn">lexical embedding</span>');
+  if (!h.review_enabled) bits.push('<span class="chip warn">review disabled</span>');
+  $("#status").innerHTML = bits.join("");
+}
+
+function gapsHtml(gaps) {
+  if (!gaps || !gaps.length) return "";
+  return `<div class="gaps">` + gaps.map(g => `
+    <div class="gap">
+      <div class="g1">${esc(g.kind)}</div>
+      <div class="g2">${esc(g.detail)}</div>
+      ${g.action ? `<div class="act"><b>Next:</b> ${esc(g.action)}</div>` : ""}
+    </div>`).join("") + `</div>`;
+}
+
+function itemHtml(c) {
+  return `<article class="item" data-id="${esc(c.id)}">
+    <h3>${esc(c.enzyme_name || "No catalyst proposed")}</h3>
+    <div class="case">${esc(c.problem_summary)}</div>
+    ${c.rationale ? `<p class="why">${esc(c.rationale)}</p>` : ""}
+    ${gapsHtml(c.gaps)}
+    <form>
+      <div>
+        <label class="f">Your verdict</label>
+        <div class="verdicts">${VERDICTS.map(([v, label], i) => `
+          <label><input type="radio" name="v-${esc(c.id)}" value="${v}"
+            ${i === 0 ? "required" : ""}><span>${label}</span></label>`).join("")}
+        </div>
+      </div>
+      <div>
+        <label class="f" for="n-${esc(c.id)}">Reasoning &mdash; this is the part that is stored and searched</label>
+        <textarea id="n-${esc(c.id)}" name="note" required
+          placeholder="What the engine got right or wrong, and what would settle it."></textarea>
+      </div>
+      <div class="row">
+        <div style="width:8rem">
+          <label class="f" for="c-${esc(c.id)}">Confidence 1&ndash;5</label>
+          <input id="c-${esc(c.id)}" name="confidence" type="number" min="1" max="5"
+            placeholder="optional">
+        </div>
+        <div class="grow">
+          <label class="f" for="p-${esc(c.id)}">PMIDs you are citing</label>
+          <input id="p-${esc(c.id)}" name="pmids" type="text" placeholder="e.g. 25985456, 18604214">
+        </div>
+      </div>
+      <button class="send" type="submit">Submit review</button>
+      <span class="hint">Agreeing records that you found it credible &mdash; it is stored as expert
+        review, never as a measurement.</span>
+    </form>
+  </article>`;
+}
+
+async function renderQueue() {
+  const rows = await api("/api/changes?status=pending");
+  if (!rows.length) {
+    $("#main").innerHTML = `<div class="empty"><strong>Queue is clear</strong>
+      Every proposal has been answered. Run <span class="mono">python -m server.db.seed</span>
+      to queue more.</div>`;
+    return;
+  }
+  $("#main").innerHTML = `<h2>${rows.length} awaiting review</h2>` + rows.map(itemHtml).join("");
+  for (const form of document.querySelectorAll(".item form")) {
+    form.addEventListener("submit", onSubmit);
+  }
+}
+
+async function onSubmit(ev) {
+  ev.preventDefault();
+  const form = ev.currentTarget;
+  const item = form.closest(".item");
+  const id = item.dataset.id;
+  const picked = form.querySelector("input[type=radio]:checked");
+  if (!picked) return;
+
+  const btn = form.querySelector("button.send");
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+  const conf = form.confidence.value.trim();
+  const body = {
+    verdict: picked.value,
+    reviewer: "",                       // the server uses the signed-in name
+    note: form.note.value.trim(),
+    confidence: conf ? Number(conf) : null,
+    cites_pmid: form.pmids.value.split(/[,\s]+/).filter(Boolean),
+  };
+  try {
+    await api(`/api/changes/${encodeURIComponent(id)}/review`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    item.remove();
+    if (!document.querySelector(".item")) renderQueue();
+    header();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "Submit review";
+    const msg = String(err.message || err);
+    form.insertAdjacentHTML("beforeend",
+      `<span class="hint" style="color:var(--stop)">${esc(msg.slice(0, 200))}</span>`);
+  }
+}
+
+async function renderExperiments() {
+  const rows = await api("/api/experiments");
+  if (!rows.length) {
+    $("#main").innerHTML = `<div class="empty"><strong>Nothing queued for the bench</strong>
+      This fills when a reviewer answers "needs an experiment".</div>`;
+    return;
+  }
+  $("#main").innerHTML = `<h2>Experiments the reviewers asked for</h2>
+    <table><thead><tr><th>Material</th><th>Enzyme</th><th>Raised by</th>
+    <th>Mean confidence</th><th>Last raised</th></tr></thead><tbody>` +
+    rows.map(r => `<tr>
+      <td class="num">${esc(r.material)}</td>
+      <td>${esc(r.enzyme_name || "—")}</td>
+      <td class="num">${esc(r.raised_by)}</td>
+      <td class="num">${esc(r.mean_confidence ?? "—")}</td>
+      <td class="num">${esc((r.last_raised || "").slice(0, 16))}</td>
+    </tr>`).join("") + `</tbody></table>`;
+}
+
+async function renderApproved() {
+  const rows = await api("/api/proposals");
+  if (!rows.length) {
+    $("#main").innerHTML = `<div class="empty"><strong>Nothing approved yet</strong>
+      This table stays empty until a biologist agrees with something. That is the
+      correct state for a fresh install, not a failure.</div>`;
+    return;
+  }
+  $("#main").innerHTML = `<h2>${rows.length} approved</h2>` + rows.map(p => `
+    <article class="item">
+      <h3>${esc(p.enzyme_name || "—")}</h3>
+      <div class="case">${esc(p.problem_summary)}</div>
+      <div class="row" style="margin-top:.5rem">
+        <span class="chip">${esc(p.evidence_level)}</span>
+        ${p.substrate_class ? `<span class="chip warn">measured on: ${esc(p.substrate_class)}</span>` : ""}
+      </div>
+      ${gapsHtml(p.gaps)}
+    </article>`).join("");
+}
+
+async function renderNotes() {
+  $("#main").innerHTML = `<h2>Search what reviewers have already said</h2>
+    <div class="row" style="margin-bottom:1rem">
+      <input class="grow" id="q" type="text"
+        placeholder="e.g. crystallinity was never controlled for">
+      <button class="send" id="go">Search</button>
+    </div>
+    <div class="banner">Worth checking before writing a long objection &mdash; a colleague
+      may have reached it already, and the engine should not hear the same point twice as
+      if it were two.</div>
+    <div id="results"></div>`;
+  const run = async () => {
+    const q = $("#q").value.trim();
+    if (q.length < 2) return;
+    const rows = await api(`/api/notes/similar?q=${encodeURIComponent(q)}`);
+    $("#results").innerHTML = rows.length
+      ? rows.map(n => `<div class="note">
+          <div class="meta">${esc(n.reviewer)} &middot; ${esc((n.created_at || "").slice(0, 16))}
+            &middot; ${esc(n.verdict || "—")} &middot;
+            similarity ${Number(n.similarity).toFixed(2)}</div>
+          <div>${esc(n.note)}</div>
+          <div class="meta" style="margin-top:.3rem">on: ${esc(n.problem_summary || "—")}</div>
+        </div>`).join("")
+      : `<div class="empty">No reviewer has written anything close to that yet.</div>`;
+  };
+  $("#go").addEventListener("click", run);
+  $("#q").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
+}
+
+const RENDER = {
+  queue: renderQueue, experiments: renderExperiments,
+  approved: renderApproved, notes: renderNotes,
+};
+
+async function show(tab) {
+  TAB = tab;
+  for (const b of document.querySelectorAll("nav button")) {
+    b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+  }
+  try { await RENDER[tab](); }
+  catch (err) {
+    $("#main").innerHTML = `<div class="empty"><strong>Could not load</strong>
+      ${esc(String(err.message || err).slice(0, 300))}</div>`;
+  }
+}
+
+for (const b of document.querySelectorAll("nav button")) {
+  b.addEventListener("click", () => show(b.dataset.tab));
+}
+header();
+show("queue");
+</script>
+</body>
+</html>

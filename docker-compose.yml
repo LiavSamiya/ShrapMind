@@ -1,0 +1,83 @@
+# Backend stack for shrapmind: Postgres + pgvector, and the review API.
+#
+# Follows voodo's compose layout. Two differences, both for the same reason —
+# what this system stores is a record of expert judgement about biology, and
+# losing or corrupting it costs more than a cache miss:
+#
+#   * No bind-mounted source and no --reload. A reviewer's approval is the
+#     only way a claim reaches the answer set, so the process serving that
+#     endpoint should not be restarting itself on a file save.
+#   * The volume is named and never anonymous. `docker compose down` must not
+#     be able to take the reviews with it.
+#
+# The engine (f2c/) is not a service. It is pure standard library and runs
+# anywhere Python does, which is what keeps `pytest tests/` working on a bare
+# checkout with nothing installed.
+#
+# Usage (from repo root):
+#   cp .env.example .env     # then set the passwords
+#   docker compose up -d
+#   docker compose logs -f api
+#   docker compose exec api python -m server.db.seed
+
+name: shrapmind
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: shrapmind-db
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shrapmind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-shrapmind}
+    volumes:
+      - shrapmind-db-data:/var/lib/postgresql/data
+      - ./server/db/schema.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shrapmind} -d ${POSTGRES_DB:-shrapmind}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: server/docker/Dockerfile.api
+    image: shrapmind-api:latest
+    container_name: shrapmind-api
+    ports:
+      - "${APP_PORT:-7870}:7870"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shrapmind}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shrapmind}
+      APP_HOST: 0.0.0.0
+      APP_PORT: "7870"
+      # A match at or above this counts as "already answered". High on
+      # purpose: handing back a loosely similar past case as if it were this
+      # one is how the wrong enzyme reaches a reviewer wearing the right
+      # case's clothes.
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.85}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      # Review is gated and fails closed: unset, the endpoint returns 503
+      # rather than letting anyone approve a claim about an enzyme.
+      REVIEWER_USERNAME: ${REVIEWER_USERNAME:-biologist}
+      REVIEWER_PASSWORD: ${REVIEWER_PASSWORD:?set REVIEWER_PASSWORD in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      SHRAPMIND_PROD: ${SHRAPMIND_PROD:-1}
+    command:
+      - uvicorn
+      - server.app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "7870"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  shrapmind-db-data:
+    name: shrapmind-db-data

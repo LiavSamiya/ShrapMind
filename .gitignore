@@ -28,3 +28,7 @@ ui/fragment-to-catalyst.html
 # Built structure page: regenerate with `python tools/build_structure.py`
 ui/structure-built.html
 data/raw/structures/
+
+# Local secrets and per-component envs
+.env
+.venv-*/

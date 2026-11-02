@@ -1,0 +1,6 @@
+# Talks to: PostgreSQL (pgvector), and HuggingFace on first model download.
+psycopg[binary]>=3.1
+pgvector>=0.2.5
+numpy>=1.24
+# Optional. Absent, client.py falls back to the lexical embedder and says so.
+# sentence-transformers>=2.2

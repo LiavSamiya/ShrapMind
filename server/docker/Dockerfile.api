@@ -1,0 +1,21 @@
+# Review API. Carries the db and app layers' dependencies and nothing else:
+# the fetchers under tools/ reach external services this image never needs to
+# talk to, so their requirements stay out of it.
+FROM python:3.12-slim
+
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+
+COPY server/db/requirements.txt /tmp/db.txt
+COPY server/app/requirements.txt /tmp/app.txt
+RUN pip install --no-cache-dir -r /tmp/db.txt -r /tmp/app.txt
+
+COPY shared/ /app/shared/
+COPY server/ /app/server/
+# The engine ships too: it is what generates the proposals the queue holds,
+# and it adds no dependencies because it has none.
+COPY f2c/ /app/f2c/
+COPY data/warehouse.json /app/data/warehouse.json
+
+EXPOSE 7870
+CMD ["uvicorn", "server.app.main:app", "--host", "0.0.0.0", "--port", "7870"]

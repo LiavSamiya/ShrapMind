@@ -1,0 +1,4 @@
+# Talks to: UniProt, NCBI E-utilities, Crossref, RCSB, EBI (OLS4, InterPro,
+# M-CSA), PAZy, CAZy. Everything here uses urllib from the standard library,
+# so the file is deliberately empty of pins -- it exists to mark the boundary
+# and to hold any pin a future fetcher needs, not to install anything today.

@@ -74,6 +74,73 @@ the coordinate file every time and refuses to produce a page if they are not
 serine, aspartate and histidine, because UniProt numbers the precursor and the
 PDB entry numbers the mature protein, forty residues apart.
 
+## The review layer
+
+The engine proposes. A biologist decides. Those are different acts and the
+architecture keeps them apart: `proposals` is written by
+`approve_pending_change` and by nothing else, so the engine cannot put a claim
+about biology in front of the next reader on its own.
+
+Structure follows [voodo](https://github.com/VooDo-AI/VooDo) — Postgres with
+pgvector, a vectorised store of past cases, a queue a human clears, and
+lightweight end-of-run feedback. What differs is the stake. In voodo an IT
+admin approves a Windows fix. Here the cost of a wrong approval is a lab
+month, so two things are stricter:
+
+**Approval never mints a measurement.** An approved row is stored at
+`expert_review`, a fifth evidence level beside the engine's
+experimental / curated / predicted / assumed. A biologist agreeing that an
+enzyme is the right choice is a considered opinion about published evidence.
+It adds no data, and a schema that let consensus become `experimental` would
+undo the discipline the rest of the project is built on.
+
+**"Needs an experiment" is a first-class answer**, not a softer rejection. It
+is the verdict that reaches the `open_experiments` view, which is the queue
+the lab actually works from — and given that none of the 289 catalytic
+constants in the warehouse was measured on a solid polymer, it is the answer
+most cases deserve.
+
+```bash
+bash server/scripts/setup_envs.sh      # one venv per component
+.venv-db/bin/python -m server.db.seed  # queue the engine's decisions
+.venv-app/bin/uvicorn server.app.main:app --port 7870
+```
+
+Or `docker compose up -d`, which brings up `pgvector/pgvector:pg16` alongside
+the API. Review is gated and fails closed: with no `REVIEWER_PASSWORD` set the
+endpoint returns 503 rather than letting anyone approve anything.
+
+### Embeddings, and what "similar" means
+
+`all-MiniLM-L6-v2` (384-dim) when it is installed. When it is not, the DB
+layer falls back to a built-in lexical embedder of the same width and the
+dashboard labels every result `lexical`, because the two answer different
+questions: lexical matching connects "fibrotic capsule" to "fibrous capsule
+formation" and will never connect "foreign body response" to "implant
+encapsulation". Vectors from the two are not comparable, so switching means
+`python -m server.db.seed --reset`, not topping up.
+
+### Index choice
+
+HNSW, not the ivfflat that voodo uses. ivfflat with `lists = 100` over a table
+holding fewer rows than lists probes one mostly-empty list per query and
+returns a fraction of the true neighbours — measured here on three rows, it
+returned one. It fails silently, so a reviewer asking "has anyone raised this
+objection already?" gets a "no" that means "the index did not look", and
+spends an hour rediscovering a colleague's point.
+
+### One environment per external boundary
+
+`server/db` talks to Postgres and HuggingFace, `server/app` to browsers,
+`tools/` to UniProt, NCBI, Crossref, RCSB and EBI. Each has its own
+`requirements.txt` and its own venv, so no component inherits a dependency it
+never declared.
+
+`f2c/` has none and gets no venv. The engine is pure standard library, which
+is what lets `python -m pytest tests/` run on a bare checkout with no install
+step — worth protecting, because the moment it needs a wheel it stops being
+auditable by someone who just cloned it.
+
 ## Data sources
 
 | Source | Role | What it contributes |
