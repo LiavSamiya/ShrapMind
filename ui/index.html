@@ -401,12 +401,33 @@ const refLine = r => !r ? "" : `<div class="refline">
   <a href="https://doi.org/${esc(r.doi)}" target="_blank" rel="noopener">${esc(r.title)}</a>
   (${esc(r.year)}) · <a href="https://pubmed.ncbi.nlm.nih.gov/${esc(r.pmid)}/" target="_blank" rel="noopener">PMID ${esc(r.pmid)}</a>
   <span class="says">What it shows: ${esc(r.says)}</span></div>`;
+/* A claim can rest on one paper and be corrected by another. `also` carries
+   the papers that were found after the first citation turned out not to say
+   what it was cited for, and they render identically — a reader should not
+   have to know which one arrived first. */
+const refLines = (r, also) =>
+  refLine(r) + (also || []).map(refLine).join("");
 
 /* Everything past catalyst selection is a design specification. It is rendered
    in the same page because the product is the whole route, but never with the
    same authority: each row states which kind of thing it is. */
 function downstreamSections(ds) {
   const out = [];
+
+  if (ds.indication) {
+    const ind = ds.indication;
+    out.push(`<section><h2>Why intervene at all</h2>
+      <div class="card stage s-literature">
+        <div class="rowhead"><span class="t">The case for treating a retained fragment</span>${badge("literature")}</div>
+        <div class="why">${esc(ind.problem)}</div>
+        <ul class="subtle" style="margin:.4rem 0 0;padding-inline-start:1.1rem">
+          ${(ind.risk_factors || []).map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+        <div class="why" style="margin-top:.5rem">${esc(ind.why_a_gap_exists)}</div>
+        ${refLine(ind.ref)}
+        <div class="subtle" style="margin-top:.4rem"><strong>What this does not
+          cover:</strong> ${esc(ind.honest_limit)}</div>
+      </div></section>`);
+  }
 
   out.push(`<section><h2>Treatment route · what happens after the catalyst</h2>
     <p class="legend">
@@ -454,7 +475,7 @@ function downstreamSections(ds) {
         <div class="why">${esc(r.proposed.what)}</div></div>
       <div class="card stage s-specified">
         <div class="rowhead"><span class="t">Open question</span>${badge("specified")}</div>
-        <div class="why">${esc(r.open)}</div>${refLine(r.ref)}</div>
+        <div class="why">${esc(r.open)}</div>${refLines(r.ref, r.also)}</div>
     </div></section>`);
 
   if (ds.caveats?.length) {
@@ -462,7 +483,7 @@ function downstreamSections(ds) {
       <div class="stack">${ds.caveats.map(c => `<div class="card correction">
         <div class="c1">${esc(c.claim)}</div>
         <div class="c2"><strong>${esc(c.status)}.</strong> ${esc(c.detail)}</div>
-        ${refLine(c.evidence)}
+        ${refLines(c.evidence, c.also)}
       </div>`).join("")}</div>
       <p class="note">These are written down because a reviewer with an immunology
       background will reach the same papers. Better to correct the claim than defend it.</p>

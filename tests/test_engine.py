@@ -400,3 +400,54 @@ def test_structure_build_keeps_one_chain(tmp_path):
     )
     atoms = build_structure.trim(src, tmp_path / "out.pdb")
     assert atoms == 1, "chain B is a second copy, not more of the same molecule"
+
+
+# --- the clinical layer's citations ----------------------------------------
+# Two of the three original references did not support the claim they were
+# attached to. That is not an unusual accident, it is what happens when
+# citations are written from memory, so these tests make the shape of an
+# honest citation enforceable rather than a habit.
+
+def test_every_clinical_reference_carries_an_identifier_and_a_claim():
+    from f2c.pipeline import REFS
+
+    for key, ref in REFS.items():
+        assert ref["pmid"].isdigit(), f"{key}: PMID must be numeric"
+        assert ref["doi"].startswith("10."), f"{key}: DOI must be a real prefix"
+        assert len(ref["says"]) > 60, (
+            f"{key}: 'says' must state what the paper shows. A citation without "
+            "it is the failure mode this field exists to prevent."
+        )
+
+
+def test_every_reference_is_actually_used_somewhere():
+    """An unused reference is decoration, and decoration drifts out of date
+    without anyone noticing it stopped being true."""
+    import json
+
+    from f2c.pipeline import REFS, build
+
+    body = json.dumps(build("PET", ["terephthalate"]))
+    for key, ref in REFS.items():
+        assert ref["pmid"] in body, f"{key} is defined but cited by nothing"
+
+
+def test_caveats_name_the_reference_they_are_correcting():
+    from f2c.pipeline import CAVEATS
+
+    assert CAVEATS, "the known gaps between brief and evidence must be listed"
+    for c in CAVEATS:
+        assert c["evidence"]["pmid"], "a caveat must point at the citation it corrects"
+        assert len(c["detail"]) > 80, "a caveat has to say what the paper does show"
+        assert c["status"], "a caveat must state how far the claim survives"
+
+
+def test_the_indication_states_what_its_evidence_does_not_cover():
+    """The lead-toxicity review justifies intervening on retained fragments.
+    It says nothing about polymers, and the product must not let that slide."""
+    from f2c.pipeline import indication
+
+    ind = indication()
+    assert ind["ref"]["pmid"] == "36074021"
+    assert "honest_limit" in ind
+    assert "lead" in ind["honest_limit"].lower()

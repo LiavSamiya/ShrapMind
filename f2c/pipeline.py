@@ -58,6 +58,62 @@ REFS = {
         "capture-release-recapture; persistence rests on macrophage renewal. "
         "The paper does not demonstrate clearance to lymph nodes.",
     ),
+    # --- added after the first two citations were found not to support the
+    # claims they were attached to. Each was resolved against NCBI and its DOI
+    # cross-checked against Crossref before being written here.
+    "stiffness_trpv4": _ref(
+        "41513093", "10.1016/j.jbc.2026.111135",
+        "Transient receptor potential vanilloid four in macrophages mediates "
+        "TGF-beta activation to drive myofibroblast differentiation and "
+        "pulmonary fibrosis",
+        2026,
+        "Macrophage TRPV4 responds to matrix stiffness in the pathophysiologic "
+        "range and optimises TGF-beta activation; deleting it in myeloid cells "
+        "protected mice from fibrosis. A mechanism by which stiffness drives "
+        "fibrosis through macrophages -- measured in lung, not against an "
+        "implant.",
+    ),
+    "mechanical_cues": _ref(
+        "37701130", "10.1016/j.mtbio.2023.100783",
+        "Macrophages and fibroblasts in foreign body reactions: How mechanical "
+        "cues drive cell functions?",
+        2023,
+        "Reviews stiffness and force as inputs to macrophage and fibroblast "
+        "behaviour in the foreign-body reaction, and states plainly that the "
+        "reported effects of mechanical cues on macrophage polarisation are "
+        "inconsistent across studies.",
+    ),
+    "lead_toxicity": _ref(
+        "36074021", "10.1080/15563650.2022.2116336",
+        "Retained bullets and lead toxicity: a systematic review",
+        2022,
+        "142 articles. Lead toxicity from retained fragments is real but "
+        "underdiagnosed, diagnosed months to years after the wound, and driven "
+        "by fragment location, number and dwell time -- fragments in a fluid "
+        "compartment carry the highest risk. No consensus exists on when to "
+        "operate, and chelation alone is not an alternative to removal.",
+    ),
+    "lymphatic_drainage": _ref(
+        "22580209", "10.1016/j.ejpb.2012.04.023",
+        "A frustrating problem: accelerated blood clearance of PEGylated solid "
+        "lipid nanoparticles following subcutaneous injection in rats",
+        2012,
+        "Colloidal particles injected subcutaneously drain preferentially into "
+        "lymphatics and accumulate in regional nodes, and PEGylation increases "
+        "that drainage. The same work shows a first PEGylated dose raises "
+        "anti-PEG IgM that markedly accelerates clearance of later ones.",
+    ),
+    "enzyme_in_hydrogel": _ref(
+        "37935291", "10.1016/j.ijbiomac.2023.127755",
+        "Chitosan-based oral hydrogel formulations of beta-galactosidase to "
+        "improve enzyme supplementation therapy for lactose intolerance",
+        2023,
+        "An enzyme covalently immobilised in a chitosan-PEG hydrogel survived "
+        "gastric pH and retained 75% of its activity under subsequent "
+        "intestinal conditions, protected from proteolysis. Evidence that a "
+        "gel can keep an enzyme working in a hostile compartment -- the gut, "
+        "not tissue at 37 C in serum.",
+    ),
 }
 
 # Where the concept brief and the cited papers part company. Named here so the
@@ -67,19 +123,43 @@ CAVEATS = [
         "claim": "A soft hydrogel prevents the fibrotic capsule because macrophages "
                  "sense stiffness.",
         "evidence": REFS["fbr_geometry"],
-        "status": "partly supported",
-        "detail": "The cited work varied size and shape, not modulus, and found "
-                  "larger spheres provoked less fibrosis. Stiffness-driven "
-                  "fibrosis is reported elsewhere; this reference does not carry it.",
+        "status": "mechanism supported, this citation is the wrong one",
+        "detail": "The originally cited work varied size and shape, not modulus, and "
+                  "found larger spheres provoked less fibrosis -- it cannot carry a "
+                  "stiffness claim. The mechanism does have support: macrophage TRPV4 "
+                  "reads matrix stiffness and drives TGF-beta activation, and deleting "
+                  "it in myeloid cells protects mice from fibrosis. That was measured "
+                  "in lung fibrosis, not against an implant, and a review of mechanical "
+                  "cues in the foreign-body reaction reports the polarisation results "
+                  "as inconsistent between studies. So: plausible mechanism, real "
+                  "evidence, not yet demonstrated for this application.",
+        "also": [REFS["stiffness_trpv4"], REFS["mechanical_cues"]],
     },
     {
         "claim": "Macrophages loaded with residue escape through new lymphatics to "
                  "regional nodes, where the waste is stored safely.",
         "evidence": REFS["tattoo_macrophage"],
-        "status": "not shown by this reference",
-        "detail": "The tattoo work shows pigment cycling between dermal macrophages "
-                  "in place. Using it as evidence for lymphatic clearance overstates it. "
-                  "The clearance route needs its own measurement.",
+        "status": "route supported, 'safely' is not",
+        "detail": "The tattoo work shows pigment cycling between dermal macrophages in "
+                  "place and cannot support lymphatic clearance. The route itself is "
+                  "documented elsewhere: colloidal particles injected subcutaneously "
+                  "drain preferentially into lymphatics and accumulate in regional "
+                  "nodes. That is drainage from subcutaneous tissue, not deep muscle, "
+                  "and accumulating in a node is where the particles stop being "
+                  "measured -- not evidence that they are harmless there.",
+        "also": [REFS["lymphatic_drainage"]],
+    },
+    {
+        "claim": "A PEG-based carrier is inert, so the treatment can be repeated if one "
+                 "course does not clear the fragment.",
+        "evidence": REFS["lymphatic_drainage"],
+        "status": "contradicted",
+        "detail": "A single PEGylated dose raised anti-PEG IgM that markedly accelerated "
+                  "clearance of subsequent doses, by the subcutaneous route as much as "
+                  "the intravenous one. The brief's carrier is HA-PEG and nothing in the "
+                  "plan assumes one course suffices, so this is a risk to the programme "
+                  "rather than a detail: repeat dosing may fail for immunological "
+                  "reasons that have nothing to do with the enzyme.",
     },
 ]
 
@@ -157,8 +237,13 @@ def carrier() -> list[dict[str, Any]]:
             "property": "Holds the enzyme active",
             "spec": "Porous network that shields the protein from host proteases",
             "why": "A free enzyme in tissue is degraded long before a solid fragment is",
-            "evidence": SPECIFIED,
-            "note": "Retained activity inside the gel at 37 C in serum is unmeasured.",
+            "evidence": LITERATURE,
+            "ref": REFS["enzyme_in_hydrogel"],
+            "note": "The premise has a precedent: an enzyme covalently immobilised in a "
+                    "chitosan-PEG gel kept 75% of its activity through gastric and then "
+                    "intestinal conditions. That is a different hostile compartment. "
+                    "Retained activity at 37 C in serum, against host proteases rather "
+                    "than digestive ones, is still unmeasured here.",
         },
         {
             "property": "Captures what the enzyme releases",
@@ -207,16 +292,60 @@ def residue() -> dict[str, Any]:
                     "endpoint of every degradation experiment",
             "evidence": SPECIFIED,
         },
-        "open": "Where coated residue finally goes is unresolved. The tattoo-pigment "
-                "literature is often cited for lymphatic clearance but shows pigment "
-                "cycling between macrophages in place, so the clearance route has to "
-                "be measured rather than assumed.",
+        "open": "Where coated residue finally goes is partly answered. The tattoo-pigment "
+                "literature, often cited here, shows pigment cycling between macrophages "
+                "in place and does not demonstrate clearance. Drainage to regional nodes "
+                "is documented for colloidal particles injected subcutaneously, and "
+                "PEGylation increases it -- but that is subcutaneous tissue, not deep "
+                "muscle, and arriving in a node is where those studies stop looking. "
+                "Whether residue reaches a node from muscle, and what it does once there, "
+                "are two separate measurements and neither has been made.",
         "ref": REFS["tattoo_macrophage"],
+        "also": [REFS["lymphatic_drainage"]],
+    }
+
+
+def indication() -> dict[str, Any]:
+    """Why leaving a fragment alone is itself a decision with a cost.
+
+    The engine spent its evidence on which enzyme and how far it is from
+    working. It never stated the case for intervening at all, which left the
+    most basic question a reviewer can ask -- why not just leave it? --
+    answered by assertion. The systematic review below answers it from 142
+    papers, and is careful about what is not known, which is the part worth
+    carrying.
+    """
+    return {
+        "problem": "A retained fragment is not inert. Lead from retained bullets "
+                   "causes systemic toxicity that is real but underdiagnosed, and "
+                   "is typically recognised months to years after the injury.",
+        "evidence": LITERATURE,
+        "ref": REFS["lead_toxicity"],
+        "risk_factors": [
+            "Fragments sitting in a fluid compartment, such as a joint space, "
+            "carry substantially higher risk.",
+            "Risk rises with the number of fragments, an associated fracture, "
+            "and how long the fragment has been in place.",
+        ],
+        "why_a_gap_exists": (
+            "The same review found no consensus on when to monitor, chelate or "
+            "operate, and concluded that long-term chelation is not a substitute "
+            "for removal. That is the space this product is aimed at: fragments "
+            "where surgery is the only established answer and the approach itself "
+            "is the risk."
+        ),
+        "honest_limit": (
+            "This evidence is about lead. It establishes that retained fragments "
+            "can harm and that removal is sometimes the only option, not that an "
+            "enzymatic route is the right alternative, and not anything about the "
+            "polymer fragments this engine selects catalysts for."
+        ),
     }
 
 
 def build(material_key: str, products: list[str]) -> dict[str, Any]:
     return {
+        "indication": indication(),
         "cocktail": cocktail(material_key, products),
         "carrier": carrier(),
         "host_response": host_response(),
