@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -562,14 +563,33 @@ def test_material_names_prefer_the_source_database_over_the_local_table():
 # this arm would mislead.
 
 def test_no_metal_route_claims_to_act_on_the_lattice():
+    """The invariant, asserted negatively.
+
+    An earlier version listed the two phrasings that were then in use, and
+    broke when a candidate correctly said it acts on the oxide surface — a
+    third right answer. Twice now a test of mine has failed on wording while
+    the behaviour was fine, so this one states what must not be claimed
+    instead of enumerating what may be.
+    """
     from f2c import metals
 
+    forbidden = ("metallic iron", "the lattice", "metallic lattice", "Fe(0)")
+    allowed = ("dissolved", "oxide surface", "ion")
     for key in metals.METALS:
-        route = metals.route(key)
-        for stage in route["stages"]:
+        for stage in metals.route(key)["stages"]:
             for cand in stage.get("candidates") or []:
-                assert "not metallic" in cand["acts_on"] or "dissolved" in cand["acts_on"], (
-                    f"{cand['name']} must state that it acts on the ion, not the metal"
+                acts = cand["acts_on"]
+                assert acts, f"{cand['name']} must say what it acts on"
+                # "dissolved Fe(II), not metallic iron" is the correct
+                # statement, so drop negated clauses before looking for a
+                # claim. A bare substring match reads the disclaimer as the
+                # claim it was written to deny.
+                claimed = re.sub(r",?\s*\bnot\b[^,.;]*", "", acts)
+                assert not any(f in claimed for f in forbidden), (
+                    f"{cand['name']} claims to act on the metal itself: {acts!r}"
+                )
+                assert any(a in acts for a in allowed), (
+                    f"{cand['name']} must name the ion or surface it acts on: {acts!r}"
                 )
 
 
@@ -582,8 +602,37 @@ def test_a_two_stage_metal_puts_capture_after_dissolution_and_says_why():
     steel = metals.route("steel")
     assert [s["n"] for s in steel["stages"]] == [1, 2, 3]
     assert steel["stages"][2]["stage"] == "Capture"
-    assert "hazard" in steel["stages"][2]["why"]
+    # The route must explain the inversion somewhere, not merely order the
+    # stages. Checked across the route rather than against one sentence.
+    text = json.dumps(steel)
+    assert "Inverted from the polymer arm" in text
     assert steel["warning"]["status"].startswith("inverts")
+
+
+def test_dissolution_is_bounded_by_its_own_capture():
+    """The answer to the arm's own warning. Chelation-driven dissolution
+    proceeds only as fast as there is free chelator, so the accelerant and the
+    capture agent are one molecule and the hazard is bounded by design."""
+    from f2c import metals
+
+    stage1 = metals.route("steel")["stages"][0]
+    assert stage1["self_limiting"]
+    assert "cannot run away" in stage1["self_limiting"]
+    names = [c["name"] for c in stage1["candidates"]]
+    assert any("eferoxamine" in n or "esferrioxamine" in n for n in names)
+
+
+def test_nothing_claims_a_chelator_was_tested_on_metal():
+    """PubMed returns nothing for a chelator against metallic iron. The route
+    rests on the oxide layer a retained fragment already carries, and must say
+    so rather than let the reader assume the metal case was covered."""
+    from f2c import metals
+
+    stage1 = metals.route("steel")["stages"][0]
+    dfob = stage1["candidates"][0]
+    gap = dfob["mismatch"][0]
+    assert "goethite" in gap["measured"]
+    assert "unmeasured" in gap["detail"]
 
 
 def test_passivating_metals_have_no_route_and_name_the_reason():

@@ -752,6 +752,9 @@ function renderMetal() {
           <div class="what">${esc(s.what)}</div>
           <div class="sub">${esc(s.why)}</div>
           ${s.open ? `<div class="sub" style="color:var(--watch)">Unsolved: ${esc(s.open)}</div>` : ""}
+          ${s.self_limiting ? `<div class="caution" style="border-color:var(--ok)">
+            <div class="t" style="color:var(--ok)">Bounded by design</div>
+            <div class="d">${esc(s.self_limiting)}</div></div>` : ""}
           ${(s.ranked || []).length ? `<div class="sub" style="margin-top:.7rem">
             ${s.ranked.length} reviewed candidates from the EC class, most usable first.
             Human origin, a solved structure, and storing what it oxidises are what
@@ -776,6 +779,8 @@ function renderMetal() {
               <span class="mk">${esc(m.kind)}:</span>
               <span class="md">${esc(m.measured)} → needs ${esc(m.target)}. ${esc(m.detail)}</span>
             </div>`).join("")}
+            ${c.advantage ? `<div class="sub" style="color:var(--ok)">
+              <strong>Why this one:</strong> ${esc(c.advantage)}</div>` : ""}
             ${(c.refs || []).map(refLine).join("")}
           </div>`).join("")}
           ${(s.refs || []).map(refLine).join("")}

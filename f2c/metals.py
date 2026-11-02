@@ -107,14 +107,28 @@ REFS = {
         "Identifies MnxG as the enzyme that oxidises Mn(II) to Mn(IV) oxide in "
         "bacterial spores. A named, isolated metal-oxidising enzyme.",
     ),
-    "siderophore_dissolution": _ref(
-        "25965980", "10.1021/acs.est.5b00725",
+    "ligand_dissolution": _ref(
+        "25965980", "10.1021/acs.est.5b01191",
         "Synergistic effect of reductive and ligand-promoted dissolution of "
         "goethite",
         2015,
-        "Reduction and chelation together dissolve an iron oxide faster than "
-        "either alone. The mechanism a capture layer would rely on, measured on "
-        "a mineral rather than on a fragment.",
+        "The mechanism stage 1 was missing. Dissolution of an iron oxide is "
+        "driven by taking the product away: the rate coefficient tracks the "
+        "stability constant of the Fe(III)-ligand complex, so the chelator sets "
+        "the rate. Desferrioxamine B and ascorbate together dissolve faster "
+        "than the sum of either alone, and the synergy is strongest under "
+        "oxygen. Ascorbate by itself does nothing in air, because the Fe(II) it "
+        "makes is reoxidised immediately. Measured on goethite at pH 6, not on "
+        "metallic iron.",
+    ),
+    "no_siderophore_on_metal": _ref(
+        "", "",
+        "Searched: siderophore or chelator against zerovalent / metallic iron",
+        2026,
+        "PubMed returns nothing for chelator-driven dissolution of metallic "
+        "iron. The oxide case is well studied and the metal case is not, which "
+        "is the honest boundary of this route and the reason stage 1 starts at "
+        "the fragment's existing rust layer rather than at the metal.",
     ),
     "mic_electron_transfer": _ref(
         "27134022", "10.1146/annurev-micro-102215-095418",
@@ -588,16 +602,70 @@ def route(material: str) -> dict[str, Any] | None:
     out["stages"] = [
         {
             "n": 1,
-            "stage": "Controlled corrosion",
-            "what": f"Release {m['element']} from the lattice as an ion, at a "
-                    "rate the capture layer can keep up with.",
-            "evidence": SPECIFIED,
-            "why": "No enzyme acts on the metal itself. The fragment is already "
-                   "corroding in tissue; this stage is about setting the rate "
-                   "rather than starting the process.",
-            "open": "How to set that rate locally, without a systemic "
-                    "electrochemical effect, is unsolved and is the stage with "
-                    "no candidate behind it.",
+            "stage": "Chelation-driven dissolution",
+            "what": "Pull Fe(III) off the oxide surface with a high-affinity "
+                    "chelator, with ascorbate as a reductant alongside it.",
+            "evidence": LITERATURE,
+            "why": "Nothing is added to make the fragment rust. Dissolution is "
+                   "driven by removing the product: strip Fe(III) from the "
+                   "surface and the equilibrium pulls more off behind it. The "
+                   "rate coefficient tracks the stability constant of the "
+                   "Fe(III)-ligand complex, so the chelator chosen sets the "
+                   "rate, from a published number rather than an experiment.",
+            "self_limiting": (
+                "This is the property that answers the arm's own warning. "
+                "Dissolution proceeds only as fast as there is unoccupied "
+                "chelator, so it cannot outrun its own capture and cannot run "
+                "away into systemic exposure. Capture and accelerant are the "
+                "same molecule, which is why the hazard is bounded by design "
+                "rather than by dosing care."
+            ),
+            "candidates": [
+                {
+                    "name": "Desferrioxamine B (deferoxamine)",
+                    "organism": "Streptomyces pilosus siderophore; an approved drug",
+                    "reaction": "Fe(III) + DFOB -> ferrioxamine, K_stability ~10^30",
+                    "acts_on": "dissolved Fe(III) and the oxide surface",
+                    "mismatch": [
+                        {
+                            "kind": "substrate",
+                            "measured": "goethite, an iron oxide, at pH 6",
+                            "target": "the oxide layer on a metallic fragment at pH 7.4",
+                            "detail": "A retained fragment is already covered in "
+                                      "that oxide, so the measured case is the "
+                                      "fragment's own surface. Whether "
+                                      "dissolution continues into the metal "
+                                      "beneath is unmeasured -- PubMed returns "
+                                      "nothing for a chelator against metallic "
+                                      "iron.",
+                        },
+                    ],
+                    "advantage": "Already licensed for iron overload, which "
+                                 "removes a whole regulatory arm: the question "
+                                 "becomes route and formulation rather than a "
+                                 "new molecular entity.",
+                },
+                {
+                    "name": "Ascorbate",
+                    "organism": "not biological in origin; vitamin C",
+                    "reaction": "Fe(III) -> Fe(II), reductive dissolution",
+                    "acts_on": "the oxide surface, only alongside a chelator",
+                    "mismatch": [
+                        {
+                            "kind": "works alone",
+                            "measured": "no dissolution under oxic conditions by itself",
+                            "target": "a contribution in oxygenated tissue",
+                            "detail": "The Fe(II) it produces is reoxidised "
+                                      "immediately in air, so ascorbate alone "
+                                      "achieves nothing. Its whole value is the "
+                                      "synergy with the chelator, which was "
+                                      "strongest under oxygen -- the condition "
+                                      "tissue actually provides.",
+                        },
+                    ],
+                },
+            ],
+            "refs": [REFS["ligand_dissolution"], REFS["no_siderophore_on_metal"]],
         },
         {
             "n": 2,
@@ -626,11 +694,13 @@ def route(material: str) -> dict[str, Any] | None:
             "stage": "Capture",
             "what": m["capture"],
             "evidence": SPECIFIED,
-            "why": "Inverted from the polymer arm. There, capture catches what "
-                   "degradation releases. Here, released metal ions are the "
-                   "hazard, so capture has to be in place and in excess before "
-                   "stage 1 is allowed to run at all.",
-            "refs": [REFS["siderophore_dissolution"]],
+            "why": "Inverted from the polymer arm, and then collapsed into "
+                   "stage 1. There, capture catches what degradation releases. "
+                   "Here the chelator that drives dissolution is the thing that "
+                   "holds the product, so capture is not a later stage waiting "
+                   "to catch up -- it is the same molecule, and the ferritin "
+                   "below is the second line for what the chelator hands on.",
+            "refs": [REFS["ligand_dissolution"]],
         },
     ]
     out["warning"] = {
