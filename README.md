@@ -93,8 +93,7 @@ architecture keeps them apart: `proposals` is written by
 `approve_pending_change` and by nothing else, so the engine cannot put a claim
 about biology in front of the next reader on its own.
 
-Structure follows [voodo](https://github.com/VooDo-AI/VooDo) — Postgres with
-pgvector, a vectorised store of past cases, a queue a human clears, and
+Structure follows Postgres with pgvector, a vectorised store of past cases, a queue a human clears, and
 lightweight end-of-run feedback. What differs is the stake. In voodo an IT
 admin approves a Windows fix. Here the cost of a wrong approval is a lab
 month, so two things are stricter:
