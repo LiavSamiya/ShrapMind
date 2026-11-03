@@ -51,6 +51,25 @@
       5.5, and that is the span this analysis uses.</p>
   </div>
 
+  <div class="stopbox">
+    <p><b>Who this protocol is for, after the premise was checked.</b> The
+      product assumed that making a fragment smaller relieves the pressure on
+      the nerve beside it, and nothing in the project had tested that. In 26
+      shrapnel-injured nerves followed a median 33 months, the presence of
+      foreign particles predicted a <em>worse</em> outcome &mdash; 28% pain
+      improvement with them against 67% without &mdash; and nerve grafting
+      beat neurolysis 100% to 47%
+      (<a href="https://doi.org/10.1007/s00701-014-2139-0" target="_blank"
+          rel="noopener">PMID 24898760</a>). About 55% of shrapnel nerve
+      injuries carry the fragment <em>inside</em> the nerve
+      (<a href="https://doi.org/10.1016/j.bas.2026.106025" target="_blank"
+          rel="noopener">PMID 42006932</a>). <strong>So this is for fragments
+      pressing on an intact nerve where surgery is refused or riskier than
+      the fragment &mdash; not for a fragment in an injured nerve, where the
+      evidence says graft, and never as a reason to delay surgery that is
+      possible.</strong></p>
+  </div>
+
   <div class="finding" style="background:var(--raised);border:1px solid var(--rule);border-inline-end:4px solid var(--stop);padding:22px;margin:24px 0">
     <p class="a" style="font-family:var(--font-display);font-size:1.3rem;font-weight:600;line-height:1.35;margin:0 0 12px">
       The reaction disables the enzyme that is supposed to manage it.</p>
@@ -171,7 +190,14 @@
         <li>Chromium at or above about 10.5% means the fragment is outside
           this route.</li>
         <li>Record nickel too. It is released by dissolution, the chelator
-          does not capture it, and the engine has no mass balance for it.</li>
+          does not capture it, and <code>metals.released_elements()</code> now
+          reports it by element rather than folding it into the iron.</li>
+        <li>Culture the retrieved fragment, and record antibiotic cover and
+          tetanus status. A chronically retained fragment is a contaminated
+          foreign body, and a protein-rich hydrogel injected beside a
+          colonised one is also a growth medium &mdash; biofilm additionally
+          blocks the surface the chelator has to reach, which makes this a
+          potency question and not only a safety one.</li>
       </ol>
       <div class="check"><b>Checkpoint.</b> A composition, in percent, for
         every coupon used downstream. Coupons for the later stages must match
@@ -376,7 +402,7 @@
 
 <section>
   <h2>What is still missing</h2>
-  <p class="sec-sub">{{GAP_TOTAL}} gaps, held as data in <code>f2c/gaps.py</code></p>
+  <p class="sec-sub">{{GAP_CLOSED}} of {{GAP_TOTAL}} closed, {{GAP_OPEN}} open &middot; <code>f2c/gaps.py</code></p>
 
   <p>This register came out of reading the whole project as a biologist would,
     and it lives in code because a gap mentioned in conversation is a gap that
@@ -384,6 +410,15 @@
     a single item on it</strong> — which is not a criticism of either, since a
     document answers the question it set out to answer. These fall between
     them.</p>
+
+  <p>Eight have since closed. Four closed in code — the mass balance now runs
+    element by element and reports the {{ELEMENTS_UNCAPTURED}} mg a 20% debulk
+    releases that nothing captures; demands sum across a patient's fragments
+    instead of assuming one; the enzyme dose is arithmetic waiting on a single
+    measurement; and there is now a named way to tell in a living subject
+    whether anything is happening. Three closed because the protocol itself
+    changed. And one closed by reading the literature, which is the one worth
+    reading first.</p>
 
   {{TABLE_GAPS}}
 

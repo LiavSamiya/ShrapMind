@@ -81,9 +81,17 @@ LABELS = {
             "טבלת קודונים סטנדרטית שנבנית בנפרד בחבילת הבדיקות, ולא מול "
             "הטבלה שהכלי עצמו משתמש בה."),
         "gaps_caption": (
-            "מרשם הפערים. אף אחד משני מסמכי ההיתכנות של הצוות לא מעלה אף "
+            "מה עדיין פתוח. אף אחד משני מסמכי ההיתכנות של הצוות לא מעלה אף "
             "פריט ברשימה."),
-        "gaps_cols": ("חומרה", "תחום", "מה חסר", "מה יסגור את זה", "אצל מי"),
+        "gaps_cols": ("חומרה", "תחום", "מה חסר", "מה יסגור את זה",
+                      "ממתין ל"),
+        "gaps_closed_caption": (
+            "מה נסגר, ומה סגר אותו. פער שנסגר נשאר במרשם: התיעוד של מה שהיה "
+            "חסר שווה כמו החסר עצמו, ואחת התשובות כאן חזרה שלילית."),
+        "gaps_closed_cols": ("סטטוס", "תחום", "הפער", "מה סגר אותו", "מתי"),
+        "closed": "נסגר",
+        "residual": "נותר:",
+        "partly": "נסגר חלקית:",
         "severity": {"blocks_injection": "חוסם הזרקה",
                      "blocks_trial": "חוסם ניסוי",
                      "blocks_claim": "חוסם טענה",
@@ -113,10 +121,19 @@ LABELS = {
             "built separately in the test suite, not against the table the "
             "tool itself uses."),
         "gaps_caption": (
-            "The gap register. Neither of the team's two feasibility "
-            "documents raises a single item on this list."),
+            "What is still open. Neither of the team's two feasibility "
+            "documents raises a single item on this register."),
         "gaps_cols": ("Severity", "Area", "What is missing",
-                      "What would close it", "Whose"),
+                      "What would close it", "Waiting on"),
+        "gaps_closed_caption": (
+            "What closed, and what closed it. A closed gap stays on the "
+            "register: the record of what was missing is worth as much as "
+            "the absence was, and one of these answers came back negative."),
+        "gaps_closed_cols": ("Status", "Area", "The gap", "What closed it",
+                             "When"),
+        "closed": "closed",
+        "residual": "Residual:",
+        "partly": "Partly closed:",
         "severity": {"blocks_injection": "blocks injection",
                      "blocks_trial": "blocks trial",
                      "blocks_claim": "blocks claim",
@@ -208,24 +225,63 @@ def sequence_block(r: dict, dna: str, L: dict) -> str:
 
 
 def table_gaps(lang: str, L: dict) -> str:
+    """Two tables: what is still open, and what closed and what closed it.
+
+    A closed gap stays on the register. The record of what was missing and
+    what answered it is worth as much as the absence was, and one of the
+    answers here came back negative -- which is the single most useful thing
+    the register has produced.
+    """
     from f2c import gaps
     suffix = "_he" if lang == "he" else ""
-    rows = []
-    for g in gaps.by_severity():
+
+    def row_open(g):
         title = g.get(f"title{suffix}") or g["title"]
         missing = g.get(f"what_is_missing{suffix}") or g["what_is_missing"]
-        rows.append(
-            f'<tr><td><span class="pill {PILL[g["severity"]]}">'
-            f'{esc(L["severity"][g["severity"]])}</span></td>'
-            f'<td class="num">{esc(L["area"][g["area"]])}</td>'
-            f'<td><strong>{esc(title)}</strong><br>{esc(missing)}</td>'
-            f'<td>{esc(g["what_would_close_it"])}</td>'
-            f'<td class="num">{esc(g["whose"])}</td></tr>')
-    head = "".join(f"<th>{esc(c)}</th>" for c in L["gaps_cols"])
-    return ('<div class="scroll"><table><caption>'
-            + esc(L["gaps_caption"])
-            + f'</caption><thead><tr>{head}</tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table></div>')
+        waiting = g.get("waiting_on")
+        partial = g.get("partially_closed_by")
+        extra = ""
+        if partial:
+            extra = f'<br><em>{esc(L["partly"])}</em> {esc(partial)}'
+        return (f'<tr><td><span class="pill {PILL[g["severity"]]}">'
+                f'{esc(L["severity"][g["severity"]])}</span></td>'
+                f'<td class="num">{esc(L["area"][g["area"]])}</td>'
+                f'<td><strong>{esc(title)}</strong><br>{esc(missing)}{extra}</td>'
+                f'<td>{esc(g["what_would_close_it"])}</td>'
+                f'<td class="num">{esc(waiting or g["whose"])}</td></tr>')
+
+    def row_closed(g):
+        title = g.get(f"title{suffix}") or g["title"]
+        closed_by = g.get(f"closed_by{suffix}") or g.get("closed_by", "")
+        residual = g.get("residual")
+        extra = f'<br><em>{esc(L["residual"])}</em> {esc(residual)}' if residual else ""
+        return (f'<tr><td><span class="pill o">{esc(L["closed"])}</span></td>'
+                f'<td class="num">{esc(L["area"][g["area"]])}</td>'
+                f'<td><strong>{esc(title)}</strong></td>'
+                f'<td>{esc(closed_by)}{extra}</td>'
+                f'<td class="num">{esc(g.get("closed_on", ""))}</td></tr>')
+
+    head_open = "".join(f"<th>{esc(c)}</th>" for c in L["gaps_cols"])
+    head_closed = "".join(f"<th>{esc(c)}</th>" for c in L["gaps_closed_cols"])
+    open_rows = "".join(row_open(g) for g in gaps.open_gaps())
+    closed_rows = "".join(
+        row_closed(g) for g in gaps.GAPS if gaps.status(g) == gaps.CLOSED)
+    return (
+        '<div class="scroll"><table><caption>'
+        + esc(L["gaps_caption"])
+        + f'</caption><thead><tr>{head_open}</tr></thead>'
+        f'<tbody>{open_rows}</tbody></table></div>'
+        '<div class="scroll"><table><caption>'
+        + esc(L["gaps_closed_caption"])
+        + f'</caption><thead><tr>{head_closed}</tr></thead>'
+        f'<tbody>{closed_rows}</tbody></table></div>')
+
+
+def _uncaptured() -> float:
+    """Milligrams released by a 20% debulk that nothing here captures."""
+    from f2c import metals
+    out = metals.released_elements("steel", FRAGMENT_MG, DEBULK)
+    return out["uncaptured_mg"] if out.get("computable") else 0.0
 
 
 def main() -> int:
@@ -284,6 +340,9 @@ def main() -> int:
         "{{DFO_MG}}": f'{chel["dfo_free_base_mg"]:.0f}',
         "{{H2_ML}}": f'{h2["h2_ml_at_37c"]:.1f}',
         "{{GAP_TOTAL}}": gaps.summary()["total"],
+        "{{GAP_OPEN}}": gaps.summary()["open"],
+        "{{GAP_CLOSED}}": gaps.summary()["closed"],
+        "{{ELEMENTS_UNCAPTURED}}": f'{_uncaptured():.2f}',
     }
 
     for lang, (src, out) in SOURCES.items():

@@ -31,6 +31,33 @@ def _ref(pmid: str, doi: str, title: str, year: int, says: str) -> dict[str, str
 # Resolved against PubMed. `says` is what the paper shows, not what we want it
 # to show -- the gap between those two is where overclaiming starts.
 REFS = {
+    "shrapnel_vs_gunshot": _ref(
+        "24898760", "10.1007/s00701-014-2139-0",
+        "Clinical aspects of ballistic peripheral nerve injury: shrapnel "
+        "versus gunshot",
+        2014,
+        "The paper that answers this project's unexamined premise, and "
+        "answers it against us. 42 patients, 58 nerves, 26 of them shrapnel, "
+        "median follow-up 33 months. Presence of foreign particles PREDICTS A "
+        "WORSE outcome -- 28% pain improvement with them against 67% without. "
+        "And nerve grafting beat neurolysis 100% to 47%, which says that "
+        "relieving the compression is not what relieves the pain; replacing "
+        "the destroyed segment is. Early surgery (median 2 months) gave 83% "
+        "against 58% late.",
+    ),
+    "ballistic_nerve_outcomes": _ref(
+        "42006932", "10.1016/j.bas.2026.106025",
+        "Comparative surgical outcomes in ballistic peripheral nerve "
+        "injuries: a single-surgeon experience and mechanism-based "
+        "classification of gunshot versus shrapnel trauma",
+        2026,
+        "107 patients, and the number that narrows the indication: about 55% "
+        "of shrapnel nerve injuries carry the fragment INSIDE the nerve, "
+        "against 4-5% for bullets. Neuropathic pain in about 95% against 73%. "
+        "Shrapnel injury is characterised as diffuse and progressive where a "
+        "bullet injury is focal and static. A product that debulks a fragment "
+        "pressing on an intact nerve is not addressing the commoner case.",
+    ),
     "fbr_geometry": _ref(
         "25985456", "10.1038/nmat4290",
         "Size- and shape-dependent foreign body immune response to materials "
@@ -448,9 +475,54 @@ def indication() -> dict[str, Any]:
         "honest_limit": (
             "This evidence is about lead. It establishes that retained fragments "
             "can harm and that removal is sometimes the only option, not that an "
-            "enzymatic route is the right alternative, and not anything about the "
-            "polymer fragments this engine selects catalysts for."
+            "enzymatic route is the right alternative."
         ),
+        # The section this engine was missing, and the one a reviewer reaches
+        # first. It was written only after someone asked what was missing.
+        "what_the_evidence_does_not_support": {
+            "claim_examined": (
+                "That making a retained fragment smaller relieves the pressure "
+                "on the nerve beside it. The whole product rested on this and "
+                "nothing in the project had checked it."
+            ),
+            "finding": (
+                "It does not hold for the commonest shrapnel case, and the "
+                "evidence points the other way. In 26 shrapnel-injured nerves "
+                "followed a median 33 months, the presence of foreign particles "
+                "predicted a WORSE outcome -- 28% pain improvement with them "
+                "against 67% without -- and nerve grafting outperformed "
+                "neurolysis 100% to 47%. Freeing the nerve is not what relieved "
+                "the pain; replacing the destroyed segment was. In a later "
+                "series of 107 patients, about 55% of shrapnel nerve injuries "
+                "had the fragment inside the nerve rather than beside it, "
+                "against 4-5% for bullets, and shrapnel injury is characterised "
+                "as diffuse and progressive where a bullet injury is focal and "
+                "static."
+            ),
+            "so_who_is_this_for": (
+                "Fragments causing mechanical pressure on an INTACT nerve, "
+                "where the nerve itself was not destroyed at the moment of "
+                "injury, and where surgery is refused or carries more risk "
+                "than the fragment. That is a real population and a smaller "
+                "one than the product was implicitly claiming."
+            ),
+            "and_who_it_is_not_for": (
+                "A fragment lodged inside an injured nerve. There the evidence "
+                "says graft the segment, and debulking the fragment addresses "
+                "neither the damage nor the pain. It is also not an argument "
+                "for delay: early surgery relieved pain in 83% of shrapnel "
+                "cases against 58% operated later, so a slow chemical route "
+                "must never be offered as a reason to wait where surgery is "
+                "possible."
+            ),
+            "what_is_still_unknown": (
+                "How large the intact-nerve population is. The series separate "
+                "intraneural from extraneural fragments but do not report "
+                "outcomes for the extraneural group as its own arm."
+            ),
+            "evidence": LITERATURE,
+            "refs": [REFS["shrapnel_vs_gunshot"], REFS["ballistic_nerve_outcomes"]],
+        },
     }
 
 

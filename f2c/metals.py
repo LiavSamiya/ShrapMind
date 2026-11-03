@@ -26,6 +26,7 @@ dissolution problem second, which inverts the polymer arm's priorities.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -150,6 +151,28 @@ REFS = {
         "oxygen. Ascorbate by itself does nothing in air, because the Fe(II) it "
         "makes is reoxidised immediately. Measured on goethite at pH 6, not on "
         "metallic iron.",
+    ),
+    "iron_homeostasis": _ref(
+        "38489995", "10.1016/j.jnha.2024.100212",
+        "Iron homeostasis in older adults: balancing nutritional requirements "
+        "and health risks",
+        2024,
+        "The fact the readout rests on: human iron excretion is inefficient "
+        "and not highly regulated, so the body controls iron by absorption "
+        "rather than by disposal. Losses are passive -- epithelial turnover, "
+        "blood loss, skin. There is no physiological route that clears iron "
+        "on demand, which is why chelator-bound iron appearing in urine is a "
+        "signal against a near-silent background.",
+    ),
+    "chelation_urinary": _ref(
+        "15720959", "",
+        "Iron chelation therapy",
+        2005,
+        "Deferoxamine's mode of clearance is urinary excretion of the "
+        "chelated iron, and the review distinguishes chelators on exactly "
+        "that basis. So the product's own chelator already carries the "
+        "readout: whatever it captures leaves in the urine, where it can be "
+        "counted.",
     ),
     "extracellular_hydrogenase": _ref(
         "30310166", "10.1038/s41598-018-33541-5",
@@ -559,10 +582,53 @@ CU_G_PER_MOL = 63.546
 # loading achieved in a carrier is exactly what nobody has measured.
 FE_ATOMS_PER_SHELL = 4500
 FERRITIN_SHELL_KDA = 474.0
-# Fraction of fragment mass that is the target metal. Carbon steel is nearly
-# all iron; a jacketed fragment is a composite and its copper fraction depends
-# on the round, so copper is left unset rather than guessed.
-METAL_FRACTION = {"steel": 0.98, "iron": 1.0}
+# What a fragment is actually made of, by element.
+#
+# This started as METAL_FRACTION = {"steel": 0.98}, which carried the iron and
+# silently discarded the other 2%. That 2% is where the alloying elements
+# live, and two of them -- nickel and chromium -- are recognised contact
+# allergens that the chelator does not capture, because deferoxamine is
+# selective for Fe(III). Dissolving a fragment releases everything in it, not
+# only the metal the route was designed around.
+#
+# The compositions below are nominal ranges for the grade, not measurements of
+# anyone's fragment, and they are labelled as such wherever they are used.
+# Stage 1 of the protocol exists to replace them with XRF on the real thing.
+COMPOSITION: dict[str, dict[str, float]] = {
+    # Low-carbon fragmentation steel. Manganese and silicon are deliberate
+    # additions; the balance is iron.
+    "steel": {"Fe": 0.980, "Mn": 0.012, "Si": 0.005, "C": 0.002, "P": 0.001},
+    "iron": {"Fe": 1.0},
+    # Austenitic stainless, for completeness. The route refuses it on
+    # passivation grounds, but the composition is why.
+    "stainless": {"Fe": 0.690, "Cr": 0.180, "Ni": 0.100, "Mn": 0.020,
+                  "Si": 0.010},
+}
+
+# Kept as a derived view so existing callers keep working: the target metal's
+# own fraction, read out of the composition rather than stated twice.
+METAL_FRACTION = {
+    key: comp.get(METALS[key]["element"], 0.0) if key in METALS else 0.0
+    for key, comp in COMPOSITION.items()
+}
+
+# Elements the arm has a capture route for. Everything else released by
+# dissolution is unaccounted for, and saying so is the point.
+CAPTURED_ELEMENTS = frozenset({"Fe"})
+ELEMENT_NOTES = {
+    "Mn": "Alloying element, not a contaminant. Neurotoxic on chronic "
+          "systemic exposure; no capture route here.",
+    "Si": "Largely inert as released silicate at this scale.",
+    "C": "Carbide and free carbon; stays as insoluble particulate rather "
+         "than dissolving, which makes it a detached-debris question "
+         "rather than a chemistry one.",
+    "P": "Trace. Enters the phosphate pool.",
+    "Cr": "Recognised contact allergen, and as Cr(III) not captured by "
+          "deferoxamine. In stainless it is also the reason the route "
+          "refuses the material.",
+    "Ni": "Recognised contact allergen and the commonest metal sensitiser. "
+          "No capture route in this arm.",
+}
 
 
 def capacity(material: str, mass_mg: float | None) -> dict[str, Any]:
@@ -571,9 +637,19 @@ def capacity(material: str, mass_mg: float | None) -> dict[str, Any]:
     if key is None or mass_mg is None or mass_mg <= 0:
         return {"computable": False,
                 "why": "needs a recognised metal and a fragment mass"}
+    # Honour the route, not just the iron content. This guard was absent
+    # while METAL_FRACTION held only steel and iron, so a metal with no route
+    # fell out through the missing-fraction branch by accident. Giving
+    # stainless a composition removed that accident and this function started
+    # answering for a material the chemistry had already refused.
+    if METALS[key]["route"] == "none":
+        return {"computable": False,
+                "why": f"{METALS[key]['name']} has no dissolution route, so "
+                       "there is nothing to capture. "
+                       + METALS[key].get("no_enzyme_reason", "")}
     fraction = METAL_FRACTION.get(key)
     element = METALS[key]["element"]
-    if fraction is None or element != "Fe":
+    if not fraction or element != "Fe":
         return {
             "computable": False,
             "why": (
@@ -1635,3 +1711,307 @@ def clinical_precedent(kind: str = "all") -> list[dict[str, Any]]:
     if kind == "all":
         return list(CLINICAL_PRECEDENTS)
     return [p for p in CLINICAL_PRECEDENTS if p["locality"] == kind]
+
+
+# ---------------------------------------------------------------------------
+# Closing four gaps from f2c/gaps.py. Each follows the shape the rest of this
+# module uses: returns `computable`, refuses with a `why` rather than guessing,
+# and honours route() -- a metal with no dissolution route gets no quantities,
+# because arithmetic answering a question the chemistry has closed is the
+# failure this engine exists to refuse.
+# ---------------------------------------------------------------------------
+
+def _refuse(key: str | None, mass_mg: float | None, needs_mass: bool = True
+            ) -> dict[str, Any] | None:
+    """The guard every quantity function shares."""
+    if key is None:
+        return {"computable": False, "why": "unrecognised metal"}
+    m = METALS[key]
+    if m["route"] == "none":
+        return {"computable": False,
+                "why": f"{m['name']} has no dissolution route. "
+                       + m.get("no_enzyme_reason", "")}
+    if needs_mass and (mass_mg is None or mass_mg <= 0):
+        return {"computable": False, "why": "needs a fragment mass"}
+    return None
+
+
+def released_elements(material: str, mass_mg: float | None,
+                      volume_fraction: float = 1.0) -> dict[str, Any]:
+    """Every element dissolution releases, not only the one with a route.
+
+    Closes the `alloy` gap. The arm computed iron and ignored the rest of the
+    fragment; the rest of the fragment is where the allergens are.
+    """
+    key = resolve(material)
+    refusal = _refuse(key, mass_mg)
+    if refusal:
+        return refusal
+    comp = COMPOSITION.get(key)
+    if not comp:
+        return {"computable": False,
+                "why": f"No composition recorded for {METALS[key]['name']}. "
+                       "A jacketed fragment's copper fraction depends on the "
+                       "round, and guessing it would be the one invented "
+                       "number in this arm."}
+
+    dissolved = mass_mg * volume_fraction
+    rows = []
+    for element, fraction in sorted(comp.items(), key=lambda kv: -kv[1]):
+        mg = dissolved * fraction
+        rows.append({
+            "element": element,
+            "fraction": fraction,
+            "mg_released": mg,
+            "captured": element in CAPTURED_ELEMENTS,
+            "note": ELEMENT_NOTES.get(element, ""),
+        })
+    uncaptured = [r for r in rows if not r["captured"] and r["mg_released"] > 0]
+    return {
+        "computable": True,
+        "volume_fraction": volume_fraction,
+        "dissolved_mg": dissolved,
+        "elements": rows,
+        "uncaptured_mg": sum(r["mg_released"] for r in uncaptured),
+        "uncaptured_elements": [r["element"] for r in uncaptured],
+        "finding": (
+            f"{sum(r['mg_released'] for r in uncaptured):.2f} mg of the "
+            f"{dissolved:.1f} mg dissolved is not iron and has no capture "
+            f"route: {', '.join(r['element'] for r in uncaptured)}."
+            if uncaptured else
+            "Everything released is iron, which the chelator captures."
+        ),
+        "basis": "Nominal composition for the grade, multiplied by the mass "
+                 "dissolved. The composition is not a measurement of any "
+                 "particular fragment.",
+        "what_is_assumed": (
+            "The grade. Stage 1 of the protocol replaces this with XRF or "
+            "SEM-EDS on the real fragment, and until it does, every "
+            "non-iron figure here is a nominal value and not a finding."
+        ),
+        "evidence": DERIVED,
+        "ref": REFS["fragment_chemistry"],
+    }
+
+
+def readout(material: str, mass_mg: float | None, volume_fraction: float = 1.0,
+            over_weeks: float = 8.0) -> dict[str, Any]:
+    """How anyone would know, in a living subject, that it is working.
+
+    Closes the `readout` gap. The answer is not to watch the fragment: a 20%
+    debulk is a 3.6% change in edge length, which routine imaging cannot see.
+    It is to watch what comes out.
+
+    Two facts settle which assay. Human iron excretion is inefficient and not
+    regulated -- the body controls iron by absorption, not disposal (PMID
+    38489995) -- so there is no physiological flux of iron into urine for a
+    signal to hide behind. And deferoxamine's own route of clearance is
+    urinary excretion of the chelated iron (PMID 15720959). The chelator the
+    product already contains is therefore also its reporter.
+    """
+    key = resolve(material)
+    refusal = _refuse(key, mass_mg)
+    if refusal:
+        return refusal
+    if METALS[key]["element"] != "Fe":
+        return {"computable": False,
+                "why": "This readout is specific to iron: it rests on there "
+                       "being no regulated excretion route for it."}
+    if over_weeks <= 0:
+        return {"computable": False, "why": "needs a time over which to spread"}
+
+    fe_mg = mass_mg * METAL_FRACTION.get(key, 1.0) * volume_fraction
+    days = over_weeks * 7.0
+    per_day = fe_mg / days
+    return {
+        "computable": True,
+        "volume_fraction": volume_fraction,
+        "over_weeks": over_weeks,
+        "iron_mg_total": fe_mg,
+        "iron_mg_per_day": per_day,
+        "recommended": "urinary ferrioxamine",
+        "why_that_one": (
+            "Ferrioxamine is not a normal constituent of urine, and humans "
+            "have no regulated route that puts iron there, so the background "
+            "it has to exceed is physiologically near-silent rather than "
+            "merely low."
+        ),
+        "why_not_serum_iron": (
+            "Serum iron is homeostatically buffered and is replenished "
+            "continuously from senescent red cells, so a slow release is "
+            "absorbed into a much larger managed flux. Watching it would be "
+            "watching the regulator, not the fragment."
+        ),
+        "why_not_imaging": (
+            "The quantity that changes is the one hardest to see. Removing "
+            "20% of the volume shortens the edge by 3.6%, which is below what "
+            "routine radiography resolves on a millimetre-scale fragment."
+        ),
+        "what_is_still_needed": (
+            "A baseline. This project has not sourced a quantitative figure "
+            "for urinary iron in an untreated person, so the signal-to-"
+            "background ratio is argued mechanistically here and not "
+            "computed. That number has to come from a reference before any "
+            "detection claim is made."
+        ),
+        "basis": "Released iron divided by the time it is released over. The "
+                 "total is fixed by the fragment's mass.",
+        "evidence": DERIVED,
+        "refs": [REFS["iron_homeostasis"], REFS["chelation_urinary"]],
+    }
+
+
+def enzyme_dose(material: str, mass_mg: float | None,
+                rate_ug_per_cm2_per_day: float | None,
+                surface_area_cm2: float | None = None,
+                volume_fraction: float = 1.0,
+                specific_activity_u_per_mg: float | None = None,
+                ) -> dict[str, Any]:
+    """How much enzyme the depot needs -- as arithmetic, not as a number.
+
+    Closes the `enzyme_dose` gap in the only way it can honestly be closed.
+    The rate has no default and the function refuses without it, because the
+    rate is exactly what nobody has measured. What this does is make the gap
+    one measurement wide instead of open-ended: stage 2 of the protocol
+    produces the rate, and the dose then follows the way the chelator mass
+    already does.
+    """
+    key = resolve(material)
+    refusal = _refuse(key, mass_mg)
+    if refusal:
+        return refusal
+    if rate_ug_per_cm2_per_day is None:
+        return {
+            "computable": False,
+            "why": "No rate. This is the gap, not an oversight: no turnover "
+                   "has been measured on a solid fragment at body "
+                   "conditions, in either arm of this product.",
+            "what_would_close_it": (
+                "Stage 2 of the protocol measures dissolution per unit "
+                "surface area on steel coupons at 37 C and pH 7.4. Pass that "
+                "number as rate_ug_per_cm2_per_day and this returns a dose."
+            ),
+            "evidence": ABSENT,
+        }
+    if rate_ug_per_cm2_per_day <= 0:
+        return {"computable": False,
+                "why": "a non-positive rate removes the fragment never"}
+
+    fe_mg = mass_mg * METAL_FRACTION.get(key, 1.0) * volume_fraction
+    area = surface_area_cm2
+    if area is None:
+        # A sphere of the fragment's mass, as the conservative default: it is
+        # the lowest surface area any shape of that mass can have, so the dose
+        # it implies is the largest.
+        density = 7.87  # g/cm3, iron
+        volume_cm3 = (mass_mg / 1000.0) / density
+        radius = (3 * volume_cm3 / (4 * math.pi)) ** (1 / 3)
+        area = 4 * math.pi * radius ** 2
+    days = (fe_mg * 1000.0) / (rate_ug_per_cm2_per_day * area)
+    out = {
+        "computable": True,
+        "iron_mg": fe_mg,
+        "surface_area_cm2": area,
+        "surface_area_assumed": surface_area_cm2 is None,
+        "rate_ug_per_cm2_per_day": rate_ug_per_cm2_per_day,
+        "days_to_target": days,
+        "weeks_to_target": days / 7.0,
+        "basis": "Iron to remove, divided by rate times area. The area "
+                 "defaults to a sphere of the same mass, which is the "
+                 "smallest any shape can have and so the slowest case.",
+        "evidence": DERIVED,
+    }
+    if specific_activity_u_per_mg:
+        out["note_on_protein_mass"] = (
+            "Converting a surface rate into milligrams of enzyme needs the "
+            "turnover per unit of enzyme at the surface, which is a different "
+            "measurement from specific activity in solution. Specific "
+            "activity is recorded here but deliberately not multiplied "
+            "through: that step is where a solution constant would be "
+            "smuggled into a surface problem."
+        )
+        out["specific_activity_u_per_mg"] = specific_activity_u_per_mg
+    return out
+
+
+def aggregate(fragments: list[tuple[str, float, float]],
+              volume_fraction: float = 1.0,
+              carrier_weeks: float = CARRIER_LIFETIME_WEEKS) -> dict[str, Any]:
+    """Sum the demands across every fragment a patient actually has.
+
+    Closes the `multiple_fragments` gap. Each quantity in this arm was
+    computed for one fragment; a blast patient has several, sometimes of more
+    than one material. Two of the quantities do not scale comfortably -- the
+    chelator ceiling and the hydrogen volume -- and that is the finding.
+
+    `fragments` is a list of (material, mass_mg, size_mm).
+    """
+    if not fragments:
+        return {"computable": False, "why": "no fragments given"}
+
+    treatable, refused = [], []
+    ferritin_mg = dfo_mg = h2_ml = iron_mg = 0.0
+    placements = 0.0
+    for material, mass_mg, size_mm in fragments:
+        key = resolve(material)
+        entry = {"material": material, "resolved": key,
+                 "mass_mg": mass_mg, "size_mm": size_mm}
+        if key is None or METALS[key]["route"] == "none":
+            entry["why_refused"] = (
+                _refuse(key, mass_mg) or {}).get("why", "no route")
+            refused.append(entry)
+            continue
+        cap = capacity(key, mass_mg)
+        chel = chelator_demand(key, mass_mg, volume_fraction)
+        h2 = hydrogen_evolution(key, mass_mg, volume_fraction)
+        place = carrier_placements(key, size_mm, volume_fraction, carrier_weeks)
+        if cap.get("computable"):
+            ferritin_mg += cap["ferritin_mg"]
+        if chel.get("computable"):
+            dfo_mg += chel["dfo_free_base_mg"]
+            iron_mg += chel["iron_mg"]
+        if h2.get("computable"):
+            h2_ml += h2["h2_ml_at_37c"]
+        if place.get("computable"):
+            # The slowest rate in the bracket, because a course finishes when
+            # its last fragment does.
+            placements = max(placements,
+                             max(r["placements"] for r in place["rows"]))
+        entry["ferritin_mg"] = cap.get("ferritin_mg")
+        entry["dfo_mg"] = chel.get("dfo_free_base_mg")
+        entry["h2_ml"] = h2.get("h2_ml_at_37c")
+        treatable.append(entry)
+
+    return {
+        "computable": True,
+        "fragments": len(fragments),
+        "treatable": treatable,
+        "refused": refused,
+        "volume_fraction": volume_fraction,
+        "total_iron_mg": iron_mg,
+        "total_ferritin_mg": ferritin_mg,
+        "total_dfo_mg": dfo_mg,
+        "total_h2_ml": h2_ml,
+        "worst_case_placements": placements,
+        "finding": (
+            f"{len(treatable)} of {len(fragments)} fragments have a route. "
+            f"Together they need {dfo_mg:.0f} mg of deferoxamine and would "
+            f"release {h2_ml:.1f} mL of hydrogen."
+            + (f" {len(refused)} fragment(s) have no route at all and are not "
+               f"included in any of these totals." if refused else "")
+        ),
+        "why_it_matters": (
+            "Treating five fragments is not five times a solved problem. The "
+            "chelator demand is stoichiometric, so it adds up exactly, and a "
+            "depot has a finite payload. The hydrogen adds up too, into the "
+            "same tissue. Neither has a per-dose ceiling established, and "
+            "that ceiling is what this total has to be compared against."
+        ),
+        "what_is_still_needed": (
+            "The ceiling. A maximum tolerated local deferoxamine dose and a "
+            "maximum tolerated gas volume are both unestablished, so this "
+            "function reports the demand and cannot yet report whether it is "
+            "acceptable."
+        ),
+        "evidence": DERIVED,
+    }

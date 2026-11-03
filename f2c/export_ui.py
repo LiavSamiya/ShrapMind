@@ -17,7 +17,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from . import formulate, goals, hostsafety, metals, pipeline, scope, substrate
+from . import (formulate, gaps, goals, hostsafety, metals, pipeline, scope,
+               substrate)
 from .engine import decide
 from .formulate import REPEAT_UNIT_G_PER_MOL, capture_requirement
 from .rank import BODY_PH, BODY_TEMPERATURE_C, WEIGHTS, _summarise
@@ -301,6 +302,9 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
             # what a depot can cite; systemic precedent answers a different
             # question.
             "clinical_precedents": list(metals.CLINICAL_PRECEDENTS),
+            "composition": metals.COMPOSITION,
+            "element_notes": metals.ELEMENT_NOTES,
+            "captured_elements": sorted(metals.CAPTURED_ELEMENTS),
         },
         # The host-safety screen, counted once here rather than quoted from
         # memory in each page. A page that states 5/6/33/461 while the
@@ -310,6 +314,10 @@ def build(proteins: list[Protein], max_alternatives: int = 5) -> dict[str, Any]:
         # itself, after a full bench protocol was written for the polymer arm
         # weeks after the project moved to metals.
         "scope": scope.summary(),
+        # The indication belongs to the whole product, not to one arm. It
+        # used to render only in the polymer view, which is now the archive.
+        "indication": pipeline.indication(),
+        "gaps": {"summary": gaps.summary(), "entries": list(gaps.GAPS)},
         "arms": {k: scope.arm(k) for k in decisions},
         "scope_banner": {"en": scope.banner("en"), "he": scope.banner("he")},
         "host_safety": hostsafety.summary(proteins),

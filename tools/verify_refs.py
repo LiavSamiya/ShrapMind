@@ -75,11 +75,21 @@ def main() -> int:
     args = ap.parse_args()
 
     refs = collect()
-    empty = [r for pmid, r in refs.items() if not pmid or not r["doi"]]
+    # A paper with a PMID and no DOI is a real paper -- plenty of older
+    # journals never minted one, and refusing to cite them would be the tool
+    # distorting the evidence to suit itself. What must not exist is an entry
+    # with NEITHER identifier, which renders two dead links and cannot be
+    # resolved by anyone.
+    empty = [r for pmid, r in refs.items() if not pmid and not r["doi"]]
     for r in empty:
         print(f"  EMPTY  {r['where']}: pmid={r['pmid']!r} doi={r['doi']!r}")
-        print("         A reference with no identifier renders a dead link. If "
-              "it records a negative result, it is not a reference.")
+        print("         A reference with no identifier at all renders a dead "
+              "link and cannot be checked. If it records a negative result, "
+              "it is not a reference.")
+    doi_less = [r for pmid, r in refs.items() if pmid and not r["doi"]]
+    for r in doi_less:
+        print(f"  NOTE   {r['where']}: PMID {r['pmid']}, no DOI recorded")
+        print("         Resolved on the PMID alone. Checked, not a problem.")
 
     pmids = [p for p in refs if p]
     if not pmids:

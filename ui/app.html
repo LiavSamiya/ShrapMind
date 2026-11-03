@@ -196,6 +196,7 @@ summary .count{margin-inline-start:auto;font-size:.84rem;color:var(--ink-3);
 .ev-literature{color:var(--unknown)} .ev-specified{color:var(--watch)}
 .ev-refused{color:var(--stop);border-color:currentColor}
 .ref{font-size:.87rem;margin-top:.4rem;color:var(--ink-2)}
+.ref .rt{font-weight:500}
 .ref .says{display:block;margin-top:.15rem;color:var(--ink-3)}
 .correction{border-left:3px solid var(--stop);padding-left:.85rem;margin-bottom:1.2rem}
 .correction .c1{font-weight:600;font-size:.98rem}
@@ -445,10 +446,15 @@ const matAbbr = k => matName(k).toLowerCase() === k.toLowerCase() ? "" : ` (${k}
 const EV = { measured: "measured", derived: "derived",
              specified: "design spec", literature: "published" };
 const badge = ev => `<span class="ev ev-${ev}">${EV[ev] || ev}</span>`;
+/* Not every real paper has a DOI -- older journals never minted them. A
+   title linked to https://doi.org/ with nothing after it is a dead link, so
+   the title is only a link when there is somewhere for it to go. */
 const refLine = r => !r ? "" : `<div class="ref">
-  <a href="https://doi.org/${esc(r.doi)}" target="_blank" rel="noopener">${esc(r.title)}</a>
-  (${esc(r.year)}) · <a href="https://pubmed.ncbi.nlm.nih.gov/${esc(r.pmid)}/"
-    target="_blank" rel="noopener">PMID ${esc(r.pmid)}</a>
+  ${r.doi
+    ? `<a href="https://doi.org/${esc(r.doi)}" target="_blank" rel="noopener">${esc(r.title)}</a>`
+    : `<span class="rt">${esc(r.title)}</span>`}
+  (${esc(r.year)})${r.pmid ? ` · <a href="https://pubmed.ncbi.nlm.nih.gov/${esc(r.pmid)}/"
+    target="_blank" rel="noopener">PMID ${esc(r.pmid)}</a>` : ""}
   <span class="says">${esc(r.says)}</span></div>`;
 const refLines = (r, also) => refLine(r) + (also || []).map(refLine).join("");
 
@@ -896,6 +902,30 @@ function renderMetal() {
         <div class="t">${esc(r.warning.claim)} — ${esc(r.warning.status)}</div>
         <div class="d">${esc(r.warning.detail)}</div></div></section>`);
     }
+    /* Who the product is for, and who it is not. This section exists
+       because nobody had checked the premise the whole thing rests on, and
+       when it was checked the answer came back partly negative. It sits
+       above the process on purpose: a reader should meet the narrowing
+       before the chemistry. */
+    const ind = DATA.indication?.what_the_evidence_does_not_support;
+    if (ind) {
+      out.push(`<section><h2>Who this is for, and who it is not</h2>
+        <p class="lede">${esc(ind.claim_examined)}</p>
+        <div class="alert" style="margin-top:1rem">
+          <div class="t">What the evidence actually shows</div>
+          <div class="d">${esc(ind.finding)}</div>
+        </div>
+        <div class="goal" style="margin-top:1rem">
+          <div class="means">The indication, narrowed</div>
+          <dl class="kv">
+            <dt>For</dt><dd>${esc(ind.so_who_is_this_for)}</dd>
+            <dt>Not for</dt><dd>${esc(ind.and_who_it_is_not_for)}</dd>
+          </dl>
+          <p class="note">${esc(ind.what_is_still_unknown)}</p>
+        </div>
+        ${refLines(null, ind.refs)}</section>`);
+    }
+
     out.push(`<section><h2>The process</h2>
       <p class="lede">Three stages for a metal, against one for a polymer.
       Only the middle one has a characterised enzyme behind it.</p>

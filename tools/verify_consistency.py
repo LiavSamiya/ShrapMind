@@ -208,6 +208,30 @@ CHECKS: list[dict[str, Any]] = [
      "truth": lambda d: round(__import__("f2c.metals", fromlist=["x"])
                               .hydrogen_evolution("steel", 50.0, 0.20)
                               ["h2_ml_at_37c"], 1)},
+    {"page": "protocol", "what": "gaps closed",
+     "claimed": 8,
+     "truth": lambda d: __import__("f2c.gaps", fromlist=["x"]).summary()["closed"]},
+    {"page": "protocol", "what": "gaps still open",
+     "claimed": 3,
+     "truth": lambda d: __import__("f2c.gaps", fromlist=["x"]).summary()["open"]},
+    {"page": "protocol", "what": "uncaptured mg from a 20% debulk",
+     "claimed": 0.2,
+     "truth": lambda d: round(__import__("f2c.metals", fromlist=["x"])
+                              .released_elements("steel", 50.0, 0.20)
+                              ["uncaptured_mg"], 2)},
+    {"page": "protocol", "what": "iron released per day over 8 weeks, mg",
+     "claimed": 0.175,
+     "truth": lambda d: round(__import__("f2c.metals", fromlist=["x"])
+                              .readout("steel", 50.0, 0.20, 8.0)
+                              ["iron_mg_per_day"], 3)},
+    {"page": "shrapmind", "what": "steel iron fraction",
+     "claimed": 0.98,
+     "truth": lambda d: d["metals"]["composition"]["steel"]["Fe"]},
+    {"page": "shrapmind", "what": "indication cites both nerve series",
+     "claimed": "24898760,42006932",
+     "truth": lambda d: ",".join(
+         r["pmid"] for r in
+         d["indication"]["what_the_evidence_does_not_support"]["refs"])},
     {"page": "protocol", "what": "gaps recorded",
      "claimed": 11,
      "truth": lambda d: __import__("f2c.gaps", fromlist=["x"]).summary()["total"]},

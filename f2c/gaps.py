@@ -27,6 +27,14 @@ from __future__ import annotations
 
 from typing import Any
 
+OPEN = "open"
+CLOSED = "closed"
+# A gap is closed when the thing that was missing exists. It is not closed
+# because someone intends to do it, and it is not removed from the register
+# when it closes: the record of what was missing and what closed it is worth
+# as much as the absence was. Entries carry `closed_by`, and where closing one
+# left something smaller behind, `residual` says what.
+
 BLOCKS_INJECTION = "blocks_injection"
 BLOCKS_TRIAL = "blocks_trial"
 BLOCKS_CLAIM = "blocks_claim"
@@ -37,6 +45,42 @@ SEVERITY_ORDER = (BLOCKS_INJECTION, BLOCKS_TRIAL, BLOCKS_CLAIM, INCOMPLETE)
 GAPS: tuple[dict[str, Any], ...] = (
     {
         "id": "premise",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "Answered, and answered against the premise. Rochkind 2014 "
+            "(PMID 24898760), 42 patients and 58 nerves with 26 of them "
+            "shrapnel at a median 33 months: the presence of foreign "
+            "particles PREDICTED A WORSE outcome, 28% pain improvement "
+            "against 67% without them, and nerve grafting beat neurolysis "
+            "100% to 47%. Relieving the compression is not what relieves "
+            "the pain; replacing the destroyed segment is. Rochkind 2026 "
+            "(PMID 42006932), 107 patients, adds that about 55% of "
+            "shrapnel nerve injuries carry the fragment inside the nerve "
+            "rather than beside it."
+        ),
+        "closed_by_he": (
+            "נענה, והתשובה נגד ההנחה. Rochkind 2014 (PMID 24898760), 42 "
+            "מטופלים ו-58 עצבים מהם 26 מרסס, מעקב חציוני 33 חודשים: נוכחות "
+            "חלקיקים זרים ניבאה תוצאה גרועה יותר — 28% שיפור בכאב מול "
+            "67% בלעדיהם — והשתלת עצב ניצחה נוירוליזה 100% מול 47%. "
+            "שחרור הלחץ אינו מה שמקל על הכאב; החלפת המקטע ההרוס היא. "
+            "Rochkind 2026 (PMID 42006932) מוסיף ש-55% מפגיעות הרסס הן עם "
+            "הרסיס בתוך העצב ולא לידו."
+        ),
+        "consequence": (
+            "The indication narrows rather than disappearing. The product "
+            "addresses fragments causing mechanical pressure on an intact "
+            "nerve, which is a real population and a smaller one. It does "
+            "not address a fragment lodged in an injured nerve, where the "
+            "evidence says graft. Saying so before the pitch is worth more "
+            "than being asked it during."
+        ),
+        "residual": (
+            "How large the intact-nerve population is. Rochkind separates "
+            "intraneural from extraneural but does not report outcomes "
+            "for extraneural fragments as its own arm."
+        ),
         "area": "clinical",
         "severity": BLOCKS_TRIAL,
         "title": "Nobody has shown that removing volume relieves the symptom",
@@ -73,6 +117,18 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "endotoxin",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "Stage 4 of the protocol now carries a polymyxin-B or "
+            "anion-exchange depletion step after IMAC, with LAL as a "
+            "release test, in both languages."
+        ),
+        "closed_by_he": (
+            "שלב 4 בפרוטוקול נושא עכשיו הסרת אנדוטוקסין בזיקה "
+            "לפולימיקסין-B או חילוף אניונים אחרי IMAC, עם LAL כבדיקת "
+            "שחרור, בשתי השפות."
+        ),
         "area": "protein",
         "severity": BLOCKS_INJECTION,
         "title": "No endotoxin removal step anywhere in the protocol",
@@ -108,6 +164,21 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "enzyme_dose",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "metals.enzyme_dose() closes it as arithmetic rather than as "
+            "a number. The rate has no default and the function refuses "
+            "without one, so the gap is now exactly one measurement wide "
+            "-- stage 2 of the protocol produces that measurement, and "
+            "the dose follows the way the chelator mass already does."
+        ),
+        "closed_by_he": (
+            "metals.enzyme_dose() סוגרת אותו כאריתמטיקה ולא כמספר. לקצב "
+            "אין ברירת מחדל והפונקציה מסרבת בלעדיו, כך שהפער ברוחב מדידה "
+            "אחת בדיוק — שלב 2 בפרוטוקול מייצר אותה, והמינון נובע כמו "
+            "שמסת המכלב כבר נובעת."
+        ),
         "area": "formulation",
         "severity": BLOCKS_TRIAL,
         "title": "How many milligrams of enzyme go into the depot",
@@ -142,6 +213,29 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "readout",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "metals.readout() names the assay and computes the flux. Not "
+            "the fragment but what leaves it: human iron excretion is "
+            "unregulated (PMID 38489995), so there is no physiological "
+            "iron flux into urine for a signal to hide behind, and "
+            "deferoxamine clears renally as ferrioxamine (PMID 15720959). "
+            "The chelator the product already contains is its reporter."
+        ),
+        "closed_by_he": (
+            "metals.readout() נוקב בבדיקה ומחשב את השטף. לא הרסיס אלא מה "
+            "שיוצא ממנו: הפרשת ברזל באדם אינה מווסתת (PMID 38489995), "
+            "ולכן אין שטף ברזל פיזיולוגי לשתן שהאות יכול להיעלם בתוכו, "
+            "ודפרוקסאמין מפונה כלייתית כפרוקסאמין (PMID 15720959). המכלב "
+            "שכבר נמצא במוצר הוא גם הדיווח שלו."
+        ),
+        "residual": (
+            "A quantitative baseline for urinary iron in an untreated "
+            "person. The signal-to-background argument is mechanistic "
+            "here, not computed, and no detection claim should be made "
+            "until that figure is sourced."
+        ),
         "area": "clinical",
         "severity": BLOCKS_TRIAL,
         "title": "No way to tell, in a living subject, whether it worked",
@@ -176,6 +270,17 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "specific_activity",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "Stage 5 defines it before the first reading: one micromole "
+            "of Fe(II) oxidised per minute at 37 C, per milligram of "
+            "protein by A280."
+        ),
+        "closed_by_he": (
+            "שלב 5 מגדיר אותה לפני הקריאה הראשונה: מיקרומול Fe(II) "
+            "מחומצן לדקה ב-37°C, למיליגרם חלבון לפי A280."
+        ),
         "area": "protein",
         "severity": BLOCKS_CLAIM,
         "title": "Activity is measured without a defined unit",
@@ -207,6 +312,15 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "biodistribution",
+        "status": OPEN,
+        "waiting_on": "the first in vivo study",
+        "waiting_note": (
+            "Not unowned, and not deferrable either: labelling the "
+            "enzyme and following it costs almost nothing once an "
+            "animal study is running, and nothing at all if it is "
+            "designed in from the start. It becomes expensive only if "
+            "the first study is run without it."
+        ),
         "area": "clinical",
         "severity": BLOCKS_TRIAL,
         "title": "What happens to the enzyme after it has worked",
@@ -238,6 +352,16 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "contamination",
+        "status": OPEN,
+        "partially_closed_by": (
+            "Stage 1 of the protocol now records culture of the "
+            "retrieved fragment, antibiotic cover and tetanus status as "
+            "enrolment criteria. What stays open is the quantity: this "
+            "project has not established how often a chronically "
+            "retained fragment is colonised, and the biofilm question "
+            "is a potency problem as well as a safety one."
+        ),
+        "waiting_on": "a colonisation rate from retrieved fragments",
         "area": "clinical",
         "severity": BLOCKS_TRIAL,
         "title": "A retained fragment is a contaminated foreign body",
@@ -272,6 +396,29 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "alloy",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "METAL_FRACTION became COMPOSITION, a per-element breakdown, "
+            "and metals.released_elements() runs the mass balance element "
+            "by element. For a 20% debulk of a 50 mg fragment it reports "
+            "0.2 mg of manganese, silicon, carbon and phosphorus with no "
+            "capture route, and names nickel and chromium as allergens "
+            "deferoxamine does not bind."
+        ),
+        "closed_by_he": (
+            "METAL_FRACTION הפך ל-COMPOSITION, פירוט לפי יסוד, "
+            "ו-metals.released_elements() מריצה את מאזן המסה יסוד אחרי "
+            "יסוד. להורדת 20% מרסיס 50 מ\"ג היא מדווחת 0.2 מ\"ג מנגן, "
+            "סיליקון, פחמן וזרחן בלי מסלול לכידה, ונוקבת בניקל ובכרום "
+            "כאלרגנים שדפרוקסאמין אינו קושר."
+        ),
+        "residual": (
+            "The compositions are nominal for the grade, not measurements "
+            "of anyone's fragment. Stage 1 of the protocol replaces them "
+            "with XRF, and every non-iron figure is labelled nominal "
+            "until it does."
+        ),
         "area": "metal",
         "severity": BLOCKS_CLAIM,
         "title": "The alloying elements are not modelled",
@@ -304,6 +451,28 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "multiple_fragments",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "metals.aggregate() sums across a patient's fragments and "
+            "reports the ones with no route separately rather than "
+            "dropping them. Five fragments including one stainless come "
+            "to 325 mg of deferoxamine and 14.8 mL of hydrogen, with up "
+            "to 70 sequential placements at the slowest rate in the "
+            "bracket."
+        ),
+        "closed_by_he": (
+            "metals.aggregate() מסכמת על פני רסיסי המטופל ומדווחת בנפרד "
+            "על אלה שאין להם מסלול במקום להשמיט אותם. חמישה רסיסים "
+            "שאחד מהם נירוסטה מגיעים ל-325 מ\"ג דפרוקסאמין ו-14.8 מ\"ל "
+            "מימן, ועד 70 הזרקות רצופות בקצב האיטי בטווח."
+        ),
+        "residual": (
+            "The ceiling to compare the total against. A maximum "
+            "tolerated local deferoxamine dose and a maximum tolerated "
+            "gas volume are both unestablished, so the function reports "
+            "demand and cannot yet report acceptability."
+        ),
         "area": "clinical",
         "severity": INCOMPLETE,
         "title": "Every calculation is for one fragment",
@@ -335,6 +504,13 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "storage",
+        "status": OPEN,
+        "waiting_on": "the stability arm of the protocol",
+        "waiting_note": (
+            "Falls out of stage 6 at no extra cost once that is "
+            "running. Recorded now so it is not discovered late, which "
+            "is the usual way a result fails to become a thing."
+        ),
         "area": "formulation",
         "severity": INCOMPLETE,
         "title": "No stability, storage or freeze-thaw data",
@@ -364,6 +540,21 @@ GAPS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "aggregation",
+        "status": CLOSED,
+        "closed_on": "2026-11-03",
+        "closed_by": (
+            "Twice over. The protocol adds a dynamic light scattering "
+            "read per buffer in stage 5, and the target changed: human "
+            "ferritin has a theoretical pI of 5.18 against TfH's 7.96, "
+            "so it sits well away from tissue pH and the colloidal "
+            "stability problem this gap described does not arise."
+        ),
+        "closed_by_he": (
+            "פעמיים. הפרוטוקול מוסיף קריאת פיזור אור דינמי לכל באפר "
+            "בשלב 5, והמטרה השתנתה: ה-pI התיאורטי של פריטין אנושי הוא "
+            "5.18 מול 7.96 של TfH, כלומר רחוק מ-pH הרקמה ובעיית היציבות "
+            "הקולואידית שהפער תיאר אינה מתעוררת."
+        ),
         "area": "formulation",
         "severity": INCOMPLETE,
         "title": "The pI finding is flagged and not acted on",
@@ -396,6 +587,21 @@ GAPS: tuple[dict[str, Any], ...] = (
 )
 
 
+def status(gap: dict[str, Any]) -> str:
+    """Open unless an entry says otherwise, so a new gap starts open."""
+    return gap.get("status", OPEN)
+
+
+def by_status(want: str) -> list[dict[str, Any]]:
+    return [g for g in GAPS if status(g) == want]
+
+
+def open_gaps() -> list[dict[str, Any]]:
+    """Worst first, and only the ones still open."""
+    rank = {s: i for i, s in enumerate(SEVERITY_ORDER)}
+    return sorted(by_status(OPEN), key=lambda g: (rank[g["severity"]], g["id"]))
+
+
 def by_severity(severity: str | None = None) -> list[dict[str, Any]]:
     """Gaps, worst first. `severity` narrows to one band."""
     rank = {s: i for i, s in enumerate(SEVERITY_ORDER)}
@@ -405,13 +611,18 @@ def by_severity(severity: str | None = None) -> list[dict[str, Any]]:
 
 def summary() -> dict[str, Any]:
     counts: dict[str, int] = {s: 0 for s in SEVERITY_ORDER}
+    by_state = {OPEN: len(by_status(OPEN)), CLOSED: len(by_status(CLOSED))}
     areas: dict[str, int] = {}
     for g in GAPS:
         counts[g["severity"]] += 1
         areas[g["area"]] = areas.get(g["area"], 0) + 1
     return {
         "total": len(GAPS),
+        "open": by_state[OPEN],
+        "closed": by_state[CLOSED],
         "counts": counts,
+        "counts_open": {s: sum(1 for g in by_status(OPEN)
+                               if g["severity"] == s) for s in SEVERITY_ORDER},
         "areas": areas,
         "absent_from_team_documents": len(GAPS),
         "note": (

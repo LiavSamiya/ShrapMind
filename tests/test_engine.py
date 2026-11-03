@@ -1568,3 +1568,173 @@ def test_both_protocol_languages_are_built_and_agree():
         assert "Q6A0I4" not in text, (
             f"{name} still references the polymer-arm enzyme"
         )
+
+
+# --- closing the gaps -------------------------------------------------------
+
+def test_composition_sums_to_one_for_every_alloy():
+    from f2c import metals
+    for key, comp in metals.COMPOSITION.items():
+        assert abs(sum(comp.values()) - 1.0) < 1e-9, key
+        assert comp, key
+
+
+def test_metal_fraction_is_derived_not_stated_twice():
+    """It used to be its own dict; now it reads out of COMPOSITION."""
+    from f2c import metals
+    for key, frac in metals.METAL_FRACTION.items():
+        element = metals.METALS[key]["element"]
+        assert frac == metals.COMPOSITION[key].get(element, 0.0), key
+    # And the old value is preserved, so nothing downstream shifted.
+    assert metals.METAL_FRACTION["steel"] == pytest.approx(0.98)
+
+
+def test_released_elements_accounts_for_everything_not_only_iron():
+    """The 2% the old constant discarded is where the allergens live."""
+    from f2c import metals
+    out = metals.released_elements("steel", 50.0, 0.20)
+    assert out["computable"]
+    total = sum(r["mg_released"] for r in out["elements"])
+    assert total == pytest.approx(50.0 * 0.20)
+    assert out["uncaptured_mg"] > 0
+    assert "Fe" not in out["uncaptured_elements"]
+    # Nickel and chromium must be named as allergens wherever they appear.
+    for element in ("Ni", "Cr"):
+        assert "allergen" in metals.ELEMENT_NOTES[element].lower()
+    # Copper has no recorded composition and must refuse rather than guess.
+    cu = metals.released_elements("copper", 50.0)
+    assert cu["computable"] is False and "composition" in cu["why"].lower()
+
+
+def test_readout_names_an_assay_and_rejects_the_obvious_one():
+    from f2c import metals
+    out = metals.readout("steel", 50.0, 0.20, over_weeks=8.0)
+    assert out["computable"]
+    assert out["iron_mg_per_day"] == pytest.approx(
+        out["iron_mg_total"] / (8.0 * 7.0))
+    assert "urinary" in out["recommended"]
+    # It must say why serum and imaging do not work, not merely prefer urine.
+    assert out["why_not_serum_iron"] and out["why_not_imaging"]
+    # And it must not claim a detection ratio it has not sourced.
+    assert "baseline" in out["what_is_still_needed"].lower()
+    assert {"38489995", "15720959"} <= {r["pmid"] for r in out["refs"]}
+
+
+def test_enzyme_dose_refuses_without_a_rate():
+    """The refusal is the honest half of this function.
+
+    No turnover has been measured on a solid fragment at body conditions, so
+    a dose with a default rate would be a number invented to look complete.
+    """
+    from f2c import metals
+    out = metals.enzyme_dose("steel", 50.0, None)
+    assert out["computable"] is False
+    assert out["evidence"] == "absent"
+    assert "stage 2" in out["what_would_close_it"].lower()
+    # Given a rate it computes, and a bigger rate finishes sooner.
+    fast = metals.enzyme_dose("steel", 50.0, 50.0, volume_fraction=0.20)
+    slow = metals.enzyme_dose("steel", 50.0, 5.0, volume_fraction=0.20)
+    assert fast["computable"] and slow["computable"]
+    assert fast["days_to_target"] < slow["days_to_target"]
+    # The default area is a sphere, which is the slowest case, and it says so.
+    assert slow["surface_area_assumed"] is True
+
+
+def test_aggregate_sums_and_keeps_the_refusals_visible():
+    from f2c import metals
+    one = metals.aggregate([("steel", 50.0, 0.8)], volume_fraction=0.20)
+    direct = metals.chelator_demand("steel", 50.0, 0.20)
+    assert one["total_dfo_mg"] == pytest.approx(direct["dfo_free_base_mg"])
+
+    many = metals.aggregate(
+        [("steel", 50.0, 0.8), ("steel", 20.0, 0.5), ("stainless", 30.0, 0.9)],
+        volume_fraction=0.20)
+    assert many["fragments"] == 3
+    assert len(many["treatable"]) == 2 and len(many["refused"]) == 1
+    assert many["refused"][0]["resolved"] == "stainless"
+    assert many["refused"][0]["why_refused"]
+    # A fragment with no route contributes nothing to any total.
+    two_only = metals.aggregate(
+        [("steel", 50.0, 0.8), ("steel", 20.0, 0.5)], volume_fraction=0.20)
+    assert many["total_dfo_mg"] == pytest.approx(two_only["total_dfo_mg"])
+    # The point of the function: the demand is super-additive in consequence.
+    assert many["total_h2_ml"] > 0 and many["worst_case_placements"] > 1
+    assert many["what_is_still_needed"]
+
+
+def test_every_new_quantity_refuses_a_metal_with_no_route():
+    from f2c import metals
+    for fn, args in (("released_elements", ("stainless", 50.0)),
+                     ("readout", ("stainless", 50.0)),
+                     ("enzyme_dose", ("stainless", 50.0, 5.0))):
+        out = getattr(metals, fn)(*args)
+        assert out["computable"] is False, fn
+        assert out["why"], fn
+
+
+# --- the register itself ----------------------------------------------------
+
+def test_a_closed_gap_says_what_closed_it_and_stays_on_the_register():
+    from f2c import gaps
+    closed = gaps.by_status(gaps.CLOSED)
+    assert len(closed) >= 8
+    for g in closed:
+        assert g.get("closed_by"), g["id"]
+        assert g.get("closed_on"), g["id"]
+        assert g.get("closed_by_he"), g["id"]
+        # Closed does not mean removed: the original description survives.
+        assert g["what_is_missing"] and g["why_it_matters"], g["id"]
+    # Nothing was dropped when it closed.
+    assert len(gaps.GAPS) == len(closed) + len(gaps.by_status(gaps.OPEN))
+
+
+def test_an_open_gap_says_what_it_is_waiting_on():
+    from f2c import gaps
+    for g in gaps.open_gaps():
+        assert g["what_would_close_it"], g["id"]
+        assert g.get("waiting_on"), (
+            f"{g['id']} is open with no named thing it waits on, which is how "
+            f"a gap becomes nobody's"
+        )
+
+
+def test_the_premise_gap_closed_against_the_premise():
+    """The most valuable result the register produced, and it is negative."""
+    from f2c import gaps, pipeline
+    premise = next(g for g in gaps.GAPS if g["id"] == "premise")
+    assert gaps.status(premise) == gaps.CLOSED
+    assert "24898760" in premise["closed_by"]
+    assert "42006932" in premise["closed_by"]
+    assert premise.get("consequence"), "a negative answer must say what follows"
+
+    # And the engine's indication must carry the narrowing, with both papers.
+    narrowed = pipeline.indication()["what_the_evidence_does_not_support"]
+    assert {"24898760", "42006932"} == {r["pmid"] for r in narrowed["refs"]}
+    for field in ("claim_examined", "finding", "so_who_is_this_for",
+                  "and_who_it_is_not_for", "what_is_still_unknown"):
+        assert narrowed[field], field
+    # It must not read as a reason to delay surgery.
+    assert "delay" in narrowed["and_who_it_is_not_for"].lower()
+
+
+def test_a_pmid_only_reference_is_allowed_but_a_bare_one_is_not():
+    """Older journals never minted DOIs; refusing to cite them would be the
+    tooling distorting the evidence to suit itself. What must not exist is an
+    entry with neither identifier, which renders two dead links."""
+    from f2c import metals, pipeline
+    for module in (metals, pipeline):
+        for key, ref in module.REFS.items():
+            assert ref.get("pmid") or ref.get("doi"), key
+    assert not metals.REFS["chelation_urinary"]["doi"]
+    assert metals.REFS["chelation_urinary"]["pmid"] == "15720959"
+
+
+def test_both_protocols_show_the_narrowed_indication_and_both_gap_tables():
+    from pathlib import Path
+    ui = Path(__file__).resolve().parent.parent / "ui"
+    for name in ("protocol.html", "protocol.en.html"):
+        text = (ui / name).read_text()
+        assert "24898760" in text and "42006932" in text, name
+        # Open and closed tables both rendered.
+        assert text.count("<caption>") >= 4, name
+        assert "tetanus" in text.lower() or "טטנוס" in text, name

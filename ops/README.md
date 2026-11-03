@@ -129,8 +129,19 @@ documents raises a single item on the list. That is not a criticism of either:
 a document answers the question it set out to answer, and these fall between
 them.
 
-The entry to read first is `premise`. Every other gap assumes the product
-works on the right problem.
+Eight of the eleven have since closed, and they stay on the register with
+`status`, `closed_on` and `closed_by`: the record of what was missing is worth
+as much as the absence was. `residual` says where closing one left something
+smaller behind, and an open entry carries `waiting_on` so it is not nobody's.
+
+The entry to read first is `premise`, and it closed against the premise.
+Rochkind 2014 (PMID 24898760) found that in shrapnel nerve injury the presence
+of foreign particles predicts a *worse* outcome, 28% pain improvement against
+67% without, and that nerve grafting beat neurolysis 100% to 47% — relieving
+the compression is not what relieves the pain. Rochkind 2026 (PMID 42006932)
+adds that about 55% of shrapnel nerve injuries carry the fragment inside the
+nerve. The indication narrowed accordingly, in `pipeline.indication()` under
+`what_the_evidence_does_not_support`, and on every current page.
 
 ## Building the protocol
 
@@ -142,3 +153,26 @@ One builder emits both languages from one set of numbers, so the Hebrew and
 English pages cannot disagree with each other or with the engine. The
 ferroxidase site is verified against 1FHA on every build and the build fails
 rather than publishing if any of the seven residues is wrong.
+
+
+## Quantities the metal arm computes
+
+| Function | Answers |
+|---|---|
+| `capacity` | ferritin mass the fragment demands |
+| `chelator_demand` | deferoxamine mass, 1:1 with Fe(III) |
+| `hydrogen_evolution` | H2 volume if the hydrogenase route runs |
+| `timeline` / `carrier_placements` | how long, and how many injections |
+| `released_elements` | every element dissolution frees, not only iron |
+| `readout` | how anyone would know in a living subject |
+| `enzyme_dose` | dose, given a rate — and a refusal without one |
+| `aggregate` | all of the above across a patient's fragments |
+
+Every one refuses a metal with no dissolution route and says why. That guard is
+not decoration: giving stainless a composition silently made `capacity()` start
+answering for it, and only the test caught it.
+
+`COMPOSITION` replaced `METAL_FRACTION`, which carried the iron and discarded
+the rest of the fragment. The rest is where the allergens are: nickel and
+chromium are released by dissolution and deferoxamine does not bind either.
+`METAL_FRACTION` survives as a derived view so existing callers keep working.
